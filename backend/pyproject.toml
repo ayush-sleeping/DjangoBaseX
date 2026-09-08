@@ -1,0 +1,35 @@
+[project]
+name = "djangobasex-backend"
+version = "0.1.0"
+description = "DjangoBaseX backend — Django 5 + Django REST Framework API"
+authors = [
+    { name = "Ayush Mishra", email = "ayushbm84@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2,<6",
+    "django-cors-headers>=4.9.0",
+    "django-environ>=0.14.0",
+    "djangorestframework>=3.18.1",
+    "drf-spectacular>=0.30.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.6",
+]
+
+# Django project, not an installable package — don't build it.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["migrations", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DJ"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "core"]

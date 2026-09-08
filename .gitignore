@@ -1,0 +1,35 @@
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- Environment ---
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env*.local
+
+# --- Python / Django (backend/) ---
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.py[cod]
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+backend/.ruff_cache/
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+
+# --- Node / Next.js (frontend/) ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
