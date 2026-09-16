@@ -36,6 +36,12 @@ no test suite, no CI and no Docker setup.** `backend/core/tests.py` is Django's 
 `backend/core/models.py` has no models. If a task assumes one of those exists, check first — the
 [Roadmap](documentation/planning/ROADMAP.md) says what is real and what is planned.
 
+**If you have been handed this project with no specific task**, read
+[`documentation/planning/BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) and start at the
+lowest-numbered unfinished item. It is the executable backlog, in dependency order, with acceptance
+criteria per task. **Two of its tasks are marked 🚧 DECISION** — those are questions for the
+repository owner, not work for you. Ask; do not answer them by starting to code.
+
 ---
 
 ## 1. Non-negotiable
@@ -198,6 +204,10 @@ ask before committing, and wait.**
 | First day on this repo, end to end | [`documentation/ONBOARDING.md`](documentation/ONBOARDING.md) |
 | Running it locally | [`README.md`](README.md) § Getting Started |
 | What actually exists vs what is planned | [`documentation/planning/ROADMAP.md`](documentation/planning/ROADMAP.md) |
+| **What to build next, with acceptance criteria** | [`documentation/planning/BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) |
+| The core + plugin architecture | [`documentation/planning/CORE_ARCHITECTURE_PLAN.md`](documentation/planning/CORE_ARCHITECTURE_PLAN.md) |
+| Starting a new product from this | [`documentation/NEW_PROJECT.md`](documentation/NEW_PROJECT.md) |
+| Taking a core update into a product | [`documentation/UPGRADING.md`](documentation/UPGRADING.md) |
 | Backend conventions | [`documentation/system-design/DJANGO_STANDARDS.md`](documentation/system-design/DJANGO_STANDARDS.md) |
 | Frontend conventions | [`documentation/system-design/NEXTJS_STANDARDS.md`](documentation/system-design/NEXTJS_STANDARDS.md) |
 | Schema changes | [`documentation/system-design/DATABASE_MIGRATIONS.md`](documentation/system-design/DATABASE_MIGRATIONS.md) |
