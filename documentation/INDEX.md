@@ -20,12 +20,17 @@ your task below, read the **Start Here** file, and stop.
 | **Understand the core + plugin architecture** | [`planning/CORE_ARCHITECTURE_PLAN.md`](planning/CORE_ARCHITECTURE_PLAN.md) |
 | **Decide the auth model (blocking)** | [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
 | **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
+| **Understand what this is FOR — read this first** | [`VISION.md`](VISION.md) |
 | **Understand the repo end to end, day one** | [`ONBOARDING.md`](ONBOARDING.md) |
 | **Know what actually exists vs what's planned** | [`planning/ROADMAP.md`](planning/ROADMAP.md) |
 | **Know what to build next, concretely** | [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md) — the executable backlog |
 | **Know how the two halves fit together** | [`core/ARCHITECTURE.md`](core/ARCHITECTURE.md) |
 | **Write backend code** | [`system-design/DJANGO_STANDARDS.md`](system-design/DJANGO_STANDARDS.md) |
 | **Write frontend code** | [`system-design/NEXTJS_STANDARDS.md`](system-design/NEXTJS_STANDARDS.md) |
+| **Design or change a model** | [`system-design/DATA_MODEL.md`](system-design/DATA_MODEL.md) — ⚠️ 5 decisions before the first migration |
+| **Add an endpoint** | [`system-design/API_DESIGN.md`](system-design/API_DESIGN.md) |
+| **Work on permissions or roles** | [`system-design/RBAC_DESIGN.md`](system-design/RBAC_DESIGN.md) |
+| **Anything security-sensitive** | [`system-design/SECURITY.md`](system-design/SECURITY.md) |
 | **Change the database schema** | [`system-design/DATABASE_MIGRATIONS.md`](system-design/DATABASE_MIGRATIONS.md) |
 | **Deploy it** | [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) — ⚠️ read § 0 first |
 | **Know why something is built this way** | [`ADR.md`](ADR.md) |
@@ -41,6 +46,7 @@ your task below, read the **Start Here** file, and stop.
 ```
 documentation/
 ├── INDEX.md              ← you are here
+├── VISION.md             what this is for, and the priority order when designs conflict
 ├── ONBOARDING.md         first day, end to end
 ├── NEW_PROJECT.md        starting a product from this boilerplate
 ├── UPGRADING.md          taking a core update into a product
