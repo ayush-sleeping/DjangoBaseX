@@ -22,6 +22,7 @@ your task below, read the **Start Here** file, and stop.
 | **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
 | **Understand the repo end to end, day one** | [`ONBOARDING.md`](ONBOARDING.md) |
 | **Know what actually exists vs what's planned** | [`planning/ROADMAP.md`](planning/ROADMAP.md) |
+| **Know what to build next, concretely** | [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md) — the executable backlog |
 | **Know how the two halves fit together** | [`core/ARCHITECTURE.md`](core/ARCHITECTURE.md) |
 | **Write backend code** | [`system-design/DJANGO_STANDARDS.md`](system-design/DJANGO_STANDARDS.md) |
 | **Write frontend code** | [`system-design/NEXTJS_STANDARDS.md`](system-design/NEXTJS_STANDARDS.md) |
