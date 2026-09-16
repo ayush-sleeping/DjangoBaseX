@@ -14,6 +14,12 @@ your task below, read the **Start Here** file, and stop.
 | Task | Start here |
 |------|-----------|
 | **Get the thing running on my machine** | [`../README.md`](../README.md) § Getting Started |
+| **Start a NEW product from this boilerplate** | [`NEW_PROJECT.md`](NEW_PROJECT.md) |
+| **Take a core update into my product** | [`UPGRADING.md`](UPGRADING.md) |
+| **Build a plugin / work as a separate team** | [`planning/PLUGIN_DEVELOPMENT.md`](planning/PLUGIN_DEVELOPMENT.md) |
+| **Understand the core + plugin architecture** | [`planning/CORE_ARCHITECTURE_PLAN.md`](planning/CORE_ARCHITECTURE_PLAN.md) |
+| **Decide the auth model (blocking)** | [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
+| **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
 | **Understand the repo end to end, day one** | [`ONBOARDING.md`](ONBOARDING.md) |
 | **Know what actually exists vs what's planned** | [`planning/ROADMAP.md`](planning/ROADMAP.md) |
 | **Know how the two halves fit together** | [`core/ARCHITECTURE.md`](core/ARCHITECTURE.md) |
@@ -35,6 +41,8 @@ your task below, read the **Start Here** file, and stop.
 documentation/
 ├── INDEX.md              ← you are here
 ├── ONBOARDING.md         first day, end to end
+├── NEW_PROJECT.md        starting a product from this boilerplate
+├── UPGRADING.md          taking a core update into a product
 ├── ADR.md                the decision register — one row per ADR
 ├── DAILY_CHANGES.md      the running log; one entry per task
 ├── VERSION_SUMMARY.md    shippable features, by version
