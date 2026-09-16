@@ -24,6 +24,25 @@ Newest first.
 
 ---
 
+## 2026-09-16
+
+### Reusability, plugin and testing docs
+**What:** Added `NEW_PROJECT.md` (clone-and-re-origin, the rename checklist, the decisions to settle
+first), `UPGRADING.md` (how a product takes a core update, and what a conflict tells you),
+`planning/PLUGIN_DEVELOPMENT.md` (the plugin contract, five enforced rules, the outside-contributor
+sandbox branch), `planning/AUTH_RND.md` (session vs JWT — resolves DB-1) and
+`planning/TESTING_STRATEGY.md` (the four tests to write first, coverage floors, CI shape).
+**Why:** `CORE_ARCHITECTURE_PLAN.md` describes the design; these describe how a person actually uses
+it — copying the boilerplate, taking updates, owning a plugin — plus the two gaps that block real
+work: the undecided auth model and the absent test suite.
+**Files:** `documentation/NEW_PROJECT.md`, `documentation/UPGRADING.md`,
+`documentation/planning/{PLUGIN_DEVELOPMENT,AUTH_RND,TESTING_STRATEGY}.md`, `documentation/INDEX.md`.
+**Verification:** Docs only. Relative links checked; none broken. Claims about the reference projects
+were taken from their trees, read in the previous session.
+**Notes:** `AUTH_RND.md` recommends JWT in `httpOnly` cookies — what both reference projects
+converged on — but explicitly says staying with sessions is a respectable end state. It is a
+recommendation, not a decision; the decision is still the owner's and still open.
+
 ## 2026-09-15
 
 ### Agent contract and documentation structure
