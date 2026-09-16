@@ -175,7 +175,8 @@ DjangoBaseX/
 │   ├── UPGRADING.md             # Taking a core update into a product
 │   ├── ADR.md + adr/            # Architecture decisions, numbered and immutable
 │   ├── core/                    # How built subsystems work
-│   ├── system-design/           # Conventions: Django, Next.js, migrations, deployment
+│   ├── VISION.md                # What this is for; the tie-breaker when designs conflict
+│   ├── system-design/           # Data model, RBAC, API, security, Django/Next.js, deployment
 │   └── planning/                # Intent: build order, architecture plan, tech debt, R&D
 ├── AGENTS.md                    # Operating contract — rules, gate, boundaries
 ├── CLAUDE.md                    # Agent entry point; imports AGENTS.md
@@ -202,12 +203,15 @@ which single file to read for the area you are working on rather than making you
 
 | I want to… | Read |
 |------------|------|
+| **Understand what this is for, and why** | [`documentation/VISION.md`](documentation/VISION.md) |
 | Understand the repo end to end, day one | [`documentation/ONBOARDING.md`](documentation/ONBOARDING.md) |
 | **Start a new product from this boilerplate** | [`documentation/NEW_PROJECT.md`](documentation/NEW_PROJECT.md) |
 | Take a core update into my product | [`documentation/UPGRADING.md`](documentation/UPGRADING.md) |
 | Know what to build next, concretely | [`documentation/planning/BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) |
 | Write backend code | [`documentation/system-design/DJANGO_STANDARDS.md`](documentation/system-design/DJANGO_STANDARDS.md) |
 | Write frontend code | [`documentation/system-design/NEXTJS_STANDARDS.md`](documentation/system-design/NEXTJS_STANDARDS.md) |
+| Design a model — ⚠️ 5 decisions before the first migration | [`documentation/system-design/DATA_MODEL.md`](documentation/system-design/DATA_MODEL.md) |
+| Add an endpoint · permissions · security | [`API_DESIGN`](documentation/system-design/API_DESIGN.md) · [`RBAC_DESIGN`](documentation/system-design/RBAC_DESIGN.md) · [`SECURITY`](documentation/system-design/SECURITY.md) |
 | Change the schema | [`documentation/system-design/DATABASE_MIGRATIONS.md`](documentation/system-design/DATABASE_MIGRATIONS.md) |
 | Know **why** something is built this way | [`documentation/ADR.md`](documentation/ADR.md) |
 | Find a known gap before reporting it | [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md) |

@@ -26,6 +26,26 @@ Newest first.
 
 ## 2026-09-16
 
+### System design completed — vision, data model, RBAC, API, security
+**What:** Added `VISION.md` (what the project is for, the three properties in priority order, the
+design principles, success criteria, and explicit non-goals) and four system-design documents:
+`DATA_MODEL.md`, `RBAC_DESIGN.md`, `API_DESIGN.md`, `SECURITY.md`. Wired all five into `INDEX.md`,
+`AGENTS.md` § 6, `README.md` and `BUILD_ORDER.md`.
+**Why:** The docs covered *how to work* (standards, contract) and *what to build* (backlog) but not
+*what the system is*. Those four are the parts that are brutal to retrofit: the schema, the
+authorization model and the API contract all get fixed by the first module that touches them.
+**Files:** `documentation/VISION.md`,
+`documentation/system-design/{DATA_MODEL,RBAC_DESIGN,API_DESIGN,SECURITY}.md`,
+`documentation/INDEX.md`, `documentation/planning/BUILD_ORDER.md`, `AGENTS.md`, `README.md`.
+**Verification:** Docs only. All relative links across the repository resolve. Existing settings
+claims re-checked against `backend/config/settings.py`.
+**Notes:** `DATA_MODEL.md` § 1 raises **five decisions that must be ADRs before the first
+migration** — custom `User`, primary key type, multi-tenancy, soft delete, change history. D1 and D3
+are the expensive ones: `AUTH_USER_MODEL` cannot be changed cheaply once referenced, and retrofitting
+tenancy is a rewrite rather than a migration. `BUILD_ORDER.md` task 1.1 now points at all five.
+The recommendation on D3 is deliberately "no organisation model, but scope through
+`visible_to()` from module one" — so adding tenancy later is one method per model, not every view.
+
 ### README rewritten, and an executable backlog added
 **What:** Rewrote `README.md` against the current state — Documentation, Architecture, Project
 Status, Using This As A Core and Contributing sections, an updated folder tree and table of

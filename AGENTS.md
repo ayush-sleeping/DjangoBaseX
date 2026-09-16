@@ -199,6 +199,7 @@ ask before committing, and wait.**
 
 | Need | File |
 |------|------|
+| **What this project is FOR — the tie-breaker when designs conflict** | [`documentation/VISION.md`](documentation/VISION.md) |
 | **Why something is built this way — settled decisions** | [`documentation/ADR.md`](documentation/ADR.md) |
 | The doc map — which single file to read | [`documentation/INDEX.md`](documentation/INDEX.md) |
 | First day on this repo, end to end | [`documentation/ONBOARDING.md`](documentation/ONBOARDING.md) |
@@ -210,6 +211,10 @@ ask before committing, and wait.**
 | Taking a core update into a product | [`documentation/UPGRADING.md`](documentation/UPGRADING.md) |
 | Backend conventions | [`documentation/system-design/DJANGO_STANDARDS.md`](documentation/system-design/DJANGO_STANDARDS.md) |
 | Frontend conventions | [`documentation/system-design/NEXTJS_STANDARDS.md`](documentation/system-design/NEXTJS_STANDARDS.md) |
+| **Designing a model** — ⚠️ 5 decisions before the first migration | [`documentation/system-design/DATA_MODEL.md`](documentation/system-design/DATA_MODEL.md) |
+| Adding an endpoint | [`documentation/system-design/API_DESIGN.md`](documentation/system-design/API_DESIGN.md) |
+| Permissions and roles | [`documentation/system-design/RBAC_DESIGN.md`](documentation/system-design/RBAC_DESIGN.md) |
+| Anything security-sensitive | [`documentation/system-design/SECURITY.md`](documentation/system-design/SECURITY.md) |
 | Schema changes | [`documentation/system-design/DATABASE_MIGRATIONS.md`](documentation/system-design/DATABASE_MIGRATIONS.md) |
 | Deploying | [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) |
 | How the two halves fit together | [`documentation/core/ARCHITECTURE.md`](documentation/core/ARCHITECTURE.md) |
