@@ -52,11 +52,16 @@ names. Every relative markdown link in the repository resolves; the only reporte
 changed (a docstring), so the § 2 gate was run in full: `ruff check` passed, `ruff format --check`
 reported 13 files already formatted, `manage.py check` found no issues, and
 `makemigrations --check --dry-run` detected no changes.
-**Notes:** ⚠️ **This cleans the working tree, not the published history.** All five existing commits
-already contain these names and are already on the remote, so they remain reachable there and in
-any clone or fork taken before today. Removing them from history would mean rewriting all five
-commits and force-pushing, which changes every commit hash and still cannot recall what was
-already fetched; the owner chose the working-tree fix deliberately, with that limitation understood.
+**Notes:** **History was rewritten too.** The working-tree fix alone would have left the names fully
+readable in the five earlier commits already on the remote, so after the cleanup landed, all six
+commits were rewritten with `git filter-branch` (file contents *and* commit messages) and
+force-pushed. Every commit hash changed — the initial scaffold is now `cac0491`. A full mirror plus
+a working-tree archive were taken first, to `~/djangobasex-backup-20260921-055737/`. Verified by
+cloning the remote fresh and sweeping every commit and every message: zero matches.
+⚠️ **Two limits remain, and neither is fixable from here.** Any clone or fork taken before the
+rewrite still holds the old objects, and the host may keep unreferenced objects reachable by their
+SHA for some time. What is gone is gone from the repository; it is not recalled from anyone who
+already had it.
 The auth research this design came from was moved out of the repository entirely rather than
 anonymised in place — its substance now lives in `system-design/AUTH_FAILURE_MODES.md`, written as
 a failure catalogue that needs no sources, because a failure mode is true or false on its own and
