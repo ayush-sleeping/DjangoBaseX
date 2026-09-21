@@ -3,7 +3,7 @@
 ## 🚀 &nbsp; DjangoBaseX
 > A Django 5 + Next.js Full Stack Starter Boilerplate.
 
-The Django / Next.js sibling of [PriorCoreA](https://github.com/ayush-sleeping/PriorCoreA): a secure, modular, production-ready base project using **Django 5 + Django REST Framework** for the API and **Next.js (App Router)** for the frontend — ideal for building scalable web applications with a Python backend and a TypeScript frontend.
+A secure, modular, production-ready base project using **Django 5 + Django REST Framework** for the API and **Next.js (App Router)** for the frontend — ideal for building scalable web applications with a Python backend and a TypeScript frontend.
 
 > **Status:** early scaffold with a settled architecture. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following the [Django-Nextjs-Journey](https://github.com/ayush-sleeping/Django-Nextjs-Journey) Level 2 plan.
 >
@@ -322,20 +322,20 @@ Built by accumulation, one module at a time (see the [Journey's North Star table
 
 > **The executable version of this table is [`documentation/planning/BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md)** — numbered tasks with acceptance criteria, in dependency order. Start there; this table is the summary.
 
-| PriorCoreA feature | DjangoBaseX equivalent | Status |
-|-------------------|------------------------|--------|
-| Sanctum auth | DRF SimpleJWT (access/refresh, blacklist, `/me`) | ⬜ |
-| Spatie roles & permissions | Groups + DRF permission classes + object-level RBAC | ⬜ |
-| Inertia + React admin | Next.js dashboard (data tables, forms, ShadCN) | ⬜ |
-| Users / Employees / Enquiries CRUD | DRF viewsets + Next.js pages | ⬜ |
-| Activity log | `django-simple-history` audit trail | ⬜ |
-| Queues (Horizon) | Celery + Redis + Flower | ⬜ |
+| Capability | How it is built here | Status |
+|------------|----------------------|--------|
+| Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ⬜ |
+| Roles & permissions | Code-declared catalog + DRF permission classes + object-level scoping | ⬜ |
+| Admin UI | Next.js dashboard — data tables, forms, ShadCN | ⬜ |
+| Core CRUD modules | DRF viewsets + Next.js pages | ⬜ |
+| Activity log | Append-only audit trail | ⬜ |
+| Background jobs | Celery + Redis + Flower | ⬜ |
 | Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
-| PHPStan / Pint | mypy + Ruff | 🔄 Ruff done |
-| Pest | pytest + pytest-django + factory_boy | ⬜ |
-| Docker setup | docker-compose (Django + Next + Postgres + Redis) | ⬜ |
+| Static analysis | mypy + Ruff | 🔄 Ruff done |
+| Test suite | pytest + pytest-django + factory_boy | ⬜ |
+| Containerisation | docker-compose (Django + Next + Postgres + Redis) | ⬜ |
 | Health check | `/api/health/` | ✅ |
-| API docs (Swagger) | drf-spectacular | ✅ |
+| API docs | drf-spectacular | ✅ |
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
 

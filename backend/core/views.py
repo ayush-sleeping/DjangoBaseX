@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 
 class HealthView(APIView):
-    """Public liveness/readiness probe. Mirrors PriorCoreA's /health endpoint."""
+    """Public liveness/readiness probe."""
 
     permission_classes = [AllowAny]
     authentication_classes: list = []

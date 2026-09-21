@@ -29,7 +29,7 @@ Also decide now: **is the login identifier an email or a username?** Django defa
 modern back office almost always wants email. Changing it later means a data migration plus every
 auth screen. *Recommendation: email, with `USERNAME_FIELD = "email"` and username removed.*
 
-Tracked as `TECH_DEBT` **DB-10**. This is `BUILD_ORDER` task 1.1.
+Tracked as `TECH_DEBT` **DB-10**. This is `BUILD_ORDER` task 0.1.
 
 ### 🚧 D2 — Primary keys: `BigAutoField` or `UUID`?
 
@@ -161,7 +161,7 @@ class SoftDeletableModel(models.Model):
 | Thing | Rule | Example |
 |-------|------|---------|
 | Model | Singular, `PascalCase` | `ActivityLog` |
-| Table | Set `db_table` **explicitly**; plugin tables prefixed | `core_activity_log`, `billing_quotes` |
+| Table | Set `db_table` **explicitly**; plugin tables prefixed | `core_activity_log`, `billing_invoices` |
 | Boolean field | `is_` / `has_` / `can_` | `is_active` |
 | Timestamp | `<verb>_at` | `deleted_at`, `accepted_at` |
 | Foreign key | Singular noun | `user`, not `user_id` |

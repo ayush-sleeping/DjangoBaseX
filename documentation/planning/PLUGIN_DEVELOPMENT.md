@@ -6,8 +6,8 @@
 [`CORE_ARCHITECTURE_PLAN.md`](CORE_ARCHITECTURE_PLAN.md). This is the intended contract; the
 checklist is written so it can be followed the day the seam lands.
 
-Adapted from PriorCoreB's `PLUGIN_ARCHITECTURE.md`, which runs four plugins in four repos with outside
-contributors — the arrangement this is copying.
+Written for the arrangement this design targets: several plugins, each in its own repo, several of
+them maintained by people who do not work on the core.
 
 ---
 
@@ -44,15 +44,15 @@ collide and the failure surfaces in production.
 | # | Rule | Example |
 |---|------|---------|
 | 1 | **Explicit app label** — `label = "billing"` in `AppConfig` | Django derives it from the package path otherwise, and it is baked into every migration |
-| 2 | **Table prefix** — every `Meta.db_table` starts `<name>_` | `billing_quotes` |
-| 3 | **Permission prefix** — `<name>.<feature>.<action>` | `billing.quotes.create` — never a bare `view` or `create` |
-| 4 | **Route prefix** — `/api/<name>/`, url names `<name>:` | `/api/billing/quotes/` |
+| 2 | **Table prefix** — every `Meta.db_table` starts `<name>_` | `billing_invoices` |
+| 3 | **Permission prefix** — `<name>.<feature>.<action>` | `billing.invoices.create` — never a bare `view` or `create` |
+| 4 | **Route prefix** — `/api/<name>/`, url names `<name>:` | `/api/billing/invoices/` |
 | 5 | **No cross-plugin imports** — `from djx_other import …` is forbidden | see below |
 
 ### Rule 5 in practice
 
-PriorCoreB has held this to **zero violations across four plugins**. When plugin A genuinely needs
-something from plugin B, in order of preference:
+This rule holds in practice — the cost of obeying it is small and the cost of breaking it compounds.
+When plugin A genuinely needs something from plugin B, in order of preference:
 
 1. **A Django signal** B emits and A receives — both stay decoupled
 2. **A contract in `core/contracts/`** that B implements and A resolves through the registry
@@ -109,8 +109,8 @@ would mean the permission list depended on when you asked.
 
 ## Working with outside contributors
 
-PriorCoreB's pattern, which is what lets an external admin work on a plugin without being able to
-break production:
+The pattern that lets an external contributor work on a plugin without being able to break
+production:
 
 | Branch | Who | Rule |
 |--------|-----|------|

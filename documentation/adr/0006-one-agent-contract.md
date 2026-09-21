@@ -9,7 +9,7 @@ AI agents work in this repository continuously, and they need to be told the rul
 live in one file or several — per-directory contracts are tempting, because backend rules and
 frontend rules are genuinely different.
 
-The upstream core this contract was adapted from (`PriorCoreD`) tried
+An earlier core whose contract this was adapted from tried
 the split and retired it. Its ADR-0016 records what went wrong: the two files drifted on a security
 claim, so one said a design was accepted debt while the other had struck it through as forbidden.
 About fifteen rules were being maintained in both. And the second file was loaded anyway, so the

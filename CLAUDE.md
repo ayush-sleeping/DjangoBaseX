@@ -10,7 +10,7 @@
 
   ── What this repository is ────────────────────────────────────────────────────────────────────
 
-  A BOILERPLATE — the Django/Next.js sibling of PriorCoreA. Products get copied from it. Do not give
+  A BOILERPLATE — a Django/Next.js base project. Products get copied from it. Do not give
   it a product identity, a client name, or domain models that belong to one product. If you are
   reading this inside a copy that HAS become a real product, the rename should already be reflected
   in AGENTS.md § 0 — if it is not, that is worth fixing before anything else, because every session

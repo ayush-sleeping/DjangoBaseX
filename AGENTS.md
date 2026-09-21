@@ -1,7 +1,6 @@
 # DjangoBaseX — Operating Contract
 
-> **This repository is a boilerplate, not a product.** It is the Django/Next.js sibling of
-> [PriorCoreA](https://github.com/ayush-sleeping/PriorCoreA) — a base that products get copied from.
+> **This repository is a boilerplate, not a product.** It is a base that products get copied from.
 > Do not give it a product identity, a client name, or domain models that belong to one product.
 >
 > **This is the only agent contract in this repository.** `CLAUDE.md` imports it, and that import is
@@ -53,6 +52,7 @@ repository owner, not work for you. Ask; do not answer them by starting to code.
 | 3 | **Read a file before you modify it.** No exceptions |
 | 4 | **Ask before any destructive operation** — dropping tables, `rm -rf`, resetting migrations, `git reset --hard` |
 | 5 | **Treat this repo as PUBLIC.** It is a boilerplate: anything committed here is inherited by every product copied from it, into repositories with their own access lists, long after anyone remembers where the value came from. Never commit real credentials, customer data, internal URLs or third-party client names. Seed/demo credentials stay obviously fake |
+| 5a | **Never name another codebase.** No other project, product, repository or module name appears anywhere in this repo — not in docs, code, comments, commit messages or examples. Record the *mechanism* and the *reason*; never the source. A pattern learned elsewhere is written as the pattern, argued on its own merits. Example names in docs are generic (`billing`, `enquiries`), never real |
 | 6 | **Never echo `.env` *values*** into output, docs or commits — key names only |
 | 7 | **Never commit** `.env`, `.env.local`, `db.sqlite3`, `.venv/`, `node_modules/`, `__pycache__/`, `.next/`, `.ruff_cache/`, `tsconfig.tsbuildinfo` |
 | 8 | **Update [`documentation/DAILY_CHANGES.md`](documentation/DAILY_CHANGES.md) in the same change as the code**, not after |

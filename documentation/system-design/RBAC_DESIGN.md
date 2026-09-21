@@ -1,5 +1,10 @@
 # Authorization (RBAC) Design
 
+> **Implementing this?** [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) is the build spec — every table,
+> column, foreign key, file and function signature. This document is the *policy* and the *why*;
+> that one is the *how*.
+
+
 **How permissions work, and why this shape.** The hardest thing in the core to retrofit, because
 every endpoint and every query depends on it.
 
@@ -74,7 +79,7 @@ Always module-prefixed. Never a bare `view` or `create`.
 users.users.view          core
 users.roles.update        core
 settings.settings.manage  core
-billing.quotes.create        plugin — the prefix IS the plugin name
+billing.invoices.create        plugin — the prefix IS the plugin name
 ```
 
 **Enforced by the conventions test:** a plugin's permissions must start with its own name. Without

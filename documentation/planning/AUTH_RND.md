@@ -69,27 +69,29 @@ The browser holds Django's `sessionid` cookie; DRF reads it. `CORS_ALLOW_CREDENT
 
 ---
 
-## What the reference projects did
+## What comparable systems settle on
 
-**`PriorCoreD` chose JWT in `httpOnly` cookies** — access/refresh pair, refresh-token
-rotation **with reuse detection**, transparent single-retry refresh on the client
-([its ADR-0006](https://github.com/PriorCoreD)). Note the shape: it took
-JWT's flexibility *and* the cookie's XSS protection, and paid for both by writing rotation and reuse
-detection properly.
+**The common answer for an API + separate SPA is JWT in `httpOnly` cookies** — an access/refresh
+pair, refresh-token rotation **with reuse detection**, and a transparent single-retry refresh on the
+client. The shape is what makes it work: it takes JWT's flexibility *and* the cookie's XSS
+protection, and pays for both by implementing rotation and reuse detection properly rather than
+skipping them.
 
-It also records a consequence worth stealing: **authenticated data is fetched client-side, because
-an `httpOnly` cookie cannot be forwarded from a server component.** Public data is fetched
-server-side. Getting those two backwards **fails silently**. Any cookie-based choice here inherits
-that exact trap, and it needs writing into `NEXTJS_STANDARDS.md` on day one.
+It carries one consequence that must be written down on day one: **authenticated data is fetched
+client-side, because an `httpOnly` cookie is not attached to a `fetch()` issued from a server
+component** — a server component has to read the cookie and forward it explicitly. Public data is
+fetched server-side. Getting the two backwards **fails silently**: the request succeeds,
+unauthenticated, and renders the empty state. Any cookie-based choice inherits that trap, and it
+belongs in `NEXTJS_STANDARDS.md` immediately.
 
-**PriorCoreB uses Laravel Fortify + Sanctum** — session-based for the first-party frontend, tokens for
-API consumers. It runs both, deliberately, for two different audiences.
+**The other common arrangement is sessions for the first-party frontend plus tokens for API
+consumers** — two mechanisms, deliberately, for two different audiences.
 
 ---
 
 ## Recommendation
 
-**Option C — the one both reference projects actually converged on: JWT in `httpOnly` cookies.**
+**Option C — JWT in `httpOnly` cookies.**
 
 - Keeps the XSS protection that makes sessions good
 - Keeps the stateless-ish scaling and non-browser support that make JWT good
@@ -97,8 +99,8 @@ API consumers. It runs both, deliberately, for two different audiences.
   refresh rotation properly
 
 If that cost is unattractive, **stay with sessions.** They are already configured, already secure,
-and a product that needs machine callers can add token auth *for those callers only* — which is
-exactly PriorCoreB's arrangement, and it is a perfectly respectable end state.
+and a product that needs machine callers can add token auth *for those callers only*. That is a
+perfectly respectable end state.
 
 **What would be wrong: JWT in `localStorage`.** It is the most commonly shown tutorial pattern and it
 trades away the one protection that matters most, for convenience.

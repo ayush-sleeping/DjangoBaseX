@@ -4,28 +4,27 @@
 otherwise. What exists today is described in [`../core/ARCHITECTURE.md`](../core/ARCHITECTURE.md).
 
 Built by accumulation, one module at a time, tracking the
-[Django-Nextjs-Journey](https://github.com/ayush-sleeping/Django-Nextjs-Journey) Level 2 plan and
-reaching parity with [PriorCoreA](https://github.com/ayush-sleeping/PriorCoreA).
+[Django-Nextjs-Journey](https://github.com/ayush-sleeping/Django-Nextjs-Journey) Level 2 plan.
 
 ---
 
 ## Status
 
-| PriorCoreA feature | DjangoBaseX equivalent | Status |
-|-------------------|------------------------|--------|
+| Capability | How it is built here | Status |
+|------------|----------------------|--------|
 | Health check | `/api/health/` | ✅ |
-| API docs (Swagger) | drf-spectacular at `/api/docs/` | ✅ |
-| PHPStan / Pint | Ruff (lint + format) | ✅ |
-| PHPStan / Pint | mypy (types) | ⬜ |
-| Sanctum auth | DRF SimpleJWT — access/refresh, blacklist, `/me` | ⬜ |
-| Spatie roles & permissions | Groups + DRF permission classes + object-level RBAC | ⬜ |
-| Inertia + React admin | Next.js dashboard — data tables, forms, ShadCN | ⬜ |
-| Users / Employees / Enquiries CRUD | DRF viewsets + Next.js pages | ⬜ |
-| Activity log | `django-simple-history` audit trail | ⬜ |
-| Queues (Horizon) | Celery + Redis + Flower | ⬜ |
+| API docs | drf-spectacular at `/api/docs/` | ✅ |
+| Lint + format | Ruff | ✅ |
+| Python types | mypy | ⬜ |
+| Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ⬜ |
+| Roles & permissions | Code-declared catalog + DRF permission classes + object-level scoping | ⬜ |
+| Admin UI | Next.js dashboard — data tables, forms, ShadCN | ⬜ |
+| Core CRUD modules | DRF viewsets + Next.js pages | ⬜ |
+| Activity log | Append-only audit trail | ⬜ |
+| Background jobs | Celery + Redis + Flower | ⬜ |
 | Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
-| Pest | pytest + pytest-django + factory_boy | ⬜ |
-| Docker setup | docker-compose — Django + Next + Postgres + Redis | ⬜ |
+| Test suite | pytest + pytest-django + factory_boy | ⬜ |
+| Containerisation | docker-compose — Django + Next + Postgres + Redis | ⬜ |
 
 ---
 

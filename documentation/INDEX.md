@@ -19,6 +19,7 @@ your task below, read the **Start Here** file, and stop.
 | **Build a plugin / work as a separate team** | [`planning/PLUGIN_DEVELOPMENT.md`](planning/PLUGIN_DEVELOPMENT.md) |
 | **Understand the core + plugin architecture** | [`planning/CORE_ARCHITECTURE_PLAN.md`](planning/CORE_ARCHITECTURE_PLAN.md) |
 | **Decide the auth model (blocking)** | [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
+| **Understand what auth/RBAC designs get wrong** | [`system-design/AUTH_FAILURE_MODES.md`](system-design/AUTH_FAILURE_MODES.md) — the failure catalogue + design checklist |
 | **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
 | **Understand what this is FOR — read this first** | [`VISION.md`](VISION.md) |
 | **Understand the repo end to end, day one** | [`ONBOARDING.md`](ONBOARDING.md) |
@@ -30,6 +31,7 @@ your task below, read the **Start Here** file, and stop.
 | **Design or change a model** | [`system-design/DATA_MODEL.md`](system-design/DATA_MODEL.md) — ⚠️ 5 decisions before the first migration |
 | **Add an endpoint** | [`system-design/API_DESIGN.md`](system-design/API_DESIGN.md) |
 | **Work on permissions or roles** | [`system-design/RBAC_DESIGN.md`](system-design/RBAC_DESIGN.md) |
+| **Build auth / authz / RBAC — the full spec** | [`system-design/AUTH_BLUEPRINT.md`](system-design/AUTH_BLUEPRINT.md) — tables, files, flows, fail-closed machinery |
 | **Anything security-sensitive** | [`system-design/SECURITY.md`](system-design/SECURITY.md) |
 | **Change the database schema** | [`system-design/DATABASE_MIGRATIONS.md`](system-design/DATABASE_MIGRATIONS.md) |
 | **Deploy it** | [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) — ⚠️ read § 0 first |

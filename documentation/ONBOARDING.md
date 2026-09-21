@@ -9,7 +9,7 @@ explains what you are looking at and what the rules are.
 
 ## 1. What this repository is
 
-**A boilerplate — the Django/Next.js sibling of [PriorCoreA](https://github.com/ayush-sleeping/PriorCoreA).**
+**A boilerplate — a production-ready Django + Next.js base project.**
 Products get *copied from* it. It is not itself a product, and it must never acquire one's identity:
 no client names, no domain models that serve a single product.
 

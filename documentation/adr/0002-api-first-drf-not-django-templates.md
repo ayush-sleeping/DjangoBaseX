@@ -10,7 +10,7 @@ alternative is a JSON API consumed by a separate Next.js frontend.
 
 Django's template layer is genuinely good, and choosing against it is a real trade. But this
 boilerplate exists to produce products with a TypeScript frontend — the whole reason it is the
-sibling of PriorCoreA rather than a copy of it. Mixing the two means every feature has to decide which
+an API-first base rather than a server-rendered one. Mixing the two means every feature has to decide which
 half it lives in, and that decision gets made inconsistently.
 
 ## Decision
@@ -39,4 +39,4 @@ All user-facing UI is Next.js. No Django template is added for a product feature
 |--------|---------|
 | Django templates + HTMX | Good stack, wrong one for this boilerplate's purpose |
 | Django templates for public pages, Next for the app | Two frontends, two auth integrations, and a permanent question about where each new page goes |
-| Inertia.js (as PriorCoreA uses) | Couples the two halves; loses the typed, independently-deployable API this exists to provide |
+| Inertia.js | Couples the two halves; loses the typed, independently-deployable API this exists to provide |

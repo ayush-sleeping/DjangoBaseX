@@ -16,9 +16,9 @@ Everything that makes the two reference projects trustworthy is a **test**, not 
 | Core does not depend on the product | `backend/tests/core/test_core_extraction.py` |
 | Frontend core does not import product code | `frontend/tests/boundaries.test.ts` |
 | Every gated route actually refuses anonymous callers | `test_route_enforcement.py` — walks the app's **own route table**, so a route added next week is covered the moment it exists |
-| No plugin imports another plugin | PriorCoreB verifies by grep; we automate it |
+| No plugin imports another plugin | Verified by AST scan, not by review |
 
-`PriorCoreD` records the cost of not having them: `npm run build` was broken by a type
+The cost of not having them is well documented elsewhere: `npm run build` broken by a type
 error and **stayed broken, unnoticed**, because nothing ran it. Its frontend once had 48,000 lines
 across 72 routes and 171 components with **zero tests**, against 38,000 backend lines with 1,130.
 
@@ -62,7 +62,7 @@ cannot be merged, including mistakes nobody has made yet.
 
 ## Coverage floors, not targets
 
-Adopted from `PriorCoreD`, including the reasoning:
+The reasoning:
 
 > A floor, not a target — set to **where the code actually is**, because a floor above reality fails
 > on arrival and gets deleted, which is how a coverage gate becomes decoration.

@@ -10,24 +10,24 @@ independent teams working in their own repos without touching the core.
 
 ## 0. Where this comes from
 
-Two existing systems, each solving half the problem.
+This design combines two problems that are usually solved separately, because a core that is copied
+into products has to solve both at once.
 
-| Source | Solves | Mechanism worth taking |
-|--------|--------|------------------------|
-| [`PriorCoreD`](https://github.com/PriorCoreD) | **Reusability** — copy it, rename it, keep taking updates | `core/` vs `project/` split enforced by tests · a registry seam · a SHA manifest + drift doctor · clone-and-re-origin so `git merge core/main` works · a setup script that renames and re-secrets |
-| [`PriorCoreB`](https://github.com/PriorOrg/PriorCoreB) | **Parallel teams** — four modules, four repos, outside contributors | One repo per plugin as a git submodule · auto-discovery through the framework's own app mechanism · plugin-prefixed permissions/tables/routes · **no cross-plugin imports** · a sandbox branch per external developer |
+| Problem | What it demands | Mechanisms adopted |
+|---------|-----------------|--------------------|
+| **Reusability** — copy it, rename it, keep taking updates | The product's code must be separable from the platform's, and drift must be visible | `core/` vs `project/` split enforced by tests · a registry seam · a SHA manifest + drift doctor · clone-and-re-origin so `git merge core/main` works · a setup script that renames and re-secrets |
+| **Parallel teams** — many modules, many repos, outside contributors | A team must be able to ship a module without touching, or being able to break, the core | One repo per plugin as a git submodule · auto-discovery through the framework's own app mechanism · plugin-prefixed permissions/tables/routes · **no cross-plugin imports** · a sandbox branch per external developer |
 
-**What Django gives us for free that Laravel did not.** PriorCoreB needs `internachi/modular` and
-Composer path repositories to get a service-provider per module. Django already has this:
-`INSTALLED_APPS` is the plugin list and `AppConfig.ready()` is the service provider. The backend
-plugin layer is genuinely less machinery here than it was there.
+**What Django gives us for free.** Equivalent module systems in other frameworks need an extra
+package and dependency-manager plumbing to get a service-provider per module. Django already has
+this: `INSTALLED_APPS` is the plugin list and `AppConfig.ready()` is the service provider. The
+backend plugin layer is genuinely less machinery here.
 
-**What we must not copy.** PriorCoreB's docs live only in the core repo
-([its ADR-0041](https://github.com/PriorOrg/PriorCoreB)) and its plugins carry no markdown.
-That suits a company monorepo with one maintainer. DjangoBaseX plugins are owned by separate teams,
-so **a plugin documents itself in its own repo** and the core links to it. Centralising the docs
-would put every plugin's doc change through the core's review queue, which is the bottleneck this
-whole design exists to remove.
+**One thing deliberately done differently.** The usual arrangement keeps all documentation in the
+core repo, with plugins carrying no markdown. That suits a monorepo with one maintainer.
+DjangoBaseX plugins are owned by separate teams, so **a plugin documents itself in its own repo**
+and the core links to it. Centralising the docs would put every plugin's doc change through the
+core's review queue, which is the bottleneck this whole design exists to remove.
 
 ---
 
@@ -59,11 +59,11 @@ backend/
 > plugins **register into them** at boot. Core ends up knowing *that* a nav section exists without
 > ever knowing the word `billing`.
 
-This is lifted directly from both sources. In `PriorCoreD` it is `core/registry.py`, whose
-docstring records the measurement that motivated it — five places where the product reached into the
-platform, three of them one big literal each. In PriorCoreB it is `McpBranchRegistry`, whose comment
-says it exactly: *"Nothing else in core learns the word Billing from this — the registry only ever
-holds a key, a label and a way to ask."*
+This is a well-proven shape. The measurement that motivates it is always the same: count the places
+where the product reaches into the platform, and you find a handful of files, several of them one
+big literal listing every module by name. The registry replaces each of those literals with a
+registration call. **Nothing in core learns the word `billing` — the registry only ever holds a key,
+a label and a way to ask.**
 
 **Deleting `project/` and `plugins/*` from a fresh copy must leave a working platform.** That is the
 property, and a test asserts it rather than a convention hoping for it.
@@ -120,10 +120,10 @@ written down is a convention that is already half-broken.
 | Thing | Rule | Example |
 |-------|------|---------|
 | Django app label | `label = "<name>"`, set **explicitly** | `label = "billing"` |
-| Database tables | `Meta.db_table` starts `<name>_` | `billing_quotes` |
-| Permissions | `<name>.<feature>.<action>` | `billing.quotes.create` |
-| API routes | mounted under `/api/<name>/`, url names `<name>:` | `/api/billing/quotes/` |
-| Frontend routes | under `/(plugins)/<name>/` | `/billing/quotes` |
+| Database tables | `Meta.db_table` starts `<name>_` | `billing_invoices` |
+| Permissions | `<name>.<feature>.<action>` | `billing.invoices.create` |
+| API routes | mounted under `/api/<name>/`, url names `<name>:` | `/api/billing/invoices/` |
+| Frontend routes | under `/(plugins)/<name>/` | `/billing/invoices` |
 
 > ⚠️ **The app-label trap.** Django derives `app_label` from the last component of the package path.
 > Every plugin package is `djx_<name>`, so labels would be unique — but a plugin that renames its
@@ -134,8 +134,8 @@ written down is a convention that is already half-broken.
 
 ## 4. Inter-plugin boundaries
 
-**A plugin may not import another plugin.** Verified by an AST scan in the boundary test, the same
-way PriorCoreB verifies it by grep — except automatically, on every run.
+**A plugin may not import another plugin.** Verified by an AST scan in the boundary test — not by
+review, and not by a grep someone remembers to run.
 
 When plugin A genuinely needs something from plugin B, in order of preference:
 
@@ -167,7 +167,7 @@ A plugin's frontend half ships **in the same repo as its backend half**, so one 
 one repo for a whole feature. The symlink is created by `scripts/plugins.py link`.
 
 **Route mounting** is a generated registry (`src/plugins/registry.generated.ts`) plus one catch-all
-segment. This is the same shape as PriorCoreB's Inertia module registry in `resources/js/app.tsx`.
+segment — the standard shape for mounting modules a build cannot know about ahead of time.
 
 > **The honest cost:** a catch-all route gives up per-route static analysis, and every plugin page is
 > resolved at runtime. The alternative — codegen writing a real route file per plugin page — keeps
@@ -250,8 +250,8 @@ five.
 
 ## 9. Team workflow
 
-Adopted from PriorCoreB's sandbox-branch pattern, which is what lets an outside admin work on Presales
-without being able to break it.
+A sandbox-branch pattern, which is what lets an outside contributor work on a plugin without being
+able to break it.
 
 | Who | Works where | Merges to `main` |
 |-----|-------------|------------------|
