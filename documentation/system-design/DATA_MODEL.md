@@ -68,7 +68,7 @@ reason the method exists, or someone will "simplify" it away.
 
 ### 🚧 D4 — Soft delete, or hard delete?
 
-Both reference projects ship a **recycle bin**, which implies soft delete.
+A recycle bin is a common product requirement, and it implies soft delete.
 
 **Recommendation: soft delete on user-facing content, hard delete on join tables and logs.** Blanket
 soft delete is a trap — every query needs the filter, and one forgotten `.filter(deleted_at=None)`

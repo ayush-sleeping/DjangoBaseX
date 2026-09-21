@@ -148,10 +148,17 @@ second god-mode.
 The seeder creates these as `is_system=True` (undeletable) and **idempotently** — running it twice
 changes nothing.
 
-| Role | Holds | Note |
+| Role (slug) | Holds | Note |
 |------|-------|------|
-| `admin` | every permission, including plugins' | Recomputed as plugins are added |
-| `staff` | read everything, write nothing | A safe default for a new employee |
+| `administrator` | every permission, including plugins' | Recomputed on every seed, so a new plugin's permissions reach it automatically |
+| `staff` | **nothing** | The safe default for a new account: it can sign in and see the shell, and nothing else |
+
+> ⚠️ **`staff` the role is not `User.is_staff` the boolean.** The role grants nothing. The boolean
+> grants Django admin access, which is full trust and outside this system entirely — see
+> [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) Ch. 20. They will be mistaken for each other on sight.
+>
+> **And `staff` holds nothing rather than "read everything".** A default role that can read every
+> row in the system is not a safe default — it is the object-scoping bug with a reassuring name.
 
 Products add their own. Keep the core's list this short — a core role a product does not want is a
 role they have to explain to their users.

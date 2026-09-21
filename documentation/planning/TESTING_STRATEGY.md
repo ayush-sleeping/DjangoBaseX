@@ -9,7 +9,7 @@ runner installed. Nothing in this repository can fail a build.
 
 ## Why this is the highest-leverage thing to build next
 
-Everything that makes the two reference projects trustworthy is a **test**, not a convention:
+Everything that makes a codebase trustworthy is a **test**, not a convention:
 
 | Guarantee | What enforces it in the source project |
 |-----------|----------------------------------------|

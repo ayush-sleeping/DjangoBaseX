@@ -26,6 +26,57 @@ Newest first.
 
 ## 2026-09-21
 
+### Design review of the auth/authz/RBAC blueprint — 28 gaps found and closed
+**What:** Reviewed `AUTH_BLUEPRINT.md` chapters 1–15 as a system design, before writing any code,
+and closed everything it found. The document goes from 1,435 to ~2,100 lines: five new chapters
+(16 runtime dependencies · 17 the deployment contract · 18 outbound email · 19 bootstrap and
+operations · 20 the Django admin), seven new decisions **A19–A25**, four new system checks
+`dbx.E005`–`E008`, and Appendix B recording what the review found. Three `BUILD_ORDER` tasks added:
+**1.0** (dependencies + deployment contract, ahead of everything else in Phase 1), **1.5b** (email
+and `bootstrap_admin`) and **1.7** (retention, key rotation, the admin decision).
+
+**Why:** Four of the gaps were defects that make the spec unbuildable as written, and each was
+verified against the installed Django 5.2.17 source rather than argued from memory:
+
+1. `PermissionsMixin.has_perm` returns `True` for an active superuser **before any backend runs**
+   (`django/contrib/auth/models.py:77-78`), so decision A12's audited bypass was unreachable and
+   `authz.superuser_bypass` would never have been written — while Ch. 9.5 claimed it always is. An
+   audit guarantee that is silently false is worse than none, because the empty log reads as "no
+   bypasses happened". Fixed by overriding `has_perm` on `users.User`.
+2. `ModelBackend` rejects inactive users inside `authenticate()`
+   (`django/contrib/auth/backends.py:91-96`), so login step 5 was unreachable and
+   `failure_reason="inactive"` could never be recorded. With `is_active` defaulting to `False`,
+   every invited user's first login would have been filed as `bad_password`. Fixed by
+   authenticating through `AllowAllUsersModelBackend` and gating explicitly.
+3. The system-role migration runs before `post_migrate`, so `administrator` would have been seeded
+   holding **no** permissions. Fixed by splitting rows from grants.
+4. Two documented routes address a `public_id` column their tables did not have.
+
+The rest were missing pieces without which the system does not work end to end — no dependency list
+at all (nothing in Ch. 16 is installed); refresh rotation with no grace window, which logs a
+two-tab user out for using the product normally; no cache configuration, leaving three security
+controls silently per-worker; client IP from `REMOTE_ADDR`, which turns per-IP lockout into a
+self-inflicted outage behind any proxy; no same-site/CORS statement, so the cookie scheme works in
+dev and fails silently across domains; forgeable CSRF double-submit; TOTP with no replay guard; no
+email configuration for the two flows that send mail; no way to create the first account; and the
+Django admin as an unmentioned second authentication *and* authorization system that bypasses every
+guard in Ch. 8.
+
+**Files:** `documentation/system-design/AUTH_BLUEPRINT.md`, `documentation/system-design/RBAC_DESIGN.md`,
+`documentation/planning/BUILD_ORDER.md`, `documentation/planning/TECH_DEBT.md` (DB-15, DB-16, DB-17),
+plus rule-5a cleanup in `documentation/system-design/{API_DESIGN,DATA_MODEL}.md`,
+`documentation/planning/TESTING_STRATEGY.md` and this file.
+
+**Verification:** Docs only — no code changed. `ruff check` and `ruff format --check` clean;
+`manage.py check` reports no issues; `makemigrations --check --dry-run` clean (no model changes).
+Django behaviours 1 and 2 above were read out of `backend/.venv/.../django/contrib/auth/` in this
+session, not recalled. All relative links in the edited files resolve.
+
+**Notes:** `RBAC_DESIGN.md` and `AUTH_BLUEPRINT.md` disagreed about the seeded roles — `admin` vs
+`administrator`, and `staff` as "read everything" vs nothing. One seeder, two specifications.
+`administrator` and "nothing" win; a default role that can read every row is the object-scoping bug
+with a reassuring name. The two 🚧 decisions (`0.1`, `0.2`) are still open and still the owner's.
+
 ### No other codebase is named anywhere in this repository
 **What:** Removed every reference to other projects, products and modules from the working tree —
 147 hits across 17 files. The reasoning they supported was kept and rewritten to stand on its own;
@@ -195,10 +246,9 @@ it — copying the boilerplate, taking updates, owning a plugin — plus the two
 work: the undecided auth model and the absent test suite.
 **Files:** `documentation/NEW_PROJECT.md`, `documentation/UPGRADING.md`,
 `documentation/planning/{PLUGIN_DEVELOPMENT,AUTH_RND,TESTING_STRATEGY}.md`, `documentation/INDEX.md`.
-**Verification:** Docs only. Relative links checked; none broken. Claims about the reference projects
-were taken from their trees, read in the previous session.
-**Notes:** `AUTH_RND.md` recommends JWT in `httpOnly` cookies — what both reference projects
-converged on — but explicitly says staying with sessions is a respectable end state. It is a
+**Verification:** Docs only. Relative links checked; none broken.
+**Notes:** `AUTH_RND.md` recommends JWT in `httpOnly` cookies but explicitly says staying with
+sessions is a respectable end state. It is a
 recommendation, not a decision; the decision is still the owner's and still open.
 
 ## 2026-09-15

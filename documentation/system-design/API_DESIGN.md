@@ -124,8 +124,7 @@ Whatever [`../planning/AUTH_RND.md`](../planning/AUTH_RND.md) decides (`TECH_DEB
 
 ## Machine callers
 
-Plugins and integrations get credentials, not user accounts. Key points, taken from how the
-reference projects do it:
+Plugins and integrations get credentials, not user accounts. Key points:
 
 - Rate-limit **per credential**, not per IP. Several consumers behind one NAT otherwise share a
   budget, and one noisy integration starves the others

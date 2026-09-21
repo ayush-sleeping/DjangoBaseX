@@ -77,6 +77,22 @@ write the ADR. Closes **DB-1**.
 then how that is granted. 1.3 sits between them because RBAC's catalog is assembled from registry
 registrations and cannot be built without the seam.*
 
+### 1.0 — Dependencies and the deployment contract ⬜
+*Added 2026-09-21 by the design review. **Nothing else in Phase 1 builds without it** — the spec as
+written imports five libraries the project does not have.*
+
+Per [`AUTH_BLUEPRINT.md`](../system-design/AUTH_BLUEPRINT.md) Ch. 16 and 17: add `pyjwt`, `pyotp`,
+`cryptography`, `argon2-cffi` and `redis` to `backend/pyproject.toml`; add `CACHES` (from
+`CACHE_URL`), `TRUSTED_PROXY_COUNT`, `ADMIN_ENABLED`, the `EMAIL_*` keys and `PASSWORD_HASHERS`;
+write `core/http.py::client_ip()`; tighten the CORS settings. Every new key goes into `.env.example`
+with a placeholder in the same change.
+
+⚠️ `backend/pyproject.toml` and `backend/config/settings.py` are **protected files** — ask first.
+
+**Done when:** `manage.py check` passes with `CACHE_URL` pointing at Redis, `client_ip()` returns
+`REMOTE_ADDR` when `TRUSTED_PROXY_COUNT=0` and ignores a spoofed `X-Forwarded-For`, and
+`.env.example` documents every new key.
+
 ### 1.1 — Authentication ⬜
 Implement what 0.2 decided: register, login, logout, `/me`, password reset, and the frontend half in
 `src/lib/api.ts`.
@@ -126,8 +142,10 @@ names are `<module>.<feature>.<action>`. Fail closed, matching DRF's existing `I
 default.
 
 - `Role` and `UserRole` — roles hold permissions, users hold roles
-- Seeded system roles `admin` (every permission, recomputed as plugins are added) and `staff` (read
-  everything, write nothing), both `is_system=True` and seeded idempotently
+- Seeded system roles `administrator` (every permission, recomputed on every seed) and `staff`
+  (**nothing** — the safe default for a new account), both `is_system=True` and seeded idempotently.
+  ⚠️ The grant recomputation runs in `post_migrate` **after** the catalog seed, not in the role
+  migration — at migration time there are no permissions to grant (`AUTH_BLUEPRINT.md` Ch. 13)
 - `/me` returns the current user's permission codes; the frontend `can()` helper uses them **only to
   hide UI**, never as the authorization decision
 - The roles admin screen **last** — it is the easiest part and the one most likely to be built first
@@ -142,12 +160,38 @@ template, so shortcuts here get copied forever.
 
 **Done when:** full CRUD works end to end, is permission-gated, is paginated, and has tests.
 
+### 1.5b — Email and the first account ⬜
+*Added 2026-09-21. `AUTH_BLUEPRINT.md` Ch. 18 and § 19.1 — **1.1c and 1.1d cannot be demonstrated
+without this**, because password reset and invitations both send mail, and with `is_active`
+defaulting to `False` nothing can create account one.*
+
+Email templates (`.txt` **and** `.html`) plus `send_password_reset()` / `send_invitation()`, sent
+from `transaction.on_commit()` and never inside the transaction; links built from
+`FRONTEND_BASE_URL`, **never** from the `Host` header. Plus `manage.py bootstrap_admin`.
+
+**Done when:** a reset email appears on the console in dev and its link works; `bootstrap_admin`
+run twice creates one account and exits non-zero the second time.
+
 ### 1.6 — `core/` vs `project/` split ⬜
 Split the backend into `core/` (platform) and `project/` (product) with `config/` as composition
 root; mirror on the frontend. Add the boundary tests: `core/` must not import `project`, and
 `frontend/src/core/` must not import `src/project/`.
 
 **Done when:** deleting `project/` leaves a working platform, and a test asserts it.
+
+---
+
+### 1.7 — Operations and the admin decision ⬜
+*Added 2026-09-21. `AUTH_BLUEPRINT.md` § 19.2–19.3 and Ch. 20.*
+
+`manage.py auth_cleanup` (retention for sessions, login attempts and reset tokens —
+**never** the activity log); `MAX_SESSIONS_PER_USER`; `JWT_SIGNING_KEY_FALLBACKS` with a `kid`
+header, so rotating the signing key is not a scheduled outage; and `/admin/` mounted only when
+`ADMIN_ENABLED`, with the `rbac` models **not registered** — the admin otherwise bypasses every
+guard in `AUTH_BLUEPRINT.md` Ch. 8 and writes no audit row.
+
+**Done when:** `auth_cleanup --dry-run` reports counts and deletes nothing; a token signed with a
+fallback key still verifies; `/admin/` is absent with `ADMIN_ENABLED=False`.
 
 ---
 
@@ -232,6 +276,11 @@ the manifest was regenerated.
 ### 4.4 — Docker Compose ⬜
 Postgres + Redis + both apps. Closes **DB-12** properly by making Postgres the default local
 database.
+
+⚠️ **Redis itself is no longer a Phase 4 concern** — task `1.0` needs it. `AUTH_BLUEPRINT.md` § 17.4
+shows the permission cache, session liveness and every throttle are all per-worker on Django's
+default `LocMemCache`, which makes a shared cache a correctness requirement rather than a
+performance one. This task packages it; it does not introduce it.
 
 ---
 
