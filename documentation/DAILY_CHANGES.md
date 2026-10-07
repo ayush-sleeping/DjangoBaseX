@@ -24,6 +24,60 @@ Newest first.
 
 ---
 
+## 2026-09-29
+
+### The platform blueprint — every capability a strong base needs, specified
+**What:** Added the master capability map `planning/PLATFORM_BLUEPRINT.md` and fourteen specification
+documents under `system-design/` (~20,000 lines in total). The specs cover configuration, extensibility, the
+API platform, jobs and integrations, notifications and alerting, observability, operations, the frontend
+platform, data lifecycle, domain primitives, optional modules, the bug-class register, engineering practices
+and a lessons catalogue. `BUILD_ORDER.md` gains Phases 5–9 (platform services, each task with acceptance
+criteria); the old Phase 5 is now Phase 10. `VISION.md` gains principle 7, *"Nothing hard-coded — a product,
+not a college project"*, and its two related non-goals are clarified. `ROADMAP.md` and `INDEX.md` list the new
+specs. `TECH_DEBT.md` gains DB-18 – DB-31.
+
+**Why:** The repository owner's brief: a base that any large product (ERP, CRM, e-commerce, anything) can be
+built on from day one — reliable, powerful, nothing hard-coded. Several mature production codebases from
+different domains were studied read-only (~450 findings), and every mechanism worth having was written down
+as a pattern with the failure it prevents. Per `AGENTS.md` rule 5a no source is named anywhere; each spec
+carries a *Blueprint — nothing built yet* banner.
+
+**Found while doing it (now in `TECH_DEBT.md`), each verified against the installed code:**
+- **DB-30** — today's `AnonRateThrottle` runs with DRF `NUM_PROXIES` unset, so DRF keys it on the whole
+  client-supplied `X-Forwarded-For` header and the limit is bypassable. The same block pins no renderer or
+  parser classes.
+- **DB-25** — the documented `get_random_secret_key()` recipe can produce a key starting with `$`, which
+  django-environ reads as a reference to another variable.
+- **DB-31** — DRF answers 403, not 401, when the authenticator has no `authenticate_header()`; the planned
+  "refresh on 401" client contract would never fire.
+- **DB-26** — `AUTH_BLUEPRINT.md` puts `__Host-` on a cookie scoped to `Path=/api/`; browsers reject that.
+- **DB-18 – DB-24, DB-27 – DB-29** — spec contradictions and gaps: the plugin-import swallow, system checks not
+  running under gunicorn, cookie paths invisible to page navigations, the machine-caller model, the
+  `PUBLIC_ROUTES` seam, the tenancy evidence, the API prefix, DB-11's inaccurate description, the Turbopack
+  root, and SQLite ignoring `select_for_update()`.
+
+**Files:** `planning/PLATFORM_BLUEPRINT.md` (new); `system-design/{CONFIGURATION, EXTENSIBILITY, API_PLATFORM,
+JOBS_AND_INTEGRATIONS, NOTIFICATIONS_AND_ALERTING, OBSERVABILITY, OPERATIONS, FRONTEND_PLATFORM,
+DATA_LIFECYCLE, DOMAIN_PRIMITIVES, REUSABLE_MODULES, BUG_CLASSES, ENGINEERING_PRACTICES, LESSONS_LEARNED}.md`
+(new); `VISION.md`, `INDEX.md`, `planning/BUILD_ORDER.md`, `planning/ROADMAP.md`, `planning/TECH_DEBT.md`.
+
+**Verification:** documentation only; no code changed. A scan for source names, ticket numbers and
+market-specific literals found none in the new or edited files. A link-and-anchor check over every `.md` in
+`documentation/`, `README.md` and `AGENTS.md` found no broken links (the one hit is the ADR template's
+deliberate `NNNN-….md` placeholder). The `AGENTS.md` § 2 code gate was not run, because no code changed.
+
+**Still open:**
+- Each spec ends with *Pending decisions* for the owner. The cross-cutting ones are in `PLATFORM_BLUEPRINT.md`
+  § 5 and § 6.
+- `ENGINEERING_PRACTICES.md` proposes `AGENTS.md` additions (worktree protocol, the diff is the verdict,
+  autospec mocks, the bug-class trigger, a Field Notes table). They await approval, because `AGENTS.md` is a
+  protected file. Several specs also propose edits to protected files (`backend/pyproject.toml`,
+  `frontend/next.config.ts`, and the `config/settings.py` split); none were made.
+- The existing docs each spec lists under *⚠️ Conflicts* were deliberately **not** edited; they are resolved
+  task by task per `BUILD_ORDER.md`.
+
+---
+
 ## 2026-09-21
 
 ### Design review of the auth/authz/RBAC blueprint — 28 gaps found and closed

@@ -25,6 +25,19 @@ Built by accumulation, one module at a time, tracking the
 | Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
 | Test suite | pytest + pytest-django + factory_boy | ⬜ |
 | Containerisation | docker-compose — Django + Next + Postgres + Redis | ⬜ |
+| Configuration — nothing hard-coded | Boot refusal, typed settings registry, feature flags, lookups, locale/currency/timezone settings — [`CONFIGURATION.md`](../system-design/CONFIGURATION.md) | ⬜ |
+| Extensibility | Full registry catalogue, soft-disable, versioned plugin SDK — [`EXTENSIBILITY.md`](../system-design/EXTENSIBILITY.md) | ⬜ |
+| Observability | Request ids, JSON logs, one scrubber, three-rung health, metrics, error tracking — [`OBSERVABILITY.md`](../system-design/OBSERVABILITY.md) | ⬜ |
+| Jobs & integrations | Job monitor, outbox, reconcilers, webhooks, safe HTTP, encrypted credentials — [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md) | ⬜ |
+| Notifications & alerting | Purposes, channels, in-app store, ops alerting — [`NOTIFICATIONS_AND_ALERTING.md`](../system-design/NOTIFICATIONS_AND_ALERTING.md) | ⬜ |
+| Data lifecycle | Audit engine, retention, soft delete, provenance, scoping — [`DATA_LIFECYCLE.md`](../system-design/DATA_LIFECYCLE.md) | ⬜ |
+| Domain primitives | Money, sequences, state machines, bulk, import/export — [`DOMAIN_PRIMITIVES.md`](../system-design/DOMAIN_PRIMITIVES.md) | ⬜ |
+| API platform | List pipeline, error catalogue, machine callers, contracts, files — [`API_PLATFORM.md`](../system-design/API_PLATFORM.md) | ⬜ |
+| Frontend platform | Transport, data layer, module contract, nav-as-gate, tokens, i18n — [`FRONTEND_PLATFORM.md`](../system-design/FRONTEND_PLATFORM.md) | ⬜ |
+| Operations | Setup, release images, rolling deploy, backups/restore — [`OPERATIONS.md`](../system-design/OPERATIONS.md) | ⬜ |
+| Optional modules | Billing, approvals, documents, help centre, helpdesk, tenancy, search, AI — [`REUSABLE_MODULES.md`](../system-design/REUSABLE_MODULES.md) | ⬜ (plugins) |
+
+The full capability map behind the rows above, with tiers, is [`PLATFORM_BLUEPRINT.md`](PLATFORM_BLUEPRINT.md).
 
 ---
 
@@ -66,3 +79,5 @@ Dependency-ordered, not priority-ordered — each step is hard to do well before
 7. **Type generation** from `/api/schema/` into the frontend (`TECH_DEBT` **DB-4**)
 8. **Docker Compose** — Postgres + Redis, which unblocks realistic local development and CI
 9. **Celery + Redis**, then the activity log, then 2FA/social login
+10. **The platform services** — [`BUILD_ORDER.md`](BUILD_ORDER.md) Phases 5–9, in the order given there, before
+    a second product is built on the core

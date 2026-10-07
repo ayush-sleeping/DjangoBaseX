@@ -22,6 +22,21 @@ your task below, read the **Start Here** file, and stop.
 | **Understand what auth/RBAC designs get wrong** | [`system-design/AUTH_FAILURE_MODES.md`](system-design/AUTH_FAILURE_MODES.md) — the failure catalogue + design checklist |
 | **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
 | **Understand what this is FOR — read this first** | [`VISION.md`](VISION.md) |
+| **See every capability a strong base must have — the master map** | [`planning/PLATFORM_BLUEPRINT.md`](planning/PLATFORM_BLUEPRINT.md) |
+| **Make something configurable / avoid hard-coding a value** | [`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md) |
+| **Add a registry, a plugin seam, or a plugin contribution** | [`system-design/EXTENSIBILITY.md`](system-design/EXTENSIBILITY.md) |
+| **Build list endpoints, errors, rate limits, tokens, uploads** | [`system-design/API_PLATFORM.md`](system-design/API_PLATFORM.md) |
+| **Add a background job, webhook, integration or secret** | [`system-design/JOBS_AND_INTEGRATIONS.md`](system-design/JOBS_AND_INTEGRATIONS.md) |
+| **Send a notification or an ops alert** | [`system-design/NOTIFICATIONS_AND_ALERTING.md`](system-design/NOTIFICATIONS_AND_ALERTING.md) |
+| **Add logging, health checks, metrics or error tracking** | [`system-design/OBSERVABILITY.md`](system-design/OBSERVABILITY.md) |
+| **Release, deploy, back up or restore** | [`system-design/OPERATIONS.md`](system-design/OPERATIONS.md) — with [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) |
+| **Build frontend platform pieces (data layer, tables, nav, theming)** | [`system-design/FRONTEND_PLATFORM.md`](system-design/FRONTEND_PLATFORM.md) |
+| **Audit, retention, soft delete, provenance, scoping** | [`system-design/DATA_LIFECYCLE.md`](system-design/DATA_LIFECYCLE.md) |
+| **Money, numbering, state machines, bulk, import/export** | [`system-design/DOMAIN_PRIMITIVES.md`](system-design/DOMAIN_PRIMITIVES.md) |
+| **Build an optional module (billing, approvals, help centre…)** | [`system-design/REUSABLE_MODULES.md`](system-design/REUSABLE_MODULES.md) |
+| **Review a change for the bugs that keep recurring** | [`system-design/BUG_CLASSES.md`](system-design/BUG_CLASSES.md) |
+| **Write tests that can fail, gates that run, docs that stay true** | [`system-design/ENGINEERING_PRACTICES.md`](system-design/ENGINEERING_PRACTICES.md) |
+| **Learn from mistakes other codebases already made** | [`system-design/LESSONS_LEARNED.md`](system-design/LESSONS_LEARNED.md) |
 | **Understand the repo end to end, day one** | [`ONBOARDING.md`](ONBOARDING.md) |
 | **Know what actually exists vs what's planned** | [`planning/ROADMAP.md`](planning/ROADMAP.md) |
 | **Know what to build next, concretely** | [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md) — the executable backlog |

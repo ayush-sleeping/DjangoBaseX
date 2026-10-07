@@ -106,6 +106,16 @@ no doc, because people build on it. `TECH_DEBT.md` lists defects we are not fixi
 The expensive decisions — the auth model, the primary key type, whether tenancy exists — get settled
 by accident if nobody settles them on purpose. Write the ADR before the code.
 
+### 7. Nothing hard-coded — a product, not a college project
+*Added 2026-09-29 by the repository owner.* Any value that can differ between deployments, tenants or
+businesses — hosts, brand, currency, timezone, locale, thresholds, vocabularies, credentials, role names —
+lives in env, the typed settings registry or a lookup table, never in code. A literal in core that names a
+model, path, event or ability is a registry waiting to be written. This is **not** a licence for knobs:
+behavioural switches stay few and must pass the admission test in
+[`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md). *No hard-coded facts; few knobs.*
+The full capability map this principle drives is
+[`planning/PLATFORM_BLUEPRINT.md`](planning/PLATFORM_BLUEPRINT.md).
+
 ---
 
 ## Success criteria
@@ -130,10 +140,13 @@ than at product five.
 ## Non-goals, stated so they do not creep in
 
 - **Not maximal configurability.** Every setting is a branch someone must maintain. Opinionated
-  defaults, few knobs
+  defaults, few knobs. This limits *behavioural switches*, not *values*: a deployment or business fact
+  is never hard-coded (principle 7)
 - **Not framework-agnostic.** It is Django and Next.js. An abstraction layer over either would cost
   more than it returns
-- **Not multi-language or multi-region on day one.** Add when a product needs it
+- **Not multi-language or multi-region on day one.** Add when a product needs it — but locale,
+  currency and timezone are settings from day one, and copy goes through a translation layer even while
+  only one language ships, so adding the second is data, not a sweep
 - **Not a performance project.** Correct, secure and clear first. Fast when something is measured slow
 
 ---

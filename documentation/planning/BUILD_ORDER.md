@@ -284,9 +284,283 @@ performance one. This task packages it; it does not introduce it.
 
 ---
 
-## Phase 5 — the real test
+## Phases 5–9 — the platform services
 
-### 5.1 — Build a second product on it ⬜
+*Added 2026-09-29 from the platform study. The map of what each phase delivers, and why, is
+[`PLATFORM_BLUEPRINT.md`](PLATFORM_BLUEPRINT.md); each task names the spec it builds to. Phases 5–9 are
+**Tier 1 and Tier 2 core** — everything a product needs before it can be the "second product" of Phase 10.
+Tier 3 modules (billing, approvals, help centre, …) are deliberately **not** in this order; they are built as
+plugins when the first product that needs them arrives — [`../system-design/REUSABLE_MODULES.md`](../system-design/REUSABLE_MODULES.md).*
+
+> ⚠️ **Resolve [`PLATFORM_BLUEPRINT.md`](PLATFORM_BLUEPRINT.md) § 5 before the tasks it touches.** Eleven places
+> where an existing spec — or today's code — contradicts what the study learned are tracked in `TECH_DEBT`
+> **DB-18 – DB-31**. Seven of them (DB-18, DB-19, DB-20, DB-25, DB-26, DB-30, DB-31) change Phase 0–3 tasks and are cheapest to fix *before* those tasks are built.
+
+> **Pulling forward is allowed.** 5.1 and 6.1 are small and make every later task safer; take them as soon as
+> Phase 2's test stack exists. Everything else stays in order.
+
+---
+
+## Phase 5 — configuration: nothing hard-coded
+
+*Spec: [`../system-design/CONFIGURATION.md`](../system-design/CONFIGURATION.md).*
+
+### 5.1 — Environment identity and the boot refusal ⬜
+One `is_production_like()` predicate (unknown `APP_ENV` counts as production), used by every check. The
+production audit runs **at settings import** and raises `ImproperlyConfigured` listing every problem at once —
+placeholder or short secrets, secrets equal to each other, `DEBUG`, console mail, localhost CORS, plain-text logs.
+Keep `dbx.E005`–`E008` for `check --deploy`. Closes **DB-7**, **DB-19**.
+
+**Done when:** importing settings with `APP_ENV=production` and the dev `.env` fails and names every problem; a
+valid production config imports (tested *first*); a CI step asserts the refusal; `APP_ENV=Production` and
+`APP_ENV=staging` are both treated as production-like.
+
+### 5.2 — Project identity ⬜
+`PRODUCT_NAME`, `PRODUCT_SLUG`, `PRIMARY_DOMAIN` in settings; OTP issuer, default from-address, cookie names and the
+API title derive from them. Shipped defaults announce themselves on screen.
+
+**Done when:** a test greps `backend/core/` and `frontend/src/core/` for the boilerplate's own name and finds
+nothing outside the settings defaults; changing `PRODUCT_NAME` changes all four derived values.
+
+### 5.3 — The typed settings registry ⬜
+`registry.settings.register(key, type, default, group, module, label, description, scope, min/max/choices)`;
+`sync_settings` in `post_migrate` refreshes metadata and **never resets a value**; strict coercion; values stored
+as `{"v": …}`; cached behind a version key bumped on write; every change audited old → new; scope cascade
+user → tenant → platform → code default (the tenant level stays inert until DB-23 is decided). Supersedes the
+narrower `core_setting` of `AUTH_BLUEPRINT.md` § 3.13 — reconcile the two in the same PR.
+
+**Done when:** re-running `sync_settings` keeps an admin-edited value; `"false"` coerces to `False` and `"yes"` is
+refused; an unregistered key cannot be written; a test fails on any registered key that no code outside the
+settings app reads.
+
+### 5.4 — Feature flags and guard modes ⬜
+`FeatureFlag` with kill-switch-first resolution (disabled beats targeting; unknown key is off; no
+`default=True` parameter exists), owner and expiry; a `GuardMode` helper for `off · log_only · enforce`.
+
+**Done when:** the resolution order is pinned by tests; a flag past its expiry fails a test; the flags a user
+sees are exposed on `/me`; shipping a new guard at its default changes no response (a test proves it).
+
+### 5.5 — Vocabularies, locale, currency and time ⬜
+A `Lookup` base (stable non-editable key, editable label, `is_active`, order) with request-time membership
+validation; platform / tenant / user settings for locale, currency, timezone and formats; storage in UTC and
+ISO-8601 on the wire.
+
+**Done when:** an admin can add a lookup value with no deploy; a deactivated value is refused on new writes but
+still renders on old rows; the API never returns a display-formatted date.
+
+### 5.6 — Anti-hard-coding scans ⬜
+`tests/architecture/` scans for ISO-4217 and IANA timezone literals, role-name string literals and secret-shaped
+`env()`/`os.environ` reads outside settings — each with a ratchet allow-list whose entries must still offend.
+
+**Done when:** adding `"USD"` to a service fails a test that names the file and line.
+
+---
+
+## Phase 6 — observability and data foundations
+
+*Specs: [`OBSERVABILITY.md`](../system-design/OBSERVABILITY.md), [`DATA_LIFECYCLE.md`](../system-design/DATA_LIFECYCLE.md),
+[`DOMAIN_PRIMITIVES.md`](../system-design/DOMAIN_PRIMITIVES.md), [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md) § encryption.*
+
+### 6.1 — Request id, structured logs, one scrubber ⬜
+Validated `X-Request-ID` in a contextvar set first and reset only after the response is built; JSON logs in
+production (enforced by 5.1); one scrubber used by logging and Sentry. Closes **DB-9**.
+
+**Done when:** a 500 body and its log line carry the same request id; a canary password sent through a normal
+and a failing-validation request appears in no log line.
+
+### 6.2 — Health in three rungs and data-plane checks ⬜
+`/api/health/live` (no I/O), `/api/health/ready` (DB + cache, timeouts, no third parties, throttle-exempt),
+`/api/health/components` (permission-gated); a registry of data-plane checks for required rows. Closes **DB-11**.
+
+**Done when:** `ready` answers 503 with the database stopped while `live` answers 200; a deliberately broken
+check degrades to `warn` instead of raising.
+
+### 6.3 — Encryption service ⬜
+`FIELD_ENCRYPTION_KEYS` (MultiFernet, newest first, separate from `SECRET_KEY`), a startup self-test, explicit
+encrypt/decrypt functions, masking, and `rotate_encryption`. ⚠️ **If Phase 1 has not yet stored an MFA secret in
+production, do this before it does** — it replaces the single-purpose MFA key.
+
+**Done when:** rotating `SECRET_KEY` leaves every encrypted value readable; adding a new key and running
+`rotate_encryption` re-encrypts; a decrypt failure raises and never returns ciphertext.
+
+### 6.4 — Audit engine to spec ⬜
+Extend the Phase 1 activity log with field diffs (secrets masked at any depth), source/via and CLI provenance,
+batch id, `status_changed`, structural read-only and a streamed export.
+
+**Done when:** an update records only changed fields with FK names and choice labels; a management command's
+writes are attributed to the command, the OS user and the host; no write route exists on the log.
+
+### 6.5 — Money and invariants ⬜
+`core.money` (Decimal + currency, one quantisation helper, one rounding mode) and the invariant pattern: a
+`clean()` validator plus a DB constraint plus an `IntegrityError` mapping.
+
+**Done when:** a source scan fails on a `FloatField` or float serializer field named like money; a test proves a
+`QuerySet.update()` that bypasses `clean()` is still refused by the database.
+
+---
+
+## Phase 7 — jobs, events, integrations and notifications
+
+*Specs: [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md),
+[`NOTIFICATIONS_AND_ALERTING.md`](../system-design/NOTIFICATIONS_AND_ALERTING.md).*
+
+### 7.1 — Celery, the job registry and queue invariants ⬜
+Jobs declared in the registry and synced into beat in `post_migrate`; `task_create_missing_queues=False`; ids-only
+payloads dispatched `on_commit`. Closes **DB-16**.
+
+**Done when:** a test fails if any declared queue has no worker in the compose file, or any beat entry names an
+unregistered task; `auth_cleanup` runs from beat, not cron.
+
+### 7.2 — Job-run monitor and the doctor umbrella ⬜
+`JobRun` recorded from Celery signals (never raising, own connection); health states
+`disabled · never_run · failing · overdue · ok` and "worker seen recently"; `manage.py doctor` running every
+registered doctor with `--json` and exit codes.
+
+**Done when:** stopping the worker turns the monitor red within three intervals while the failed-jobs count stays
+zero; `doctor` exits non-zero on a planted problem.
+
+### 7.3 — Outbox, reconcilers and locks ⬜
+Transactional outbox (unique dedupe key, `SKIP LOCKED` leases, stale-lease recovery, `unknown` state); a
+`Reconciler` base; single-flight locks with short TTLs; the open-findings queue.
+
+**Done when:** killing a worker mid-send leaves the row `unknown`, not re-sent; a rolled-back transaction leaves
+no outbox row.
+
+### 7.4 — Safe outbound HTTP and the non-production guard ⬜
+One HTTP client factory (timeouts, retries honouring `Retry-After`, redaction, private-range refusal, per-target
+breaker); provider error mapping; outside production an allow-list transport answering 423 and mail redirected to
+one test recipient.
+
+**Done when:** a request to a private address is refused before connecting; in development a non-allow-listed
+POST gets 423 and no mail leaves the machine except to the test recipient.
+
+### 7.5 — The retention engine ⬜
+`registry.retention` policies with age **and** row caps, batched deletes, opt-in for evidence tables, floors,
+`--status` / `--dry-run`. `auth_cleanup` becomes one caller.
+
+**Done when:** `--dry-run` reports counts and deletes nothing; a retention value of `0` is clamped to the floor; the
+audit log is untouched unless named explicitly.
+
+### 7.6 — Webhooks, outbound and inbound ⬜
+Signed `timestamp.body`, SSRF guard at write **and** send, no redirects, 4xx permanent, backoff, breaker, delivery
+log with redeliver and send-test, emitted through the outbox; inbound verification with DB idempotency.
+
+**Done when:** a test fails if any catalogue event has no emitting call site, and fails — not skips — if it finds
+no events at all.
+
+### 7.7 — Notifications ⬜
+Purposes registry with admin routing, channel adapters, the event × channel matrix with per-user preferences,
+the in-app store (per-user read, shared resolve, digest upsert) and email templates.
+
+**Done when:** a caller can notify with no destination in code; a failing channel never fails the save; "send
+test" works for every route.
+
+### 7.8 — Ops alerting ⬜
+One dispatcher with a DB ledger, incidents announced once and recovered once, quiet hours with a single release
+summary, and a twice-daily digest.
+
+**Done when:** a flapping check produces one incident message and one recovery message, and cooldowns survive a
+cache clear.
+
+---
+
+## Phase 8 — the frontend platform
+
+*Spec: [`FRONTEND_PLATFORM.md`](../system-design/FRONTEND_PLATFORM.md). Depends on 1.1 (auth) and 1.4 (`/me`).*
+
+### 8.1 — Transport, typed errors and the data layer ⬜
+One transport module with typed errors and `retry_after` handling; ESLint bans `fetch` elsewhere; one data/cache
+layer (decide first — `PLATFORM_BLUEPRINT.md` § 6); `useApiQuery` / `useApiList` / `usePagedQuery` with the
+load-state contract.
+
+**Done when:** an AST ratchet test fails on a new `useEffect` + `setLoading` fetch in a page; a failed list fetch
+renders an error, never an empty state.
+
+### 8.2 — Bootstrap, permissions, navigation and the session marker ⬜
+`/api/me/bootstrap`; a fail-closed permission provider on *effective* permissions; server-built navigation that is
+also the route gate (default-deny); the `Path=/` session marker cookie. Closes **DB-20**.
+
+**Done when:** a page with no navigation entry is refused and a test walking `app/**/page.tsx` fails on it; a
+signed-in user whose access token has expired is refreshed, not bounced.
+
+### 8.3 — Design system and the module contract ⬜
+Semantic tokens with foreground pairs, dark mode, the Index · Form · Show shells, the standard DataTable and the
+mandatory primitives — built against the Users module of 1.5 as the reference.
+
+**Done when:** the token-completeness test passes in both themes; the Users module uses only the shells.
+
+### 8.4 — i18n, formatters and contract generation ⬜
+A translation layer with per-plugin catalogues; formatters driven by bootstrap locale/currency/timezone;
+OpenAPI → TypeScript types plus exported enums and permission codes, each with a drift check. Closes **DB-4**.
+
+**Done when:** changing a serializer field without regenerating fails CI; a hard-coded currency formatter in a
+page fails lint.
+
+### 8.5 — CSP and runtime branding ⬜
+Per-request nonce CSP, Report-Only first with enforcement flipped by a runtime variable; runtime brand identity
+with a validated colour grammar and a backend contrast solver.
+
+**Done when:** enforcing the CSP needs a restart, not a rebuild; a brand colour failing WCAG AA is refused with the
+measured ratio and a passing suggestion.
+
+---
+
+## Phase 9 — platform completeness
+
+*Before the second product. Specs: [`EXTENSIBILITY.md`](../system-design/EXTENSIBILITY.md),
+[`API_PLATFORM.md`](../system-design/API_PLATFORM.md), [`DATA_LIFECYCLE.md`](../system-design/DATA_LIFECYCLE.md),
+[`DOMAIN_PRIMITIVES.md`](../system-design/DOMAIN_PRIMITIVES.md), [`OPERATIONS.md`](../system-design/OPERATIONS.md),
+[`ENGINEERING_PRACTICES.md`](../system-design/ENGINEERING_PRACTICES.md).*
+
+### 9.1 — The full registry catalogue and plugin lifecycle ⬜
+Every registry in `EXTENSIBILITY.md` with the uniform contribution shape; the soft-disable contract; the versioned
+SDK facade; service contracts. Needs Phase 3. Closes **DB-18**, **DB-22**.
+
+**Done when:** disabling a plugin hides its nav, routes, jobs, search sources and help pages without touching its
+data; `manage.py check` passes with every plugin removed from `INSTALLED_APPS`.
+
+### 9.2 — API platform ⬜
+The shared list pipeline (required pk tiebreak, unknown filters rejected), the error-code catalogue, the 429
+contract, content-sniffed uploads with private file serving, and machine callers once **DB-21** is decided.
+
+**Done when:** a list endpoint sorted on a non-unique column never repeats or drops a row across pages; an upload
+renamed to `.png` but containing HTML is refused.
+
+### 9.3 — Data lifecycle ⬜
+Soft delete with partial unique constraints and the recycle bin; state-transition history; provenance; every
+listable model registered for scoping, with write-path narrowing.
+
+**Done when:** a test fails if any model with a tenant or owner field is not registered for scoping; a user who
+cannot see a row gets 404 on `PATCH` to it.
+
+### 9.4 — Domain primitives ⬜
+Document sequences (peek vs reserve), the state-machine helper, the business calendar, bulk actions, the
+import/export registry.
+
+**Done when:** two concurrent reservations on a fresh database mint different numbers; a bulk action over "all
+matching" touches exactly the rows the list shows.
+
+### 9.5 — Operations ⬜
+Release images, the deploy driver, verified backups, restore with `config_snapshot`, infrastructure policy tests,
+the first-run wizard.
+
+**Done when:** a deploy whose backup fails stops before migrating; a restored dump from another environment comes
+up with its schedules and integrations disabled.
+
+### 9.6 — Engineering practice ⬜
+`BUG_CLASSES.md` in the PR template; the upgraded ADR template; generated folder indexes and a doc link test;
+`CHANGELOG.md` with upgrade notes; per-app idempotent `seed_demo`. Closes **DB-13**.
+
+**Done when:** a broken relative link in `documentation/` fails CI; `seed_demo` run twice creates each demo row
+once.
+
+---
+
+## Phase 10 — the real test
+
+*Renumbered from Phase 5 on 2026-09-29, when the platform-service phases were inserted before it.*
+
+### 10.1 — Build a second product on it ⬜
 **Nothing proves a core is reusable until something else is built on it.** Whatever hurts the second
 time is the design flaw. It is far cheaper to find at product two than at product five.
 
@@ -294,10 +568,10 @@ time is the design flaw. It is far cheaper to find at product two than at produc
 
 ## Not in any phase — do these when they come up
 
-- **DB-7** — refuse `DEBUG=True` and placeholder secrets when not in development
+- **DB-7** — refuse `DEBUG=True` and placeholder secrets when not in development → now **5.1**
 - **DB-8** — production security settings (`SECURE_SSL_REDIRECT`, secure cookies, HSTS)
-- **DB-9** — `LOGGING` configuration with request correlation
-- **DB-11** — a readiness probe that actually checks the database
-- **DB-4** — generate frontend types from `/api/schema/`
+- **DB-9** — `LOGGING` configuration with request correlation → now **6.1**
+- **DB-11** — a readiness probe that actually checks the database → now **6.2**
+- **DB-4** — generate frontend types from `/api/schema/` → now **8.4**
 - **DB-3** — `mypy` + `django-stubs`
-- **DB-13** — a `seed` management command
+- **DB-13** — a `seed` management command → now **9.6**
