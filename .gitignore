@@ -33,3 +33,12 @@ frontend/out/
 frontend/coverage/
 frontend/*.tsbuildinfo
 frontend/next-env.d.ts
+
+# --- AI agents (see documentation/core/AGENT_TOOLING.md) ---
+# Personal, per-machine: never shared. .claude/settings.json, rules, skills, agents and
+# agent-memory/ ARE committed.
+.claude/settings.local.json
+.claude/agent-memory-local/
+.claude/worktrees/
+.claude/**/__pycache__/
+CLAUDE.local.md

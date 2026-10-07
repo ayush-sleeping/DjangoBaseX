@@ -1,0 +1,4 @@
+# Gitignored files to copy into each new git worktree (Claude Code reads this file).
+# Never copy db.sqlite3: one lane, one database.
+backend/.env
+frontend/.env.local

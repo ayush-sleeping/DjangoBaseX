@@ -55,6 +55,7 @@ your task below, read the **Start Here** file, and stop.
 | **See what changed recently** | [`DAILY_CHANGES.md`](DAILY_CHANGES.md) |
 | **See what shipped, by version** | [`VERSION_SUMMARY.md`](VERSION_SUMMARY.md) |
 | **Know the rules I'm working under** | [`../AGENTS.md`](../AGENTS.md) — the operating contract |
+| **Change agent tooling — hooks, skills, subagents, `.claude/`** | [`core/AGENT_TOOLING.md`](core/AGENT_TOOLING.md) |
 
 ---
 

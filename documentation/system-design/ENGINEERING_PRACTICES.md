@@ -2022,6 +2022,9 @@ touches the named doc.
    ([§ 19](#19-ruff-configuration-discipline--process))
 6. **Harness hooks that refuse protected-file edits** — they encode `AGENTS.md`'s protected list in tooling, which is
    itself agent configuration. ([§ 39](#39-collision-files-protected-files-and-hooks--process))
+   **Decided 2026-10-07 — [ADR-0007](../adr/0007-claude-code-harness.md):** protected-file edits *ask* rather than
+   refuse; the hook lives in `.claude/hooks/` and reads the list from `AGENTS.md` itself (no `protected.txt`); bulk
+   staging is not refused. § 40's skills, implementer agent and drift checks are built as described there.
 7. **The numbers**: the default coverage floor for new core code (60% suggested), the PR size classes
    (300/800/1,500), the file-size caps. ([§ 10](#10-coverage-per-file-floors-a-default-for-new-code-a-ratchet-that-never-lowers--process), [§ 22](#22-file-size-caps-as-a-ratchet-per-layer--process), [§ 45](#45-pr-size-budgets-every-pr-mergeable-and-dark--process))
 8. **Playwright for browser checks** — `TESTING_STRATEGY.md`'s stack table does not yet list an end-to-end tool.

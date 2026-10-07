@@ -15,6 +15,7 @@ Built by accumulation, one module at a time, tracking the
 | Health check | `/api/health/` | ✅ |
 | API docs | drf-spectacular at `/api/docs/` | ✅ |
 | Lint + format | Ruff | ✅ |
+| AI agent guard rails | `AGENTS.md` contract + `.claude/` hooks, skills, subagents — [`AGENT_TOOLING.md`](../core/AGENT_TOOLING.md) | ✅ |
 | Python types | mypy | ⬜ |
 | Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ⬜ |
 | Roles & permissions | Code-declared catalog + DRF permission classes + object-level scoping | ⬜ |

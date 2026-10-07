@@ -23,6 +23,7 @@ Template: [`adr/0000-template.md`](adr/0000-template.md).
 | [0004](adr/0004-ruff-is-the-only-python-tool.md) | Ruff is the only Python lint/format tool | Accepted | 2026-09-15 |
 | [0005](adr/0005-sqlite-for-dev-postgres-by-url.md) | SQLite for development, PostgreSQL via `DATABASE_URL` | Accepted | 2026-09-15 |
 | [0006](adr/0006-one-agent-contract.md) | One agent contract, at the repository root | Accepted | 2026-09-15 |
+| [0007](adr/0007-claude-code-harness.md) | `.claude/` enforces and points at the contract; it never holds rules | Accepted | 2026-10-07 |
 
 ---
 

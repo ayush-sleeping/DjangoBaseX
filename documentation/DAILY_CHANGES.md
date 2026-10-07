@@ -24,6 +24,70 @@ Newest first.
 
 ---
 
+## 2026-10-07
+
+### Agent tooling: `.claude/` guard rails, skills and subagents; a contract under budget
+**What:** Added a Claude Code harness following the official `.claude` directory layout:
+- `.claude/settings.json`: attribution off, the § 2 gate allow-listed, and `.env` reads denied.
+- Two hooks: `agent_guard.py` (PreToolUse) and `session_context.py` (SessionStart), plus a stdlib self-test.
+- Five pointer-only path-scoped rules.
+- Seven skills: `/verify`, `/changelog`, `/commit`, `/next-task`, `/adr`, `/bug-class-check` and
+  `/new-django-app`.
+- Three subagents: `code-reviewer`, `doc-auditor` and `implementer`. The first two have committed memory.
+- `.worktreeinclude` and `GEMINI.md`, which imports `AGENTS.md`.
+
+`AGENTS.md` went from 240 to 198 lines with every rule kept: procedures moved to skills, and § 7 was rewritten
+as "Agents and tooling". The protected list gained `GEMINI.md` and `.claude/settings.json`, and rule 7 gained
+`.claude/settings.local.json`. The decision is recorded as ADR-0007, and the subsystem is documented in
+`core/AGENT_TOOLING.md`.
+
+**Why:** Every rule depended on the agent remembering it. `CLAUDE.md`/`AGENTS.md` are context, not
+enforcement, and the contract exceeded the documented ~200-line adherence budget. The owner's choices
+(2026-10-07):
+- `.claude/rules/` holds pointers only, which keeps ADR-0006 intact and Codex, Cursor and Copilot on the
+  full rule set.
+- Protected-file edits **ask** rather than refuse.
+- The guard refuses malformed or AI-attributed commit messages and history rewriting. Bulk staging and
+  plain pushes are not refused.
+- A `GEMINI.md` pointer is added. No other per-tool files.
+
+This resolves `ENGINEERING_PRACTICES.md` pending decision 6.
+
+**Files:**
+- New: `.claude/settings.json`, `.claude/hooks/{agent_guard,session_context,test_agent_guard}.py`,
+  `.claude/rules/{backend,migrations,frontend,documentation,agent-config}.md`,
+  `.claude/skills/{verify,changelog,commit,next-task,adr,bug-class-check,new-django-app}/SKILL.md`,
+  `.claude/agents/{code-reviewer,doc-auditor,implementer}.md`,
+  `.claude/agent-memory/{code-reviewer,doc-auditor}/MEMORY.md`, `.worktreeinclude`, `GEMINI.md`,
+  `documentation/adr/0007-claude-code-harness.md`, `documentation/core/AGENT_TOOLING.md`.
+- Edited: `AGENTS.md`, `.gitignore`, `documentation/{ADR,INDEX,DAILY_CHANGES}.md`,
+  `documentation/planning/ROADMAP.md`, `documentation/system-design/ENGINEERING_PRACTICES.md` (pending
+  decision 6 marked decided).
+
+**Verification:**
+- `python3 .claude/hooks/test_agent_guard.py`: 18 tests, OK. The run includes the guard parsing the rewritten
+  `AGENTS.md` protected list (14 entries) and the commit types.
+- `session_context.py` run by hand printed the branch, the dirty files, django 5.2.17 / DRF 3.18.1 / next
+  16.3.4 / react 19.2.8, and the next task (0.1 🚧 DECISION).
+- `settings.json` parses as JSON, and every `.claude/**` frontmatter block parses as YAML.
+- A link-and-anchor check over `documentation/**`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` and
+  `.claude/**` found 0 problems. Every path cited in `.claude/**` exists, except the gitignored
+  `settings.local.json`, by design.
+- A name and secret scan of every changed file found 0 hits. `AGENTS.md` is 198 lines.
+- **Not verified live:** hooks register at session start, so this session could not exercise them. A probe
+  `git commit -m "Updated stuff"` reached git, which refused it only because nothing was staged.
+- The § 2 code gate was not run, because no backend or frontend code changed.
+
+**Notes / still open:**
+- Hooks load at session start. Run `/hooks` in a new session to confirm they registered.
+- Enforcement is Claude Code only. Other agents get the same written rules.
+- The `CLAUDE.md` maintainer comment still says the import is "the ONLY thing that loads automatically",
+  which is no longer true now that `.claude/rules/` and skill descriptions exist. It is a protected file and
+  was left unedited. The comment is stripped from context, so the stale text costs nothing at runtime.
+- A `commit-msg` git hook for humans (`ENGINEERING_PRACTICES.md` § 39) is still future work.
+
+---
+
 ## 2026-09-29
 
 ### The platform blueprint — every capability a strong base needs, specified
