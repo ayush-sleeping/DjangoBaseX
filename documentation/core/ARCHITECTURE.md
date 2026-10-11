@@ -81,12 +81,9 @@ Everything environment-dependent comes from `.env` through `django-environ`, rea
 | `DEFAULT_THROTTLE_CLASSES` | `AnonRateThrottle`, `UserRateThrottle` | Basic rate limiting is on |
 | `DEFAULT_SCHEMA_CLASS` | drf-spectacular `AutoSchema` | Every view appears in the OpenAPI doc |
 
-> ⚠️ **Open question — session auth vs a separate-origin frontend.** `SessionAuthentication` means a
-> cookie, which means CSRF tokens on every write and `CORS_ALLOW_CREDENTIALS = True` (already set).
-> That works, but the [Roadmap](../planning/ROADMAP.md) plans **SimpleJWT**. These are different auth
-> models and mixing them halfway is where real bugs live. **Decide before building the first
-> authenticated endpoint**, and write the ADR — do not let it get settled by whichever endpoint
-> happens to be written first. Tracked as `TECH_DEBT` **DB-1**.
+> ⚠️ **`SessionAuthentication` above is a placeholder.** The auth model is decided
+> ([ADR-0009](../adr/0009-jwt-in-httponly-cookies.md)): JWT in `httpOnly` cookies backed by DB session
+> rows. `CookieJWTAuthentication` replaces it in `BUILD_ORDER` 1.1b. No endpoint authenticates yet.
 
 ---
 

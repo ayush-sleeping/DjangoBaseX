@@ -95,12 +95,12 @@ whose constraint and JSON behaviour differs.
 ### 5. Check the two foundational questions before writing a feature
 
 Both are in [`planning/TECH_DEBT.md`](planning/TECH_DEBT.md), both get settled by accident if nobody
-settles them on purpose, and both are **much** more expensive to change later. One is already
+settles them on purpose, and both are **much** more expensive to change later. Both are already
 settled in the core:
 
 | Decision | Why now |
 |----------|---------|
-| **DB-1 — session auth or JWT** | Whichever your first authenticated endpoint uses settles it. Different CSRF, CORS and refresh models |
+| **DB-1 — session auth or JWT** | ✅ **Settled in the core** ([ADR-0009](adr/0009-jwt-in-httponly-cookies.md)): JWT in `httpOnly` cookies with DB session rows. Your frontend must share a registrable domain with the API (`SameSite=Lax`) |
 | **DB-10 — custom `User` model** | ✅ **Settled in the core** ([ADR-0008](adr/0008-custom-user-model-email-identity.md)): your product inherits `users.User` with email login. Add fields to it; never swap `AUTH_USER_MODEL` |
 
 ### 6. Run it

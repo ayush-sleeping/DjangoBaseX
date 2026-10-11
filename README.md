@@ -281,7 +281,7 @@ Stated plainly, because assuming otherwise wastes time.
 - `uv` + Ruff on the backend, ESLint + strict TypeScript on the frontend
 - A custom `users.User` (email login, no username) as `AUTH_USER_MODEL` — [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)
 - `docker compose up` development stack with live reload on both halves
-- Full documentation set, 8 ADRs, an agent contract, and a ranked tech-debt register
+- Full documentation set, 9 ADRs, an agent contract, and a ranked tech-debt register
 
 **❌ Not built yet**
 - **Authentication** — no login, no tokens, no `/me`
@@ -291,11 +291,8 @@ Stated plainly, because assuming otherwise wastes time.
 - **CI** — no workflows
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
-**⚠️ One decision to settle before the first feature** — it gets decided by accident otherwise, and
-it is expensive to reverse:
-1. **Session auth or JWT** — see [`documentation/planning/AUTH_RND.md`](documentation/planning/AUTH_RND.md)
-
-The other, custom `User` model or Django's, is settled: [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md).
+**✅ Both foundational decisions are settled:** custom `User` model ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md))
+and JWT in `httpOnly` cookies backed by DB session rows ([ADR-0009](documentation/adr/0009-jwt-in-httponly-cookies.md)).
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
 

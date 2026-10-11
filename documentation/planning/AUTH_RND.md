@@ -2,7 +2,7 @@
 
 **Resolves [`TECH_DEBT.md`](TECH_DEBT.md) DB-1 — the decision blocking every authenticated feature.**
 
-**Status:** R&D, awaiting a decision. When decided, this becomes an ADR and this file points at it.
+**Status:** ✅ Decided 2026-10-11 — **option C**, recorded as [ADR-0009](../adr/0009-jwt-in-httponly-cookies.md), with the owner's answers to the four questions. This file is kept for the reasoning.
 
 ---
 

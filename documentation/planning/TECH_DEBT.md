@@ -13,7 +13,6 @@ problem was real.
 
 | ID | Pri | Title | Detail |
 |----|-----|-------|--------|
-| **DB-1** | 🔴 | **Auth model undecided — session vs JWT** | `config/settings.py` sets `SessionAuthentication`; [ROADMAP](ROADMAP.md) plans SimpleJWT. Different CSRF, CORS and refresh implications. **Whichever the first authenticated endpoint uses settles it by accident.** Decide deliberately and write the ADR *before* building auth |
 | **DB-5** | 🔴 | **No test suite** | `backend/core/tests.py` is Django's stub; the frontend has no runner installed. Nothing can fail a build. Every module added before the suite exists is a module whose tests get written "later" |
 | **DB-6** | 🔴 | **No CI** | No `.github/workflows/`. The `AGENTS.md` § 2 gate runs only when a person remembers. A broken `npm run build` or a missing migration can sit unnoticed indefinitely |
 | **DB-7** | 🟠 | **Nothing guards unsafe production defaults** | No `APP_ENV`-style check refuses `DEBUG=True` or a placeholder `SECRET_KEY` outside development. A default that is safe locally and unsafe in production is invisible until something asserts it |
@@ -53,4 +52,5 @@ person can see it was real, and how it was resolved._
 
 | ID | Pri | Title | Closed |
 |----|-----|-------|--------|
+| ~~**DB-1**~~ | 🔴 | ~~**Auth model undecided — session vs JWT**~~ | **2026-10-11** — [ADR-0009](../adr/0009-jwt-in-httponly-cookies.md): JWT in `httpOnly` cookies with DB session rows. `SessionAuthentication` stays in `settings.py` until 1.1b replaces it |
 | ~~**DB-10**~~ | 🟠 | ~~**Custom `User` model decision still open**~~ | **2026-10-11** — [ADR-0008](../adr/0008-custom-user-model-email-identity.md): `users.User`, email login, set as `AUTH_USER_MODEL` before any other migration referenced it |

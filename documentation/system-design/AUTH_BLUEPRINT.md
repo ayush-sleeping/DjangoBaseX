@@ -45,10 +45,10 @@ yourself designing while implementing, this document failed and should be fixed 
 ## 1. The decisions this encodes
 
 > ⚠️ **Two of these are `BUILD_ORDER` 🚧 DECISION items (`0.1`, `0.2`).** **A1–A3 (`0.1`) are
-> settled by [ADR-0008](../adr/0008-custom-user-model-email-identity.md)**, as written here
-> (2026-10-11). A4–A5 (`0.2`) are not yet an ADR. They are written here as **stated assumptions** so
-> the rest of the book is concrete. If the owner decides differently, the reversal cost is in the
-> last column — and Chapter 13 says what has to change.
+> settled by [ADR-0008](../adr/0008-custom-user-model-email-identity.md)** and **A4–A5 (`0.2`) by
+> [ADR-0009](../adr/0009-jwt-in-httponly-cookies.md)**, both as written here (2026-10-11). The rest
+> are this book's own decisions; the reversal cost is in the last column — and Chapter 13 says what
+> has to change.
 
 | # | Decision | Choice | Why | Reversal cost |
 |---|----------|--------|-----|---------------|

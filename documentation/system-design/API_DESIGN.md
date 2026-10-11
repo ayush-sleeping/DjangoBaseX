@@ -114,7 +114,7 @@ fields explicitly.
 
 ## Authentication
 
-Whatever [`../planning/AUTH_RND.md`](../planning/AUTH_RND.md) decides (`TECH_DEBT` DB-1). Regardless:
+JWT in `httpOnly` cookies backed by DB session rows ([ADR-0009](../adr/0009-jwt-in-httponly-cookies.md)); the flows are `AUTH_BLUEPRINT.md` Ch. 6. In addition:
 
 - `/api/auth/me/` returns the user **and their permission codes** — one round trip for the shell
 - Wrong password and unknown email answer **identically**, so the endpoint is not a user oracle

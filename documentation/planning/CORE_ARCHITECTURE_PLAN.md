@@ -235,7 +235,7 @@ Ordered by dependency. Each phase leaves the repo working.
 - [ ] `setup.sh`
 
 ### Phase 1 — the platform worth reusing
-Auth (resolve `TECH_DEBT` DB-1 first), RBAC through the permission registry, users CRUD as the
+Auth (cookie JWT per ADR-0009), RBAC through the permission registry, users CRUD as the
 reference module, activity log, settings, the dashboard shell and nav.
 
 ### Phase 2 — making it pleasant

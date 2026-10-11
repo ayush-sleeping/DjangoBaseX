@@ -26,6 +26,41 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 0.2 decided: JWT in `httpOnly` cookies with DB session rows (ADR-0009)
+**What:** The owner settled 0.2 with option C from `AUTH_RND.md`: a JWT access and refresh pair in
+`httpOnly` cookies, rotation with reuse detection, and a `users_user_session` row per refresh
+token, as `AUTH_BLUEPRINT.md` A4–A5 and Ch. 6 specify. Machine callers use the `API_PLATFORM.md`
+§§ 7–8 tokens instead. This is a decision and its docs only; no code changed.
+**Why:** `settings.py` configured sessions while the roadmap planned SimpleJWT, so the first
+authenticated endpoint would have decided it by accident (DB-1). The owner's answers:
+- non-browser callers are likely;
+- logout must take effect;
+- several servers from day one.
+
+Those rule out pure sessions (a second token system would be needed anyway) and pure stateless JWT
+(it cannot be revoked).
+**Files:**
+- New: `documentation/adr/0009-jwt-in-httponly-cookies.md`.
+- Changed: `README.md`, `documentation/{ADR,INDEX,NEW_PROJECT,DAILY_CHANGES}.md`,
+  `documentation/core/ARCHITECTURE.md`,
+  `documentation/planning/{AUTH_RND,BUILD_ORDER,CORE_ARCHITECTURE_PLAN,ROADMAP,TECH_DEBT}.md`,
+  `documentation/system-design/{API_DESIGN,AUTH_BLUEPRINT,SECURITY}.md`.
+
+**Verification:** documentation only, so the code gate was not run. Every relative link in the
+changed files resolves (checked by script). `git grep` finds no doc still calling DB-1 open or
+planning SimpleJWT, except `AUTH_RND.md`'s option B text and the blueprint's "rejected" table, which
+are reasoning.
+**Notes / still open:**
+- **"Immediate" logout, stated precisely:** a revoked session stops working within
+  `SESSION_LIVENESS_CACHE_TTL` (60 seconds) on every server. Setting it to `0` makes revocation
+  instant, at one DB read per request. The ADR records the trade.
+- Several servers make **Redis mandatory at 1.0**, ahead of the 4.4 Compose work. The Docker dev
+  stack will need a Redis service then.
+- `settings.py` still sets `SessionAuthentication`. That is intentional until 1.1b. ROADMAP and
+  ARCHITECTURE now say so, which meets 0.2's "no longer contradicts" criterion.
+- **How a first-party mobile app authenticates is not decided.** The ADR leaves it for its own ADR,
+  because `API_PLATFORM.md` § 21 removes the blueprint's Bearer fallback.
+
 ### BUILD_ORDER 0.1 decided: a custom `users.User`, email login (ADR-0008)
 **What:** The owner settled 0.1. A new `users` app holds `users.User(AbstractBaseUser,
 PermissionsMixin)` and its `UserManager`, with the `AUTH_BLUEPRINT.md` § 3.1 columns. Email is the

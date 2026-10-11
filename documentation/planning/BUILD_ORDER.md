@@ -67,7 +67,12 @@ costs nothing today and is very expensive to add at product three. Closes **DB-1
 **Done when:** an ADR exists, and if a custom model was chosen, `AUTH_USER_MODEL` is set and migrated
 before anything else.
 
-### 0.2 — 🚧 DECISION: the auth model ⬜
+### 0.2 — 🚧 DECISION: the auth model ✅
+**Decided 2026-10-11 — [ADR-0009](../adr/0009-jwt-in-httponly-cookies.md):** option C. A JWT access
+and refresh pair in `httpOnly` cookies, rotation with reuse detection, and a `users_user_session` row
+per refresh token, exactly as `AUTH_BLUEPRINT.md` A4–A5 and Ch. 6 specify. Machine callers use the
+`API_PLATFORM.md` tokens instead. The owner runs several servers from day one, so the shared cache
+in **1.0** is required, not optional.
 Read [`AUTH_RND.md`](AUTH_RND.md), answer its four questions, pick session / JWT / JWT-in-cookies,
 write the ADR. Closes **DB-1**.
 

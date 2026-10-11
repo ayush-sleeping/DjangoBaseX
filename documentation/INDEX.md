@@ -18,7 +18,7 @@ your task below, read the **Start Here** file, and stop.
 | **Take a core update into my product** | [`UPGRADING.md`](UPGRADING.md) |
 | **Build a plugin / work as a separate team** | [`planning/PLUGIN_DEVELOPMENT.md`](planning/PLUGIN_DEVELOPMENT.md) |
 | **Understand the core + plugin architecture** | [`planning/CORE_ARCHITECTURE_PLAN.md`](planning/CORE_ARCHITECTURE_PLAN.md) |
-| **Decide the auth model (blocking)** | [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
+| **Why the auth model is cookie JWT (decided)** | [`adr/0009-jwt-in-httponly-cookies.md`](adr/0009-jwt-in-httponly-cookies.md) — reasoning in [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
 | **Understand what auth/RBAC designs get wrong** | [`system-design/AUTH_FAILURE_MODES.md`](system-design/AUTH_FAILURE_MODES.md) — the failure catalogue + design checklist |
 | **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
 | **Understand what this is FOR — read this first** | [`VISION.md`](VISION.md) |

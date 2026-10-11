@@ -46,12 +46,12 @@ The full capability map behind the rows above, with tiers, is [`PLATFORM_BLUEPRI
 
 Two questions that get answered badly if they get answered by accident:
 
-### 1. Session auth or JWT — not both
+### 1. Session auth or JWT — not both ✅ decided
 
-`config/settings.py` currently sets `SessionAuthentication`, and the table above plans SimpleJWT.
-Those are different models with different CSRF, CORS and refresh implications. Landing the first
-authenticated endpoint settles it de facto, so **settle it deliberately first and write the ADR**.
-Tracked as [`TECH_DEBT.md`](TECH_DEBT.md) **DB-1**.
+**Settled 2026-10-11 by [ADR-0009](../adr/0009-jwt-in-httponly-cookies.md):** JWT in `httpOnly`
+cookies, backed by DB session rows, built to `AUTH_BLUEPRINT.md` Ch. 6 with `pyjwt` (not SimpleJWT).
+`config/settings.py` still sets `SessionAuthentication` until `BUILD_ORDER` 1.1b replaces it with
+`CookieJWTAuthentication`. No endpoint authenticates before then.
 
 ### 2. Tests before or after the first real feature
 
@@ -70,8 +70,8 @@ Dependency-ordered, not priority-ordered — each step is hard to do well before
 
 1. **pytest + pytest-django + factory_boy**, and a CI workflow that runs the `AGENTS.md` § 2 gate.
    Everything below is safer with this in place, and it is the cheapest it will ever be
-2. **Resolve DB-1** (auth model) and write the ADR
-3. **Auth** — SimpleJWT, `/me`, refresh rotation, and the frontend half in `src/lib/api.ts`
+2. ~~**Resolve DB-1** (auth model) and write the ADR~~ — ✅ ADR-0009
+3. **Auth** — cookie JWT per ADR-0009 (`pyjwt`), `/me`, refresh rotation, and the frontend half in `src/lib/api.ts`
 4. **RBAC** — groups, permission classes, object-level checks. Fail closed, like the DRF default
 5. ~~**A custom `User` model**~~ — ✅ done 2026-10-11: `users.User`, email login
    ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)), the project's first migration

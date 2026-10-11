@@ -60,7 +60,7 @@ remembers where it came from.
 
 ### Authentication
 
-- Pending [`../planning/AUTH_RND.md`](../planning/AUTH_RND.md). Whatever wins:
+- Decided: JWT in `httpOnly` cookies with DB session rows ([ADR-0009](../adr/0009-jwt-in-httponly-cookies.md)). The rules it must keep:
   - The browser's credential must be **unreadable by JavaScript** (`httpOnly`), so an XSS bug cannot
     exfiltrate a session
   - **Revocation must be real** — a `Session` row, or a token blacklist. "Valid until it expires" is
