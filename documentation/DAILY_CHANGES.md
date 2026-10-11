@@ -26,6 +26,82 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 1.2: the RBAC engine — catalog, roles, grants, cached has_perm, scoping
+**What:**
+- **New `rbac` app:**
+  - five tables (§ 3.7–3.11) in `rbac/0001`;
+  - `seeding.sync_catalog()`, which never deletes (`post_migrate` and `seed_permissions`);
+  - `selectors.permission_codes_for()`, cached per request and per version;
+  - `RBACBackend`, with an audited superuser bypass;
+  - `services` (`create_role`, `set_grants`, `assign_role`, `revoke_role`), each bumping the
+    cache version and keeping `mfa_enforced` in step with `mfa_required` roles;
+  - an empty `admin.py`, deliberately (Ch. 20).
+- **`core/`:**
+  - `registry.py` (built by the junior), the permission vocabulary and catalog;
+  - `permissions.py`, `has_permission(...)` for Layer 1;
+  - `querysets.py`, `VisibleToQuerySet` for Layer 2;
+  - `checks.py`, `dbx.E005` (shared cache) and `dbx.E006` (single grant path).
+- **`users`:**
+  - `permissions.py` is now the catalog `GROUP`; re-auth moved to `reauth.py`;
+  - `backends.CredentialsOnlyBackend`;
+  - the `User.has_perm` / `has_module_perms` overrides;
+  - `UserQuerySet.visible_to()`;
+  - `/me.permissions` holds the real codes.
+- **Settings:** two `AUTHENTICATION_BACKENDS` and `rbac` in `INSTALLED_APPS` (plus Ruff
+  `known-first-party`).
+- **CI:** gains a Redis service and `CACHE_URL`. Test settings silence E005.
+
+**Who did what:**
+- **Junior (`djangobasex-bd`), working alone with one final report:** `core/registry.py` with 35
+  tests, and `tests/architecture/{permission_refs,test_permission_refs_scanner,test_permission_codes}.py`
+  with 26 scanner tests plus the 4-test catalog check.
+- **Lead:** everything else, plus filling in `DECLARED_AHEAD_OF_USE` from the junior's paste-ready
+  output.
+
+**Why:** BUILD_ORDER 1.2 (blueprint 1.2a–c): one grant path, catalog-driven, fail-closed, and cheap
+enough to call on every request.
+**Files:**
+- New: `backend/rbac/` (`__init__`, `apps`, `admin`, `models`, `permissions`, `seeding`,
+  `selectors`, `backends`, `services`, `tests`, `migrations/0001_initial`,
+  `management/commands/seed_permissions`), `backend/core/{registry,permissions,querysets,checks}.py`,
+  `backend/users/backends.py`, `backend/users/reauth.py` (moved from `users/permissions.py`),
+  `backend/tests/test_registry.py`,
+  `backend/tests/architecture/{permission_refs,test_permission_refs_scanner,test_permission_codes}.py`.
+- Changed: `backend/users/{permissions,apps,serializers,views}.py`, `backend/users/models/user.py`,
+  `backend/core/apps.py`, `backend/config/{settings,settings_test}.py`, `backend/pyproject.toml`,
+  `.github/workflows/ci.yml`, `AGENTS.md`, `README.md`,
+  `documentation/{DAILY_CHANGES,ONBOARDING}.md`, `documentation/core/ARCHITECTURE.md`,
+  `documentation/planning/{BUILD_ORDER,TECH_DEBT}.md`,
+  `documentation/system-design/AUTH_BLUEPRINT.md`.
+
+**Verification:**
+- `uv run pytest`: 229 passed, including 21 rbac, 35 registry, 26 scanner and 4 catalog tests.
+- **First runs:**
+  - the junior's catalog test failed as designed until the allow-list was filled;
+  - my `test_the_shipped_configuration_passes_the_auth_checks` failed because E005 fires under the
+    test settings. That exposed a real CI break: `DEBUG=False manage.py check` gives
+    `dbx.E005 … LocMemCache with DEBUG=False`, and with `CACHE_URL=redis://…` gives no issues.
+    Fixed with Redis in CI, E005 silenced in test settings only, and the test split in two.
+- **Mutation checks:**
+  - lead: `has_perm` back to `super()` failed exactly `test_every_superuser_bypass_is_audited`
+    (0 bypass records); removing the version bump from `set_grants` failed exactly
+    `test_a_grant_change_takes_effect_without_a_restart`;
+  - junior, 4 checks: module scoping, duplicate groups, scanner exclusions, annotated assignments.
+- **Ruff:** two lead rounds found 5 and then 3 long lines; both fixed. Now clean, 89 files.
+  `manage.py check` clean. `makemigrations --check` reports no changes. `actionlint` clean.
+- `migrate` applied `rbac.0001` to the dev DB, and `post_migrate` seeded 9 permissions in 2 groups;
+  a second `seed_permissions` reported "catalog already in sync".
+- **Process note:** one lead command was blocked by the `.env` deny rule (an attempt to move
+  `.env` aside to simulate CI). Nothing ran, and the simulation was redone with env-var overrides.
+
+**Notes / still open:**
+- No endpoint is permission-gated yet. `DefaultDeny`/`BaseViewSet` arrive with the first viewset
+  (1.5).
+- Still to come: the roles API, system roles and guards (1.4); invitations (they need roles); the
+  rest of the registry (1.3).
+- The Docker backend needs a restart (or `docker compose exec backend uv run --frozen python
+  manage.py migrate`) to pick up `rbac`. The dev DB here was migrated directly.
+
 ### BUILD_ORDER 1.1d: TOTP two-factor and re-authentication (invitations deferred to after 1.2)
 **What:**
 - **Models:** `MfaDevice` and `MfaRecoveryCode` (§ 3.6) in `users/0004`.

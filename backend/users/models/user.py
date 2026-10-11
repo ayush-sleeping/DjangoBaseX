@@ -3,10 +3,12 @@
 import uuid
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
-from django.contrib.auth.models import PermissionsMixin
+from django.contrib.auth.models import PermissionsMixin, _user_has_module_perms, _user_has_perm
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils import timezone
+
+from core.querysets import VisibleToQuerySet
 
 from .. import signals
 
@@ -16,7 +18,20 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
-class UserManager(BaseUserManager):
+class UserQuerySet(VisibleToQuerySet):
+    def visible_to(self, user):
+        """
+        Everyone may see themselves, so /me and the account screen work with no permissions at all
+        through this same queryset rather than a second path (AUTH_BLUEPRINT § 7.6).
+        """
+        if user is None or not user.is_authenticated:
+            return self.none()
+        if user.has_perm("users.users.view"):
+            return self.all()
+        return self.filter(pk=user.pk)
+
+
+class UserManager(BaseUserManager.from_queryset(UserQuerySet)):
     use_in_migrations = True
 
     def create_user(self, email, password=None, **extra_fields):
@@ -79,6 +94,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    def has_perm(self, perm, obj=None):
+        # NOT super(): PermissionsMixin answers True for an active superuser before any backend
+        # runs, which would leave RBACBackend's superuser-bypass audit permanently empty (A12).
+        return _user_has_perm(self, perm, obj)
+
+    def has_module_perms(self, app_label):
+        # Same reason as has_perm: let the backends (RBACBackend) decide, superusers included.
+        return _user_has_module_perms(self, app_label)
 
     def save(self, *args, **kwargs):
         self.email = normalize_email(self.email)

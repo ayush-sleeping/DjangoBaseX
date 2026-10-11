@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from core.registry import registry
+
 from .models import User
 
 
@@ -51,7 +53,10 @@ class MeSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_permissions(self, user) -> list[str]:
-        return []
+        # The effective codes, for the frontend's can(). A superuser holds the whole catalog.
+        if user.is_superuser:
+            return sorted(registry.permissions.codes())
+        return sorted(user.get_all_permissions())
 
     def get_mfa_enabled(self, user) -> bool:
         return user.mfa_devices.filter(confirmed_at__isnull=False).exists()

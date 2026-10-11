@@ -62,14 +62,18 @@ INSTALLED_APPS = [
     # Local
     "core",
     "users",
+    "rbac",
 ]
 
 # Set before the first migration and never changed after (ADR-0008).
 AUTH_USER_MODEL = "users.User"
 
-# Authenticates inactive users too, so login can record *why* it refused (AUTH_BLUEPRINT § 6.2).
-# The is_active decision is made in users.services.auth, never by the backend.
-AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.AllowAllUsersModelBackend"]
+# One grant path (§ 7.4a, dbx.E006). The credentials backend authenticates inactive users too, so
+# login can record *why* it refused (§ 6.2); users.services.auth makes the is_active decision.
+AUTHENTICATION_BACKENDS = [
+    "rbac.backends.RBACBackend",  # answers has_perm; grants nothing at authentication
+    "users.backends.CredentialsOnlyBackend",  # checks passwords; grants no permission (§ 7.4a)
+]
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # must sit above CommonMiddleware

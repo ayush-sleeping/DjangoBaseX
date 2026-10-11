@@ -156,7 +156,20 @@ in this same PR.
 and a wrong password and an unknown address answer **identically** (no user enumeration). Once
 **2.2** exists, `test_route_enforcement.py` must also still pass.
 
-### 1.2 — Authorization — the two enforcement layers ⬜
+### 1.2 — Authorization — the two enforcement layers ✅
+**Done 2026-10-11** (blueprint 1.2a–c):
+- the code catalog through `core.registry`, seeded by `rbac.seeding` (`post_migrate` and
+  `seed_permissions`);
+- the five `rbac` tables;
+- `RBACBackend` with versioned caching and the audited superuser bypass;
+- Layer 1, `core.permissions.has_permission(...)`;
+- Layer 2, `core.querysets.VisibleToQuerySet` and `User.objects.visible_to()`;
+- `dbx.E005` / `E006`;
+- the code↔catalog architecture test.
+
+`AUTH_BLUEPRINT.md` § 7.6a records the decisions. Done-when: a permission nobody holds refuses
+everyone (`test_has_permission_refuses…`); `visible_to()` with no rule is `.none()`; an unknown code
+cannot be granted (`set_grants` raises), and one referenced in code fails the catalog test.
 The mechanism that answers *may this request do this*, per
 [`../system-design/RBAC_DESIGN.md`](../system-design/RBAC_DESIGN.md) §§ "The two layers of checking"
 and "Fail closed, everywhere":
@@ -176,6 +189,8 @@ no rule for a user returns `.none()` and never `.all()`; and a permission code a
 catalog is denied **and logged as a bug**, because that means a typo or a missing seed.
 
 ### 1.3 — The registry seam ⬜
+*Started 2026-10-11:* `core/registry.py` exists, with the **permissions** registry only. Navigation,
+settings and health registries are what remains.
 *Prerequisite for 1.4 — the RBAC catalog is assembled from registrations, so the seam has to exist
 before there is anything to assemble.*
 

@@ -53,5 +53,9 @@ STORAGES = {
     "staticfiles": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
 }
 
+# Tests use a per-process cache on purpose (cleared per test by conftest), with DEBUG=False. That is
+# exactly what dbx.E005 refuses for a deployment, so it is silenced here and only here.
+SILENCED_SYSTEM_CHECKS = ["dbx.E005"]
+
 # Hashing is deliberately slow; tests only need it to be correct.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

@@ -984,7 +984,7 @@ class RequiresRecentAuth(BasePermission):
 ### 6.9a As built (1.1d, 2026-10-11) — MFA and re-auth
 
 Implemented in `users/mfa.py` (pure TOTP, crypto and recovery-code functions), `users/services/mfa.py`,
-`users/permissions.py`, `users/tokens.py` (the mfa_token) and `users/authentication.py` (the
+`users/reauth.py`, `users/tokens.py` (the mfa_token) and `users/authentication.py` (the
 enrolment gate). Decisions taken while building:
 
 1. **The `mfa_token` is a JWT** (`typ="mfa"`, `sub`, a random `nonce`, `MFA_TOKEN_LIFETIME`),
@@ -996,7 +996,7 @@ enrolment gate). Decisions taken while building:
    and replaces any unconfirmed device. Multiple devices are additive later.
 3. **The enrolment gate exempts `me/`** as well as setup, confirm and logout. Without `me/` the
    frontend cannot tell why it is being refused.
-4. **`RequiresRecentAuth` lives in `users/permissions.py`, not `core`**, because it reads
+4. **`RequiresRecentAuth` lives in `users/reauth.py`, not `core`** (`users/permissions.py` is the catalog, § 7.1), because it reads
    `users_user_session` and `core` must not import `users` (Ch. 2). It moves when 1.2 / 9.1 give
    `core` a session abstraction. The opt-in list is `REAUTH_ACTIONS` in settings until the
    `core_setting` registry exists (5.3).
@@ -1285,6 +1285,50 @@ second path (§ 4). One rule, and the weakest case is the default.
 > it does not say they may edit *this* user. **Shipping only Layer 1 is the common shape** — and a
 > scaffolded object-permission layer that nobody ever implements is worse than none, because it
 > reads as though the check exists.
+
+### 7.6a As built (1.2, 2026-10-11) — the engine
+
+The `rbac` app holds `models.py` (§ 3.7–3.11, `rbac/0001`), `seeding.py`, `selectors.py`,
+`backends.py`, `services.py` and the `seed_permissions` command. `core` holds `registry.py`,
+`permissions.py`, `querysets.py` and `checks.py`. The junior session built `core/registry.py` and the
+code↔catalog test. Decisions taken while building:
+
+1. **`PermissionSpec` and `PermissionGroupSpec` live in `core/registry.py`, not `rbac/catalog.py`.**
+   Apps declare permissions through `core` alone, so `users` never imports `rbac` (Ch. 2), and
+   `core/registry.py` imports only the stdlib (a test pins it).
+2. **The registry:**
+   - `register()` is all-or-nothing and thread-safe;
+   - codes match `CODE_PATTERN`, and the first segment must equal the group's module (A7);
+   - duplicate group or permission codes are a boot error;
+   - it seals on the first read, so a late `register()` raises;
+   - the action segment is not validated against a fixed list (the catalog uses `send` and
+     `revoke`);
+   - empty groups are allowed and are `dbx.W002`'s to report.
+3. **Two backends, one grant path:** `rbac.backends.RBACBackend` answers `has_perm`;
+   `users.backends.CredentialsOnlyBackend` (`AllowAllUsersModelBackend` with every permission
+   method empty and `contributes_permissions = False`) only checks passwords. `dbx.E006` refuses
+   any other backend, and a test proves Django `auth_group` grants give nothing.
+4. **`users.User.has_perm` / `has_module_perms` skip Django's superuser short-circuit**, so every
+   bypass reaches `RBACBackend` and is audited (`authz.superuser_bypass`). Reverting it to `super()`
+   fails `test_every_superuser_bypass_is_audited` (mutation-checked).
+5. **Caching:** per request on the user object, then `rbac:perms:<user>:<version>` for 10 minutes.
+   Every write in `rbac.services` and every effective `sync_catalog()` bumps the version.
+   Mutation-checked.
+6. **`HasPermission` is built by a factory**, `has_permission("users.users.view", ...)`, because
+   DRF instantiates permission classes with no arguments. `RequiresRecentAuth` follows the same
+   shape.
+7. **`/me.permissions`** holds the effective codes. For a superuser it is the whole catalog, so the
+   frontend's `can()` needs no special case.
+8. **`mfa_required` roles:** `assign_role` / `revoke_role` keep `user.mfa_enforced` in step.
+9. **`dbx.E005` is live:** CI now runs a Redis service with `CACHE_URL`, and the test settings
+   silence E005 explicitly (they use a per-process cache on purpose).
+10. **The code↔catalog test** (`tests/architecture/test_permission_codes.py`) scans `has_perm(`,
+    `has_perms(`, `HasPermission(` and every `required_permissions` assignment or keyword. It
+    excludes test files, which hold deliberately bogus codes. Codes declared before their endpoints
+    sit in `DECLARED_AHEAD_OF_USE`, a ratchet that fails once a code is used.
+11. **Not here:** `DefaultDeny` as the DRF default and `BaseViewSet`'s `required_permissions`
+    (Ch. 9.1) land with the first viewset (1.5). System roles and the elevated / last-superuser
+    guards are 1.4. `dbx.E001`–`E004` and `W001`–`W003` need routes and roles to check.
 
 ---
 

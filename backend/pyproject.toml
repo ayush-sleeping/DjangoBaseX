@@ -42,7 +42,7 @@ exclude = ["migrations", ".venv"]
 select = ["E", "F", "I", "B", "UP", "DJ"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "core", "tests", "users"]
+known-first-party = ["config", "core", "rbac", "tests", "users"]
 
 [tool.pytest.ini_options]
 # The only settings tests ever use: pinned env, in-memory cache/email/storage (ENGINEERING_PRACTICES § 5).

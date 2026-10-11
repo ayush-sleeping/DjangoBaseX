@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 
 from . import mfa, tokens
 from .cookies import clear_auth_cookies, cookie_names, set_auth_cookies
-from .permissions import requires_recent_auth
+from .reauth import requires_recent_auth
 from .serializers import (
     ForgotPasswordSerializer,
     LoginSerializer,

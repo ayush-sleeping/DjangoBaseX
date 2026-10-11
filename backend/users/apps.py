@@ -6,6 +6,10 @@ class UsersConfig(AppConfig):
     name = "users"
 
     def ready(self):
+        from core.registry import registry
+
         from . import signals
+        from .permissions import GROUP
 
         signals.connect()
+        registry.permissions.register(GROUP)
