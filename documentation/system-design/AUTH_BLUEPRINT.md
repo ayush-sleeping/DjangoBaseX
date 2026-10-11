@@ -1422,6 +1422,67 @@ def deactivate(*, actor, user, reason) -> None:
     log_activity("users.user.deactivated", actor=actor, target=user, meta={"reason": reason})
 ```
 
+### 8.6 As built (1.4, 2026-10-11) — roles, guards, the declarative gate
+
+1. **The gate (Ch. 9.1):**
+   - `core/api/views.py::BaseAPIView` and `core/api/viewsets.py::BaseViewSet`, with one rule in
+     `core/permissions.py::HasPermission`: `required_permissions = None` denies everyone, `[]`
+     means any signed-in user, and a viewset's per-action dict denies any missing action;
+     `public = True` opens a view.
+   - Both bases prepend `IsAuthenticated` unless public, so anonymous callers get 401.
+   - `core.permissions.DefaultDeny` is DRF's default (`dbx.E004`).
+   - **Every existing endpoint was moved onto `BaseAPIView`.** The `has_permission(...)` factory
+     from 1.2 is gone, because two ways to gate a view is the cost that compounds.
+2. **Boot checks:** `dbx.E001` (every `/api/` route inherits a base and declares something) and
+   `dbx.E007` (`public = True` ⇔ `core.routes.PUBLIC_ROUTES`, every entry resolves and has a
+   reason). Third-party public views (the schema and docs) pass by being in the ledger. The ledger
+   **replaces** the "`# public: <reason>` comment" of § 9.1: the reason lives in one file a check
+   can read.
+3. **Catalog:** the rbac group is now the § 10.3 set: `rbac.permissions.view`, and
+   `rbac.roles.view/create/update/delete/assign`. 1.2's `rbac.roles.manage` was deprecated by
+   seeding, not deleted.
+4. **System roles:**
+   - `rbac/0002_seed_system_roles` creates the `administrator` (system, elevated) and `staff`
+     (system) rows, and is reversible while unheld;
+   - `post_migrate` then runs `sync_catalog()` → `ensure_system_roles()` →
+     `recompute_administrator()`, in that order (§ 13);
+   - **System roles' grants cannot be edited** through the API: `administrator`'s are recomputed
+     on every migrate, and `staff` is "nothing" by definition. Their description can be edited;
+     their name cannot.
+5. **Guards in `rbac.services`** (§ 8.4 signatures, keyword `actor`; `actor=None` is the system):
+   - `SystemRoleProtected` (409 `system_role`);
+   - `RoleInUse` (409 `role_in_use` with `user_count`);
+   - `ElevatedRequiresSuperuser` (403), covering **any** change to an elevated role: creating,
+     marking, assigning, revoking, editing fields, **regranting** and deleting. Found in review
+     (junior note 14): guarding assignment alone let any `rbac.roles.update` holder widen an
+     elevated role's grants, and with them every holder's access. That is the § 8.2 escalation
+     by a side door. Tested and mutation-checked;
+   - `LastAdministrator` (409): **interpreted** as "the last active holder of `administrator`
+     cannot lose it while no active superuser exists". The `is_superuser` flag itself is not a
+     role; deactivating the last superuser is `users.services`' guard, which arrives with 1.5;
+   - `UnknownPermission` (400 with the codes).
+6. **The API** (`/api/rbac/`, § 10.3):
+   - role assignment is `POST`/`GET users/<id>/roles/` and **`DELETE users/<id>/roles/<role_id>/`**
+     (a DELETE with a body is avoided);
+   - every lookup goes through `visible_to()`, so assigning a role also needs `users.users.view`
+     to see the user (404 otherwise);
+   - role lists are ordered `name, pk`, because `Count()` drops `Meta.ordering` (DRF warned;
+     fixed);
+   - errors use `{"error": {code, message, details?}}`, while DRF's own 401/403 still say
+     `{"detail": ...}`.
+7. **Deactivation cascade (§ 8.5)** waits for `users.services.deactivate` (1.5).
+8. **Frontend:**
+   - `src/lib/permissions.ts`: `can` / `canAny` / `isSuperuser` are pure over `/me`, plus
+     `usePermissions()`; they hide UI and never decide;
+   - `src/lib/rbac.ts` maps each control to exactly its endpoint's code (affordance parity);
+   - `/settings/roles` and `/settings/roles/[publicId]`: system roles show a lock badge, with
+     rename, delete and grants disabled; `is_elevated` is editable by superusers only; `PATCH`
+     sends changed fields only; the grants editor saves one full-replacement `PUT`;
+   - `is_staff` is never displayed;
+   - **Not yet:** role assignment UI (no users list until 1.5), disabling elevated-role editing
+     for non-superusers in the UI (the API already refuses), and a nav built from
+     `registry.navigation`.
+
 ---
 
 ## 9. The fail-closed machinery

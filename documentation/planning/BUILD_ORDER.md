@@ -188,9 +188,12 @@ from the URL lets any permitted user edit any row.
 no rule for a user returns `.none()` and never `.all()`; and a permission code absent from the
 catalog is denied **and logged as a bug**, because that means a typo or a missing seed.
 
-### 1.3 — The registry seam ⬜
-*Started 2026-10-11:* `core/registry.py` exists, with the **permissions** registry only. Navigation,
-settings and health registries are what remains.
+### 1.3 — The registry seam ✅
+**Done 2026-10-11** (junior session): `core/registry.py` holds permissions, navigation (with a
+permission cross-check at seal), health and api_routes. It is stdlib-only, all-or-nothing, and seals
+on first read. The done-when test registers a throwaway `AppConfig` into a fresh registry and finds
+it in every catalog with no core file naming it. `events`, `jobs`, `search` and `settings` arrive
+with their phases (`CORE_ARCHITECTURE_PLAN.md` § 2 note).
 *Prerequisite for 1.4 — the RBAC catalog is assembled from registrations, so the seam has to exist
 before there is anything to assemble.*
 
@@ -201,7 +204,19 @@ boot-time, one-way, read-only afterwards. **`registry.py` imports nothing from `
 **Done when:** a throwaway app registering a permission group and a nav section appears in both
 without any core file naming it.
 
-### 1.4 — RBAC ⬜
+### 1.4 — RBAC ✅
+**Done 2026-10-11:**
+- the declarative gate (`BaseAPIView` / `BaseViewSet`, `DefaultDeny`, `dbx.E001`/`E004`/`E007`),
+  with every endpoint moved onto it;
+- the system roles `administrator` and `staff` (`rbac/0002`, recomputed after the catalog seed);
+- the § 8.4 services with the system-role, elevated-role, last-administrator and role-in-use
+  guards;
+- `/api/rbac/` per § 10.3;
+- frontend: `can()` / `usePermissions()` and the roles screen at `/settings/roles`.
+
+`AUTH_BLUEPRINT.md` § 8.6 records the decisions. Done-when: a role holding no permissions is
+refused by a gated endpoint (`test_a_role_holding_no_permissions_is_refused`), and the catalog is
+assembled from `ready()` registrations.
 Roles on top of 1.2's permissions, **through the registry**, not a hard-coded catalog. Permission
 names are `<module>.<feature>.<action>`. Fail closed, matching DRF's existing `IsAuthenticated`
 default.

@@ -284,7 +284,7 @@ Stated plainly, because assuming otherwise wastes time.
 - Next.js 16 + React 19 + Tailwind 4, typed API wrapper, home page reading live backend health
 - `uv` + Ruff on the backend, ESLint + strict TypeScript on the frontend
 - **Sign in** — cookie-JWT auth per [ADR-0009](documentation/adr/0009-jwt-in-httponly-cookies.md): login, refresh with rotation and reuse detection, logout, sign-out-everywhere-else, `/api/auth/me/`, password reset by email (single-use links; any password change signs out every session), per-address+IP throttling and progressive lockout, TOTP two-factor with recovery codes and re-auth for sensitive actions, and minimal pages at `/login`, `/forgot-password`, `/reset-password` and `/account/security`
-- **Permissions (RBAC engine)** — a code-declared catalog seeded to the database, roles and grants with an audit trail, a cached `has_perm` with an audited superuser bypass, `has_permission(...)` for views, `visible_to()` scoping, and boot checks for a shared cache and a single grant path
+- **Permissions (RBAC engine)** — a code-declared catalog seeded to the database, roles and grants with an audit trail, a cached `has_perm` with an audited superuser bypass, `has_permission(...)` for views, `visible_to()` scoping, and boot checks for a shared cache and a single grant path; a declarative gate on every endpoint (undeclared = denied); system roles `administrator` / `staff`; the roles API and a roles screen at `/settings/roles`
 - A custom `users.User` (email login, no username) as `AUTH_USER_MODEL` — [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)
 - `docker compose up` development stack with live reload on both halves, plus Redis as the shared cache
 - Argon2 password hashing; a proxy-aware `client_ip()` with tests (`manage.py test core`); `/admin/` only when `ADMIN_ENABLED`
@@ -292,7 +292,7 @@ Stated plainly, because assuming otherwise wastes time.
 
 **❌ Not built yet**
 - **Invitations** — they need `rbac.Role`, so they follow RBAC (`BUILD_ORDER` 1.2)
-- **RBAC, the rest** — the roles API and screen, system roles, and the elevated-role / last-superuser guards (`BUILD_ORDER` 1.4)
+- **Invitations, and the Users CRUD** — invitations need roles (now built) and the Users module of `BUILD_ORDER` 1.5
 - **Models** — only `users.User`; no domain models yet
 - **Tests** — a backend pytest suite (harness, `users.User`, `client_ip()`, health); no frontend runner yet. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0

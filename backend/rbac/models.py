@@ -9,6 +9,8 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from core.querysets import VisibleToQuerySet
+
 
 class PermissionGroup(models.Model):
     """UI grouping only. Nothing may branch on a group (§ 3.7)."""
@@ -45,6 +47,13 @@ class Permission(models.Model):
         return self.code
 
 
+class RoleQuerySet(VisibleToQuerySet):
+    def visible_to(self, user):
+        if user is None or not user.is_authenticated or not user.has_perm("rbac.roles.view"):
+            return self.none()
+        return self.all()
+
+
 class Role(models.Model):
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     name = models.CharField(max_length=64, unique=True)
@@ -64,6 +73,8 @@ class Role(models.Model):
     permissions = models.ManyToManyField(
         Permission, through="RolePermission", related_name="roles", blank=True
     )
+
+    objects = RoleQuerySet.as_manager()
 
     class Meta:
         db_table = "rbac_role"

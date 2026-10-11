@@ -5,9 +5,9 @@ Tokens never appear in a response body — only in cookies (AUTH_BLUEPRINT § 6.
 
 from django.core.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
+
+from core.api.views import BaseAPIView
 
 from . import mfa, tokens
 from .cookies import clear_auth_cookies, cookie_names, set_auth_cookies
@@ -59,11 +59,11 @@ INVALID_TOKEN = {
 }
 
 
-class LoginView(APIView):
+class LoginView(BaseAPIView):
     # Public (core.routes.PUBLIC_ROUTES). No authenticators: a stale access cookie must not turn
     # a sign-in attempt into a 401 before the credentials are even read.
+    public = True  # core.routes.PUBLIC_ROUTES
     authentication_classes: list = []
-    permission_classes = [AllowAny]
     throttle_classes = [LoginThrottle]  # step 1: 5/min per (address, IP) pair
 
     def post(self, request):
@@ -83,10 +83,10 @@ class LoginView(APIView):
         return response
 
 
-class RefreshView(APIView):
+class RefreshView(BaseAPIView):
     # Public: it authenticates by the refresh cookie itself, not by an access token.
+    public = True  # core.routes.PUBLIC_ROUTES
     authentication_classes: list = []
-    permission_classes = [AllowAny]
 
     def post(self, request):
         refresh_token = request.COOKIES.get(cookie_names().refresh)
@@ -103,7 +103,9 @@ class RefreshView(APIView):
         return response
 
 
-class LogoutView(APIView):
+class LogoutView(BaseAPIView):
+    required_permissions = []  # any signed-in user
+
     def post(self, request):
         auth.logout(request)
         response = Response(status=status.HTTP_204_NO_CONTENT)
@@ -111,20 +113,24 @@ class LogoutView(APIView):
         return response
 
 
-class RevokeOtherSessionsView(APIView):
+class RevokeOtherSessionsView(BaseAPIView):
+    required_permissions = []  # any signed-in user
+
     def post(self, request):
         return Response({"revoked": auth.revoke_other_sessions(request)})
 
 
-class MeView(APIView):
+class MeView(BaseAPIView):
+    required_permissions = []  # any signed-in user
+
     def get(self, request):
         return Response(MeSerializer(request.user).data)
 
 
-class ForgotPasswordView(APIView):
+class ForgotPasswordView(BaseAPIView):
     # Public. Always 204, whether or not the address exists (§ 6.6).
+    public = True  # core.routes.PUBLIC_ROUTES
     authentication_classes: list = []
-    permission_classes = [AllowAny]
     throttle_classes = [PasswordResetThrottle]  # 3/hour per address
 
     def post(self, request):
@@ -134,10 +140,10 @@ class ForgotPasswordView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ResetPasswordView(APIView):
+class ResetPasswordView(BaseAPIView):
     # Public: authenticated by the reset token itself.
+    public = True  # core.routes.PUBLIC_ROUTES
     authentication_classes: list = []
-    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
@@ -161,7 +167,8 @@ class ResetPasswordView(APIView):
         return response
 
 
-class PasswordConfirmView(APIView):
+class PasswordConfirmView(BaseAPIView):
+    required_permissions = []  # any signed-in user
     throttle_classes = [MfaThrottle]
 
     def post(self, request):
@@ -174,10 +181,10 @@ class PasswordConfirmView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class MfaVerifyView(APIView):
+class MfaVerifyView(BaseAPIView):
     # Public: authenticated by the password step's mfa_token, which grants nothing else.
+    public = True  # core.routes.PUBLIC_ROUTES
     authentication_classes: list = []
-    permission_classes = [AllowAny]
     throttle_classes = [MfaVerifyThrottle]
 
     def post(self, request):
@@ -199,7 +206,8 @@ class MfaVerifyView(APIView):
         return response
 
 
-class MfaSetupView(APIView):
+class MfaSetupView(BaseAPIView):
+    required_permissions = []  # any signed-in user
     throttle_classes = [MfaThrottle]
 
     def post(self, request):
@@ -211,7 +219,8 @@ class MfaSetupView(APIView):
             return Response(MFA_UNAVAILABLE, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
-class MfaConfirmView(APIView):
+class MfaConfirmView(BaseAPIView):
+    required_permissions = []  # any signed-in user
     throttle_classes = [MfaThrottle]
 
     def post(self, request):
@@ -226,8 +235,9 @@ class MfaConfirmView(APIView):
         return Response({"recovery_codes": codes})
 
 
-class MfaDisableView(APIView):
-    permission_classes = [IsAuthenticated, requires_recent_auth("mfa_disable")]
+class MfaDisableView(BaseAPIView):
+    required_permissions = []  # any signed-in user
+    permission_classes = [*BaseAPIView.permission_classes, requires_recent_auth("mfa_disable")]
     throttle_classes = [MfaThrottle]
 
     def post(self, request):

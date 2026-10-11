@@ -121,7 +121,7 @@ truth; read them rather than recalling.
 Stated plainly, because assuming otherwise wastes time:
 
 - **Authentication is partial.** Cookie-JWT login, refresh, logout, `/me`, password reset, throttling, lockout, TOTP two-factor and re-auth exist (`users/`, ADR-0009); invitations wait for RBAC.
-- **The RBAC engine exists; the roles API does not.** `rbac/` (catalog, roles, grants, cached `has_perm`), `core/permissions.py` and `core/querysets.py` (`visible_to`). No endpoint is permission-gated yet; the roles API and screen are 1.4.
+- **RBAC is built.** `rbac/` (catalog, roles, grants, cached `has_perm`, the roles API), `core/permissions.py` + `core/api/` (the declarative gate every endpoint inherits), `core/querysets.py` (`visible_to`). No Users CRUD yet (1.5).
 - **One model.** `users.User` ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)); no domain models yet.
 - **A young backend test suite.** `uv run pytest` with `config.settings_test`, a root `conftest.py` (test-database guard, cache isolation) and factories in `backend/tests/`. No frontend runner.
 - **CI** (`.github/workflows/ci.yml`): the `AGENTS.md` § 2 gate in two jobs, backend against a PostgreSQL 16 service, frontend including `next build`.

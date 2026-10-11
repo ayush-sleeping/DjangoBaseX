@@ -14,6 +14,8 @@ import {
   signOut,
 } from "@/lib/auth";
 import { MFA_ENROLMENT_PATH } from "@/lib/mfa";
+import { can } from "@/lib/permissions";
+import { ROLE_CODES } from "@/lib/rbac";
 
 type PanelState =
   | { status: "loading" }
@@ -126,6 +128,11 @@ export function LoginPanel() {
         <Link className="mt-3 block text-sm underline" href={MFA_ENROLMENT_PATH}>
           Account security
         </Link>
+        {can(me, ROLE_CODES.view) ? (
+          <Link className="mt-1 block text-sm underline" href="/settings/roles">
+            Roles
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={handleSignOut}

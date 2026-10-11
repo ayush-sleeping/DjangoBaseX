@@ -20,8 +20,6 @@ from tests.architecture.permission_refs import find_permission_refs
 # users.* with the Users CRUD (BUILD_ORDER 1.5) and invitations (after 1.2), rbac.* with 1.4.
 DECLARED_AHEAD_OF_USE: frozenset[str] = frozenset(
     {
-        "rbac.roles.manage",
-        "rbac.roles.view",
         "users.invitations.send",
         "users.sessions.revoke",
         "users.users.create",

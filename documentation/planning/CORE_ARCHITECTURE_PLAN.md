@@ -85,6 +85,16 @@ One module, no imports from `core.*` above it, holding the catalogs a plugin con
 | `settings` | a settings schema | the configuration screen |
 | `health` | a readiness check | `/api/health/ready` |
 
+> **As built (2026-10-11, `BUILD_ORDER` 1.2–1.3):**
+> - `core/registry.py` holds **permissions**, **navigation**, **health** and **api_routes**;
+>   `events`, `jobs`, `search` and `settings` arrive with their phases.
+> - Navigation cross-checks every item's permission against the same registry's catalog when it
+>   seals, so a nav item can never point at a typo'd code.
+> - Reserved `/api/` prefixes are `admin, api, auth, core, docs, health, rbac, schema, users`.
+> - Each registry seals on first read.
+> - `config/urls.py` does not yet include `registry.api_routes`: no app registers one until
+>   Phase 3 plugins.
+
 ### Registration rules
 
 1. **Boot-time and one-way.** Registration happens in `AppConfig.ready()`. There is no `unregister`

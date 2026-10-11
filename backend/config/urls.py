@@ -5,6 +5,7 @@ URL configuration for DjangoBaseX.
   /api/health/       Public health probe
   /api/schema/       OpenAPI schema (JSON)
   /api/docs/         Swagger UI
+  /api/rbac/         Roles and the permission catalog (AUTH_BLUEPRINT § 10.3)
 """
 
 from django.conf import settings
@@ -15,6 +16,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
     path("api/", include("core.urls")),
     path("api/", include("users.urls")),
+    path("api/rbac/", include("rbac.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ]

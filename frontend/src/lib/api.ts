@@ -34,6 +34,11 @@ export class ApiError extends Error {
     const code = (this.body as { error?: { code?: unknown } } | null)?.error?.code;
     return typeof code === "string" ? code : undefined;
   }
+
+  /** The envelope's `error.details`: field errors, a list of codes, a count. Shape is per code. */
+  get details(): unknown {
+    return (this.body as { error?: { details?: unknown } } | null)?.error?.details;
+  }
 }
 
 /**

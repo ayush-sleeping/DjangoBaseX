@@ -29,10 +29,10 @@ Then state: "Ready to work. What would you like me to work on?"
 [`frontend/package.json`](frontend/package.json). A version quoted from prose goes stale silently.
 (In Claude Code a SessionStart hook prints the locked versions, branch and next task — still verify.)
 
-**Know what does not exist yet:** **no roles API or invitations, no frontend tests, no production
-Docker** (auth and the RBAC engine are built: ADR-0009, `rbac/`) (`docker-compose.yml` is a development stack only). The only model is `users.User`
-([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)). If a task assumes one of
-those exists, check the [Roadmap](documentation/planning/ROADMAP.md) first.
+**Know what does not exist yet:** **no Users CRUD or invitations, no frontend tests, no production
+Docker** (`docker-compose.yml` is a development stack only). Auth (ADR-0009) and RBAC (`rbac/`, the
+`core/api/` gate) are built; there are no domain models yet. If a task assumes something exists,
+check the [Roadmap](documentation/planning/ROADMAP.md) first.
 
 **With no specific task**, start at the lowest-numbered unfinished item in
 [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) — the executable backlog, with acceptance

@@ -119,6 +119,7 @@ JWT in `httpOnly` cookies backed by DB session rows ([ADR-0009](../adr/0009-jwt-
 - `/api/auth/me/` returns the user **and their permission codes** — one round trip for the shell
 - Wrong password and unknown email answer **identically**, so the endpoint is not a user oracle
 - Auth endpoints are throttled harder than the rest
+- **Every endpoint inherits `core.api.views.BaseAPIView` or `core.api.viewsets.BaseViewSet` and declares `required_permissions`** (codes, `[]` for any signed-in user, or a per-action dict for a viewset). Undeclared is denied, for superusers too, and `dbx.E001` refuses to boot with one. Writes go through the module's services; errors use `{"error": {"code", "message", "details"}}` (AUTH_BLUEPRINT § 8.6)
 - **Every `/api/` route refuses an anonymous caller with 401/403** — enforced by
   `backend/tests/architecture/test_route_enforcement.py`, which calls each route with every method.
   A route that must be public (login, health) is not given a bare `AllowAny`; its **URL name** goes
