@@ -26,6 +26,54 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 2.2: architecture tests — route enforcement and migrations
+**What:**
+- New `core/routes.py` `PUBLIC_ROUTES`, the exemption ledger: `core:health`, `schema` and
+  `swagger-ui`, each with a reason (`AUTH_BLUEPRINT.md` § 9.2).
+- New `tests/architecture/`:
+  - `url_walk.py` renders every route to a callable path, and raises on any converter or regex it
+    cannot render rather than skipping it;
+  - `test_route_enforcement.py` calls every non-exempt `/api/` route anonymously with
+    GET/POST/PUT/PATCH/DELETE and fails on anything but 401/403, with a specific hint on 404. It also
+    guards against an empty walk, and a meta-test runs the checker on `fake_urls.py` (gated, open
+    and lookup-first views);
+  - `test_public_routes.py` pins the ledger, and checks every key resolves and has a reason;
+  - `test_migrations.py` checks one head per app, `makemigrations --check` inside pytest, and a
+    table for every managed model.
+- `API_DESIGN.md` § Authentication now states the rule.
+
+**Why:** `BUILD_ORDER` 2.2. These tests reject a whole class of mistake rather than one instance:
+an endpoint shipped open, or a migration chain that only breaks at deploy. They must exist before
+1.1 adds the first gated endpoints.
+**Files:**
+- New: `backend/core/routes.py`,
+  `backend/tests/architecture/{__init__,url_walk,fake_urls,test_route_enforcement,test_public_routes,test_migrations}.py`.
+- Changed: `documentation/DAILY_CHANGES.md`, `documentation/planning/{BUILD_ORDER,TESTING_STRATEGY}.md`,
+  `documentation/system-design/API_DESIGN.md`.
+
+**Verification:**
+- `uv run pytest`: 43 passed. The first run had 1 failure: `test_no_model_change_is_missing_a_migration`
+  hit "Database access not allowed", because `makemigrations` checks the applied history. Marked
+  `django_db`; re-run green.
+- **Acceptance, break 1:** with `core:health` removed from `PUBLIC_ROUTES`, the route test failed
+  with `GET /api/health/ [core:health] -> 200` (and 405 for the other four methods) plus the fix
+  hint. Restored, it passed.
+- **Acceptance, break 2:** two throwaway `users/0002_probe_branch_{a,b}.py` migrations failed the
+  head test with `users: 0002_probe_branch_a, 0002_probe_branch_b. Merge with makemigrations
+  --merge…`. Both files were deleted and `users/migrations` is clean.
+- `ruff check`: passed. `ruff format --check`: the first run flagged `test_migrations.py`; after
+  `ruff format`, 38 files formatted.
+
+**Notes / still open:**
+- No gated `/api/` route exists yet, so the real-route test checks zero routes today. That is why
+  the meta-test and the "walk found the API" guard exist. 1.1's endpoints are the first it enforces.
+- `schema` and `swagger-ui` are public today. Gating them to `DEBUG` or `SCHEMA_PUBLIC` is noted in
+  the ledger's reason and is not done.
+- `/admin/` sits outside `/api/`, so this test does not see it. That is DB-15's point, and
+  `ADMIN_ENABLED` is the control.
+- Not here: the `dbx.E001`/`E007` boot checks (1.2a), the boundary test (needs the `project/` split,
+  1.6), and plugin conventions (3.2).
+
 ### BUILD_ORDER 2.1: pytest, with a guarded and hermetic harness
 **What:**
 - `pytest`, `pytest-django`, `factory-boy` and `pytest-cov` added to the `dev` group.

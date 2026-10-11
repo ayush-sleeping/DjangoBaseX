@@ -234,7 +234,18 @@ Add `"typecheck": "tsc --noEmit"` to `frontend/package.json` (closes `TECH_DEBT`
 **Done when:** `cd backend && uv run pytest` runs and reports at least one passing smoke test that
 hits `/api/health/`. `cd frontend && npm run typecheck` passes.
 
-### 2.2 — The architecture tests ⬜
+### 2.2 — The architecture tests ✅
+**Done 2026-10-11.** `tests/architecture/`:
+- `test_route_enforcement.py` walks every `/api/` route and calls each with five methods,
+  anonymously. A meta-test proves the checker flags an `AllowAny` view and a lookup-first 404 while
+  passing a gated view.
+- `test_public_routes.py` pins the new `core/routes.py` `PUBLIC_ROUTES` ledger: health, schema and
+  docs, each with a reason.
+- `test_migrations.py` checks one head per app, no missing migration, and a table for every model.
+
+Both deliberate breaks fail with a readable message. Removing `core:health` from the ledger reports
+`GET /api/health/ [core:health] -> 200`. Two `0002` migrations report
+`users: 0002_probe_branch_a, 0002_probe_branch_b`.
 In `backend/tests/architecture/`, per [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) § "The four tests":
 
 - `test_route_enforcement.py` — walk Django's URL resolver for **every** route, call each

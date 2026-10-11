@@ -1,6 +1,8 @@
 # Testing Strategy
 
-**Step 1 of the order below is done (2026-10-11, `BUILD_ORDER` 2.1):** `uv run pytest` with
+**Steps 1 and most of 2 are done (2026-10-11, `BUILD_ORDER` 2.1–2.2):** route enforcement and
+migrations from "the four tests" exist; architecture boundaries and plugin conventions wait for
+the `project/` split and plugins (Phase 3). Step 1: `uv run pytest` with
 pytest-django, factory_boy and pytest-cov, a test-database guard and a hermetic harness. The
 frontend still has no runner, and without CI nothing can fail a build.
 

@@ -119,6 +119,13 @@ JWT in `httpOnly` cookies backed by DB session rows ([ADR-0009](../adr/0009-jwt-
 - `/api/auth/me/` returns the user **and their permission codes** — one round trip for the shell
 - Wrong password and unknown email answer **identically**, so the endpoint is not a user oracle
 - Auth endpoints are throttled harder than the rest
+- **Every `/api/` route refuses an anonymous caller with 401/403** — enforced by
+  `backend/tests/architecture/test_route_enforcement.py`, which calls each route with every method.
+  A route that must be public (login, health) is not given a bare `AllowAny`; its **URL name** goes
+  into `backend/core/routes.py` `PUBLIC_ROUTES` with a one-sentence reason, and
+  `test_public_routes.py` pins that list, so opening a route is always a reviewed change. A **404**
+  to an anonymous caller fails the test too: the view looked something up before checking who was
+  asking
 
 ---
 
