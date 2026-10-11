@@ -26,6 +26,57 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 1.0: dependencies, cache, client IP, admin switch, Redis in Docker
+**What:**
+- `pyjwt`, `pyotp`, `cryptography`, `argon2-cffi` and `redis` added with `uv add`
+  (`pyproject.toml` and `uv.lock`).
+- `settings.py` gains `CACHES` from `CACHE_URL` (LocMem by default), `TRUSTED_PROXY_COUNT`,
+  `ADMIN_ENABLED`, `EMAIL_BACKEND`, `DEFAULT_FROM_EMAIL`, `FRONTEND_BASE_URL`, Argon2-first
+  `PASSWORD_HASHERS`, and `x-csrf-token` in `CORS_ALLOW_HEADERS`.
+- `config/urls.py` mounts `/admin/` only when `ADMIN_ENABLED`, which defaults to `DEBUG`.
+- New `core/http.py::client_ip()` reads `X-Forwarded-For` from the right, with 7 tests in
+  `core/tests.py`.
+- `docker-compose.yml` adds a `redis` service and points the backend's `CACHE_URL` at it.
+- Every new key is in `backend/.env.example`.
+
+**Why:** `BUILD_ORDER` 1.0, which Phase 1 cannot build without. ADR-0009 plus the owner's
+"several servers from day one" make a shared cache a correctness requirement: throttles, lockout
+and session liveness live in it (`AUTH_BLUEPRINT.md` § 17.4).
+**Files:**
+- New: `backend/core/http.py`.
+- Changed: `backend/pyproject.toml`, `backend/uv.lock`, `backend/config/settings.py`,
+  `backend/config/urls.py`, `backend/core/tests.py`, `backend/.env.example`, `docker-compose.yml`,
+  `README.md`, `documentation/{DAILY_CHANGES,ONBOARDING}.md`, `documentation/core/ARCHITECTURE.md`,
+  `documentation/planning/{BUILD_ORDER,TECH_DEBT}.md`, `documentation/system-design/DEPLOYMENT.md`.
+
+**Verification:**
+- `ruff check`: passed. `ruff format --check`: 21 files formatted. `manage.py check`: no issues.
+  `makemigrations --check --dry-run`: no changes.
+- `manage.py test core`: 7 tests, OK. **Mutation check:** with `chain[-n]` swapped for the common
+  `chain[0]` bug, 2 tests failed (`one_proxy_ignores_a_client_written_prefix`,
+  `two_proxies_count_from_the_right`). Restored, all 7 pass.
+- Locally, the settings resolve to LocMem, proxy count `0` (int), `ADMIN_ENABLED == DEBUG`, the
+  `argon2` hasher, `x-csrf-token` allowed and the console email backend.
+- **Acceptance criterion:** inside the backend container, with `CACHE_URL` pointing at Redis,
+  `manage.py check` reported no issues. A `cache.set`/`get` round-trip used `RedisCache` and returned
+  `pong`. Redis policy is `allkeys-lru`, and port 6379 is not reachable from the host.
+- HTTP: `/api/health/` 200, `/admin/` 302 (login redirect, so mounted under `DEBUG`).
+- **Unexplained:** one request to `localhost:3000/` returned 302 during the restart. It could not
+  be reproduced: five later requests all returned 200 via `127.0.0.1`, Docker is the only listener,
+  and the Next.js log shows only 200s.
+
+**Notes / still open:**
+- **Dev Redis has no password or persistence.** It is unpublished and on the compose network only.
+  The authenticated Redis of `OPERATIONS.md` § 15 is still 4.4 work.
+- `client_ip()` is the only reader of `TRUSTED_PROXY_COUNT`. Throttles and lockout must call it,
+  never `REMOTE_ADDR`.
+- **Not here:** the `dbx.E005` check that refuses LocMem with `DEBUG=False` lands with 1.2a. The
+  JWT and cookie keys are 1.1b.
+- **Tests:** these run under Django's runner (`manage.py test`). 2.1 adds pytest-django, which
+  runs `TestCase` classes unchanged.
+- **Your local `backend/.env` needs no change.** Every new key has a safe default. Products set
+  `CACHE_URL` and `TRUSTED_PROXY_COUNT` before deploying (`DEPLOYMENT.md` § 1).
+
 ### BUILD_ORDER 0.2 decided: JWT in `httpOnly` cookies with DB session rows (ADR-0009)
 **What:** The owner settled 0.2 with option C from `AUTH_RND.md`: a JWT access and refresh pair in
 `httpOnly` cookies, rotation with reuse detection, and a `users_user_session` row per refresh

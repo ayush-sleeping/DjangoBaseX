@@ -89,7 +89,13 @@ write the ADR. Closes **DB-1**.
 then how that is granted. 1.3 sits between them because RBAC's catalog is assembled from registry
 registrations and cannot be built without the seam.*
 
-### 1.0 — Dependencies and the deployment contract ⬜
+### 1.0 — Dependencies and the deployment contract ✅
+**Done 2026-10-11.** The five libraries are in `pyproject.toml`. `settings.py` has `CACHES` from
+`CACHE_URL`, `TRUSTED_PROXY_COUNT`, `ADMIN_ENABLED` (now gating `/admin/` in `config/urls.py`), the
+email keys, `FRONTEND_BASE_URL`, Argon2-first `PASSWORD_HASHERS`, and `x-csrf-token` in
+`CORS_ALLOW_HEADERS`. `core/http.py::client_ip()` has 7 tests in `core/tests.py`. Docker runs Redis
+as the cache. Not here: the `dbx.E005` boot check (it lands with the Ch. 9.2 checks in 1.2a), and
+the JWT/cookie keys of § 12 (1.1b).
 *Added 2026-09-21 by the design review. **Nothing else in Phase 1 builds without it** — the spec as
 written imports five libraries the project does not have.*
 

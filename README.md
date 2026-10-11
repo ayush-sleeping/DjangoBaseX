@@ -72,7 +72,7 @@ cp backend/.env.example backend/.env    # then set SECRET_KEY (step 3 below show
 docker compose up --build               # logs from both apps stream here; Ctrl-C stops
 ```
 Frontend on [localhost:3000](http://localhost:3000), API on [localhost:8000](http://localhost:8000).
-Migrations run on start. Create an admin with
+Redis runs alongside as the shared cache (not exposed to the host). Migrations run on start. Create an admin with
 `docker compose exec backend uv run python manage.py createsuperuser`. After changing
 `package.json`, restart with `docker compose up --build -V` so the container's `node_modules` is
 rebuilt. This is a **development** stack only — SQLite, `runserver`, `next dev` — and it shares
@@ -280,14 +280,15 @@ Stated plainly, because assuming otherwise wastes time.
 - Next.js 16 + React 19 + Tailwind 4, typed API wrapper, home page reading live backend health
 - `uv` + Ruff on the backend, ESLint + strict TypeScript on the frontend
 - A custom `users.User` (email login, no username) as `AUTH_USER_MODEL` — [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)
-- `docker compose up` development stack with live reload on both halves
+- `docker compose up` development stack with live reload on both halves, plus Redis as the shared cache
+- Argon2 password hashing; a proxy-aware `client_ip()` with tests (`manage.py test core`); `/admin/` only when `ADMIN_ENABLED`
 - Full documentation set, 9 ADRs, an agent contract, and a ranked tech-debt register
 
 **❌ Not built yet**
 - **Authentication** — no login, no tokens, no `/me`
 - **RBAC** — nothing beyond DRF's `IsAuthenticated` default
 - **Models** — only `users.User`; no domain models yet
-- **Tests** — zero, on both sides. **Nothing can fail a build**
+- **Tests** — a first handful (`manage.py test`); no pytest, no frontend runner, no CI. **Nothing can fail a build yet**
 - **CI** — no workflows
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 

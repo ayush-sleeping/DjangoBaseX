@@ -5,8 +5,8 @@
 #   docker compose down              stop
 #
 # Development only — not a production topology (DEPLOYMENT.md § 0, OPERATIONS.md § 5).
-# Uses SQLite in backend/db.sqlite3 (ADR-0005), shared with a host `runserver`.
-# Postgres and Redis join with BUILD_ORDER 1.0 / 4.4.
+# Uses SQLite in backend/db.sqlite3 (ADR-0005), shared with a host `runserver`, and Redis as the
+# shared cache (AUTH_BLUEPRINT § 17.4). Postgres joins with BUILD_ORDER 4.4.
 # Ports bind to 127.0.0.1 only (OPERATIONS.md § 15).
 
 x-hardening: &hardening
@@ -14,15 +14,29 @@ x-hardening: &hardening
   cap_drop: [ALL]
 
 services:
+  # The shared cache: throttles, lockout, session liveness. Not published to the host. No auth or
+  # persistence yet — development only; OPERATIONS.md § 15's authenticated Redis lands with 4.4.
+  redis:
+    <<: *hardening
+    image: redis:7.4-alpine
+    user: redis
+    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   backend:
     <<: *hardening
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    # Every value except ALLOWED_HOSTS comes from backend/.env (copy backend/.env.example first).
+    # Every value except these comes from backend/.env (copy backend/.env.example first).
     # `backend` is the hostname the frontend container calls it by.
     environment:
       ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      CACHE_URL: redis://redis:6379/0
     command: >
       sh -c "uv run --frozen python manage.py migrate --noinput &&
              exec uv run --frozen python manage.py runserver 0.0.0.0:8000"
@@ -30,6 +44,9 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
+    depends_on:
+      redis:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD

@@ -8,6 +8,7 @@ Never read os.environ directly elsewhere — add a setting here and import it.
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -18,6 +19,10 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3000"]),
     CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:3000"]),
+    TRUSTED_PROXY_COUNT=(int, 0),
+    EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
+    DEFAULT_FROM_EMAIL=(str, "no-reply@example.com"),
+    FRONTEND_BASE_URL=(str, "http://localhost:3000"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -85,8 +90,21 @@ DATABASES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Password validation
+# Cache — part of the security model, not a performance detail (AUTH_BLUEPRINT § 17.4)
 # -------------------------------------------------------------------------------------------- ::
+# Throttles, lockout, session liveness and the permission version all live here. LocMem is per
+# process, so with more than one worker each of them silently becomes per worker: a shared cache
+# (redis://) is required anywhere more than one process serves requests.
+CACHES = {"default": env.cache("CACHE_URL", default="locmemcache://")}
+
+# Passwords
+# -------------------------------------------------------------------------------------------- ::
+# Argon2 first; existing PBKDF2 hashes still verify and are re-hashed on the next login.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+]
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -110,9 +128,27 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # CORS / CSRF — the Next.js frontend runs on a different origin
 # -------------------------------------------------------------------------------------------- ::
+# Exact origins, scheme included. Never CORS_ALLOW_ALL_ORIGINS with credentials: the library then
+# reflects any origin, so every site can make authenticated calls (AUTH_BLUEPRINT § 17.2).
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = True
+# The cookie-auth CSRF header (§ 6.1) must pass preflight, or every unsafe request fails as a
+# "CORS error" that hides the auth problem behind it.
+CORS_ALLOW_HEADERS = [*default_headers, "x-csrf-token"]
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+
+# Deployment contract (AUTH_BLUEPRINT Ch. 17–20)
+# -------------------------------------------------------------------------------------------- ::
+# Proxies in front of the app. 0 trusts REMOTE_ADDR; N takes the Nth X-Forwarded-For entry from
+# the RIGHT. Wrong here makes per-IP lockout global. Read only through core.http.client_ip().
+TRUSTED_PROXY_COUNT = env("TRUSTED_PROXY_COUNT")
+# The Django admin is a second auth system; /admin/ is mounted only when this is on (Ch. 20).
+ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=DEBUG)
+# Console in development, so a missing SMTP configuration is visible rather than silent (Ch. 18).
+EMAIL_BACKEND = env("EMAIL_BACKEND")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+# Where emailed links point. Never derived from the request's Host header.
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL")
 
 # Django REST Framework
 # -------------------------------------------------------------------------------------------- ::

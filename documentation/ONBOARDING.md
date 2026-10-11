@@ -63,6 +63,7 @@ npm run dev                               # :3000
 | Frontend says the backend is down | Django isn't running, or `NEXT_PUBLIC_API_URL` in `.env.local` is wrong |
 | CORS error in the browser console | The frontend origin isn't in `CORS_ALLOWED_ORIGINS` in `backend/.env` |
 | `uv: command not found` | `brew install uv` |
+| `/admin/` answers 404 | `ADMIN_ENABLED` is off. It defaults to `DEBUG` (`AUTH_BLUEPRINT.md` Ch. 20) |
 | Ruff fails on files you didn't touch | A new app is missing from `known-first-party` in `backend/pyproject.toml` (`TECH_DEBT` DB-14) |
 
 ---

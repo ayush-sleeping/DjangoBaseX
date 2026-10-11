@@ -37,6 +37,11 @@
 | `DATABASE_URL` | unset (SQLite) | **A PostgreSQL URL** |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | The real frontend origin, **https**. Never `*` with credentials |
 | `CSRF_TRUSTED_ORIGINS` | `http://localhost:3000` | The real frontend origin, **https** |
+| `CACHE_URL` | unset (LocMem) — Docker sets Redis | **A shared Redis URL.** Throttles, lockout and session revocation live in the cache; LocMem makes each of them per worker (`AUTH_BLUEPRINT.md` § 17.4) |
+| `TRUSTED_PROXY_COUNT` | `0` | **The number of proxies in front of the app.** Left at `0` behind a load balancer, every user shares one IP and one attacker locks everyone out (§ 17.3) |
+| `ADMIN_ENABLED` | defaults to `DEBUG` | **`False`** unless you deliberately want `/admin/` reachable (Ch. 20) |
+| `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` | console / `no-reply@example.com` | A real mail backend and a sender on your domain |
+| `FRONTEND_BASE_URL` | `http://localhost:3000` | The public frontend URL, **https**. Emailed links point here |
 
 ### Frontend
 
