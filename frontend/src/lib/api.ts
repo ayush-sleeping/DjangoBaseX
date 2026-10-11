@@ -41,6 +41,22 @@ export class ApiError extends Error {
   }
 }
 
+/** DRF's page envelope, as every paginated list endpoint returns it. */
+export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
+
+/** Field → messages, from a 400 `invalid`. Empty when the error is anything else. */
+export function fieldErrors(error: unknown): Record<string, string[]> {
+  if (!(error instanceof ApiError) || error.status !== 400 || error.code !== "invalid") return {};
+  const details = error.details;
+  if (!details || typeof details !== "object" || Array.isArray(details)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [field, messages] of Object.entries(details)) {
+    const list = Array.isArray(messages) ? messages : [messages];
+    out[field] = list.filter((m): m is string => typeof m === "string");
+  }
+  return out;
+}
+
 /**
  * The user's role requires two-factor and they have not set it up: every endpoint but enrolment,
  * logout and /me answers this. Pages send the user to /account/security (MFA_ENROLMENT_PATH in

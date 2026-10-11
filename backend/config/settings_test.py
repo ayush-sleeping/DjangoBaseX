@@ -36,6 +36,8 @@ _PINNED_ENV = {
     "LOCKOUT_WINDOW": "900",
     "LOCKOUT_DURATION": "900",
     "PASSWORD_RESET_TOKEN_LIFETIME": "1800",
+    "PASSWORD_SETUP_TOKEN_LIFETIME": "259200",
+    "INVITATION_LIFETIME": "604800",
     # A valid, test-only Fernet key (32 zero bytes, urlsafe-base64). Never used outside pytest.
     "MFA_ENCRYPTION_KEY": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "MFA_ISSUER": "DjangoBaseX",

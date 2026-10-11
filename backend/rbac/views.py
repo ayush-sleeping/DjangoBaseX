@@ -10,6 +10,7 @@ from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from core.api.errors import from_exception, invalid_response
 from core.api.views import BaseAPIView
 from core.api.viewsets import BaseViewSet
 
@@ -27,34 +28,14 @@ from .serializers import (
 User = get_user_model()  # rbac never imports users' models (Ch. 2)
 
 
-def error(exc: services.RbacError, http_status: int, details=None) -> Response:
-    body = {"error": {"code": exc.code, "message": str(exc) or exc.__doc__ or exc.code}}
-    if details is not None:
-        body["error"]["details"] = details
-    return Response(body, status=http_status)
-
-
-def invalid(serializer) -> Response:
-    return Response(
-        {
-            "error": {
-                "code": "invalid",
-                "message": "Check the fields.",
-                "details": serializer.errors,
-            }
-        },
-        status=status.HTTP_400_BAD_REQUEST,
-    )
-
-
 def rbac_error_response(exc: services.RbacError) -> Response:
     if isinstance(exc, services.ElevatedRequiresSuperuser):
-        return error(exc, status.HTTP_403_FORBIDDEN)
+        return from_exception(exc, status.HTTP_403_FORBIDDEN)
     if isinstance(exc, services.UnknownPermission):
-        return error(exc, status.HTTP_400_BAD_REQUEST, details=exc.codes)
+        return from_exception(exc, status.HTTP_400_BAD_REQUEST, details=exc.codes)
     if isinstance(exc, services.RoleInUse):
-        return error(exc, status.HTTP_409_CONFLICT, details={"user_count": exc.user_count})
-    return error(exc, status.HTTP_409_CONFLICT)  # SystemRoleProtected, LastAdministrator
+        return from_exception(exc, status.HTTP_409_CONFLICT, details={"user_count": exc.user_count})
+    return from_exception(exc, status.HTTP_409_CONFLICT)  # SystemRoleProtected, LastAdministrator
 
 
 def roles_for_response(user):
@@ -101,7 +82,7 @@ class RoleViewSet(
     def create(self, request):
         serializer = RoleCreateSerializer(data=request.data)
         if not serializer.is_valid():
-            return invalid(serializer)
+            return invalid_response(serializer)
         data = dict(serializer.validated_data)
         try:
             role = services.create_role(
@@ -115,7 +96,7 @@ class RoleViewSet(
         role = self.get_object()
         serializer = RoleUpdateSerializer(data=request.data, context={"role": role})
         if not serializer.is_valid():
-            return invalid(serializer)
+            return invalid_response(serializer)
         try:
             services.update_role(actor=request.user, role=role, **serializer.validated_data)
         except services.RbacError as exc:
@@ -135,7 +116,7 @@ class RoleViewSet(
         role = self.get_object()
         serializer = GrantsSerializer(data=request.data)
         if not serializer.is_valid():
-            return invalid(serializer)
+            return invalid_response(serializer)
         try:
             diff = services.set_grants(
                 actor=request.user,
@@ -168,7 +149,7 @@ class UserRoleViewSet(BaseViewSet):
         user = self._user()
         serializer = AssignRoleSerializer(data=request.data)
         if not serializer.is_valid():
-            return invalid(serializer)
+            return invalid_response(serializer)
         role = get_object_or_404(
             Role.objects.visible_to(request.user), public_id=serializer.validated_data["role"]
         )

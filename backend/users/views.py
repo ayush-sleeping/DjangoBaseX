@@ -1,29 +1,54 @@
 """
 /api/auth/ endpoints. Thin: parse, delegate to users.services.auth, respond (AGENTS.md § 3).
 Tokens never appear in a response body — only in cookies (AUTH_BLUEPRINT § 6.2 step 10).
+
+The /api/users/ section (UserViewSet onward) is the reference module every later module copies
+(BUILD_ORDER 1.5): a BaseViewSet with required_permissions per action, get_queryset() through
+visible_to() so an invisible row is a 404, validate-only serializers, one services call per write.
 """
 
+from django.apps import apps
 from django.core.exceptions import ValidationError
-from rest_framework import status
+from django.db.models import Prefetch, Q
+from django.shortcuts import get_object_or_404
+from rest_framework import mixins, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from core.api.errors import error_response, from_exception, invalid_response
 from core.api.views import BaseAPIView
+from core.api.viewsets import BaseViewSet
 
 from . import mfa, tokens
 from .cookies import clear_auth_cookies, cookie_names, set_auth_cookies
+from .models import Invitation, User
 from .reauth import requires_recent_auth
 from .serializers import (
+    AcceptInvitationSerializer,
+    DeactivateSerializer,
     ForgotPasswordSerializer,
+    InvitationCreateSerializer,
+    InvitationSerializer,
     LoginSerializer,
     MeSerializer,
     MfaConfirmSerializer,
     MfaVerifySerializer,
     PasswordConfirmSerializer,
     ResetPasswordSerializer,
+    UserCreateSerializer,
+    UserSerializer,
+    UserUpdateSerializer,
 )
-from .services import auth, passwords
+from .services import auth, invitations, passwords
 from .services import mfa as mfa_service
-from .throttles import LoginThrottle, MfaThrottle, MfaVerifyThrottle, PasswordResetThrottle
+from .services import users as users_service
+from .throttles import (
+    InvitationAcceptThrottle,
+    LoginThrottle,
+    MfaThrottle,
+    MfaVerifyThrottle,
+    PasswordResetThrottle,
+)
 
 # One body for wrong password, unknown address and inactive account, so login is not an oracle.
 INVALID_CREDENTIALS = {
@@ -243,3 +268,151 @@ class MfaDisableView(BaseAPIView):
     def post(self, request):
         mfa_service.disable(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# --- /api/users/ ---------------------------------------------------------------------------------
+
+
+def role_model():
+    return apps.get_model("rbac", "Role")  # by string: users never imports rbac (Ch. 2)
+
+
+class UserViewSet(BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
+    serializer_class = UserSerializer
+    required_permissions = {
+        "list": ["users.users.view"],
+        "retrieve": ["users.users.view"],
+        "create": ["users.users.create"],
+        "partial_update": ["users.users.update"],
+        "deactivate": ["users.users.deactivate"],
+        "activate": ["users.users.deactivate"],
+        "revoke_sessions": ["users.sessions.revoke"],
+    }
+
+    def get_queryset(self):
+        queryset = (
+            User.objects.visible_to(self.request.user)
+            .prefetch_related(
+                Prefetch("user_roles", queryset=_user_roles_with_role()), "mfa_devices"
+            )
+            .order_by("email", "pk")
+        )
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(Q(email__icontains=search) | Q(full_name__icontains=search))
+        return queryset
+
+    def _fresh(self, user):
+        return UserSerializer(self.get_queryset().get(pk=user.pk)).data
+
+    def create(self, request):
+        serializer = UserCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return invalid_response(serializer)
+        user = users_service.create_user(actor=request.user, **serializer.validated_data)
+        return Response(self._fresh(user), status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, public_id=None):
+        user = self.get_object()
+        serializer = UserUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return invalid_response(serializer)
+        users_service.update_user(actor=request.user, user=user, **serializer.validated_data)
+        return Response(self._fresh(user))
+
+    @action(detail=True, methods=["post"])
+    def deactivate(self, request, public_id=None):
+        user = self.get_object()
+        serializer = DeactivateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return invalid_response(serializer)
+        try:
+            users_service.deactivate(
+                actor=request.user, user=user, reason=serializer.validated_data["reason"]
+            )
+        except users_service.UsersError as exc:
+            return from_exception(exc, status.HTTP_409_CONFLICT)
+        return Response(self._fresh(user))
+
+    @action(detail=True, methods=["post"])
+    def activate(self, request, public_id=None):
+        user = users_service.activate(actor=request.user, user=self.get_object())
+        return Response(self._fresh(user))
+
+    @action(detail=True, methods=["post"], url_path="sessions/revoke")
+    def revoke_sessions(self, request, public_id=None):
+        count = users_service.revoke_sessions(actor=request.user, user=self.get_object())
+        return Response({"revoked": count})
+
+
+def _user_roles_with_role():
+    user_role = apps.get_model("rbac", "UserRole")
+    return user_role.objects.select_related("role").order_by("role__name")
+
+
+class InvitationViewSet(BaseViewSet, mixins.ListModelMixin):
+    serializer_class = InvitationSerializer
+    required_permissions = {
+        "list": ["users.invitations.send"],
+        "create": ["users.invitations.send"],
+        "revoke": ["users.invitations.send"],
+    }
+
+    def get_queryset(self):
+        return Invitation.objects.select_related("role", "invited_by").order_by(
+            "-created_at", "-pk"
+        )
+
+    def create(self, request):
+        serializer = InvitationCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return invalid_response(serializer)
+        role = get_object_or_404(role_model(), public_id=serializer.validated_data["role"])
+        try:
+            invitation = invitations.invite(
+                actor=request.user, email=serializer.validated_data["email"], role=role
+            )
+        except invitations.ElevatedRequiresSuperuser as exc:
+            return from_exception(exc, status.HTTP_403_FORBIDDEN)
+        except invitations.InvitationError as exc:
+            return from_exception(exc, status.HTTP_409_CONFLICT)
+        return Response(InvitationSerializer(invitation).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def revoke(self, request, public_id=None):
+        try:
+            invitation = invitations.revoke(actor=request.user, invitation=self.get_object())
+        except invitations.NotPending as exc:
+            return from_exception(exc, status.HTTP_409_CONFLICT)
+        return Response(InvitationSerializer(invitation).data)
+
+
+class AcceptInvitationView(BaseAPIView):
+    # Public (core.routes.PUBLIC_ROUTES): authenticated by the invitation token itself.
+    public = True
+    authentication_classes: list = []
+    throttle_classes = [InvitationAcceptThrottle]
+
+    def post(self, request):
+        serializer = AcceptInvitationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return invalid_response(serializer)
+        data = serializer.validated_data
+        try:
+            issued = invitations.accept(request, data["token"], data["password"], data["full_name"])
+        except invitations.InvalidInvitationToken:
+            return error_response(
+                "invalid_token",
+                "This invitation is invalid or has expired. Ask for a new one.",
+                status.HTTP_400_BAD_REQUEST,
+            )
+        except ValidationError as exc:
+            return error_response(
+                "invalid_password",
+                "Choose a different password.",
+                status.HTTP_400_BAD_REQUEST,
+                details=list(exc.messages),
+            )
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        set_auth_cookies(response, issued)
+        return response

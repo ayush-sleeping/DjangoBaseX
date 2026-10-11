@@ -5,12 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
-import { isMfaEnrollmentRequired } from "@/lib/api";
+import { fieldErrors, isMfaEnrollmentRequired } from "@/lib/api";
 import { MFA_ENROLMENT_PATH } from "@/lib/mfa";
 import { isSuperuser, type Permissions, usePermissions } from "@/lib/permissions";
 import {
   deleteRole,
-  fieldErrors,
   getRole,
   grantedIn,
   listPermissionGroups,
@@ -34,6 +33,8 @@ const danger = "rounded-md bg-red-600 px-3 py-2 text-sm text-white disabled:opac
 
 const SYSTEM_REASON =
   "This is a system role: its name, its permissions and its existence are fixed by the seed.";
+// The API refuses any change to an elevated role from anyone but a superuser (§ 8.2).
+const ELEVATED_REASON = "Only a superuser can change or delete an elevated role.";
 
 type Loaded = {
   role: Role;
@@ -99,6 +100,7 @@ export function RoleEditor({ publicId }: { publicId: string }) {
   const { role, catalog } = state;
   // Every write answers with the new role; keep the catalog, which a write never changes.
   const replaceRole = (next: Role) => setState({ role: next, catalog });
+  const elevatedLock = role.is_elevated && !isSuperuser(perms.me);
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
@@ -111,22 +113,42 @@ export function RoleEditor({ publicId }: { publicId: string }) {
           Held by {role.user_count} user{role.user_count === 1 ? "" : "s"}.
         </p>
         {role.is_system ? <p className="text-sm text-zinc-500">🔒 {SYSTEM_REASON}</p> : null}
+        {elevatedLock ? <p className="text-sm text-zinc-500">🔒 {ELEVATED_REASON}</p> : null}
       </header>
 
       {perms.can(ROLE_CODES.update) ? (
-        <DetailsForm key={role.public_id} role={role} perms={perms} onSaved={replaceRole} />
+        <DetailsForm
+          key={role.public_id}
+          role={role}
+          perms={perms}
+          locked={elevatedLock}
+          onSaved={replaceRole}
+        />
       ) : null}
 
       <GrantsSection
         key={role.public_id}
         role={role}
         catalog={catalog}
-        editable={perms.can(ROLE_CODES.update) && !role.is_system && catalog !== undefined}
+        editable={
+          perms.can(ROLE_CODES.update) && !role.is_system && !elevatedLock && catalog !== undefined
+        }
+        lockReason={
+          role.is_system
+            ? "System roles' permissions are fixed."
+            : elevatedLock
+              ? ELEVATED_REASON
+              : undefined
+        }
         onSaved={async () => replaceRole(await getRole(role.public_id))}
       />
 
       {perms.can(ROLE_CODES.delete) ? (
-        <DeleteSection role={role} onDeleted={() => router.push("/settings/roles")} />
+        <DeleteSection
+          role={role}
+          locked={elevatedLock}
+          onDeleted={() => router.push("/settings/roles")}
+        />
       ) : null}
     </div>
   );
@@ -135,10 +157,13 @@ export function RoleEditor({ publicId }: { publicId: string }) {
 function DetailsForm({
   role,
   perms,
+  locked,
   onSaved,
 }: {
   role: Role;
   perms: Permissions;
+  /** Elevated role, non-superuser: shown read-only, because the API would refuse any change. */
+  locked: boolean;
   onSaved: (role: Role) => void;
 }) {
   const superuser = isSuperuser(perms.me);
@@ -186,44 +211,47 @@ function DetailsForm({
   return (
     <form onSubmit={handleSubmit} className={card} noValidate>
       <h2 className="text-sm font-semibold">Details</h2>
-      <label className="block text-sm">
-        Name
-        <input
-          name="name"
-          defaultValue={role.name}
-          disabled={role.is_system}
-          required
-          className={input}
-        />
-        {role.is_system ? (
-          <span className="mt-1 block text-xs text-zinc-500">System roles keep their name.</span>
-        ) : null}
-        {fieldError("name")}
-      </label>
-      <label className="block text-sm">
-        Description
-        <textarea
-          name="description"
-          rows={2}
-          defaultValue={role.description}
-          className={input}
-        />
-        {fieldError("description")}
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="mfa_required" defaultChecked={role.mfa_required} />
-        Require two-factor authentication for everyone holding this role
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="is_elevated"
-          defaultChecked={role.is_elevated}
-          disabled={!superuser}
-        />
-        Elevated: only a superuser can change or assign it
-        {!superuser ? <span className="text-xs text-zinc-500">(superusers only)</span> : null}
-      </label>
+      {locked ? <p className="text-xs text-zinc-500">🔒 {ELEVATED_REASON}</p> : null}
+      <fieldset disabled={locked} className="space-y-4">
+        <label className="block text-sm">
+          Name
+          <input
+            name="name"
+            defaultValue={role.name}
+            disabled={role.is_system}
+            required
+            className={input}
+          />
+          {role.is_system ? (
+            <span className="mt-1 block text-xs text-zinc-500">System roles keep their name.</span>
+          ) : null}
+          {fieldError("name")}
+        </label>
+        <label className="block text-sm">
+          Description
+          <textarea
+            name="description"
+            rows={2}
+            defaultValue={role.description}
+            className={input}
+          />
+          {fieldError("description")}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="mfa_required" defaultChecked={role.mfa_required} />
+          Require two-factor authentication for everyone holding this role
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="is_elevated"
+            defaultChecked={role.is_elevated}
+            disabled={!superuser}
+          />
+          Elevated: only a superuser can change or assign it
+          {!superuser ? <span className="text-xs text-zinc-500">(superusers only)</span> : null}
+        </label>
+      </fieldset>
       {message ? (
         <p
           role={message.ok ? "status" : "alert"}
@@ -232,9 +260,11 @@ function DetailsForm({
           {message.text}
         </p>
       ) : null}
-      <button type="submit" disabled={pending} className={button}>
-        {pending ? "Saving…" : "Save details"}
-      </button>
+      {locked ? null : (
+        <button type="submit" disabled={pending} className={button}>
+          {pending ? "Saving…" : "Save details"}
+        </button>
+      )}
     </form>
   );
 }
@@ -243,11 +273,14 @@ function GrantsSection({
   role,
   catalog,
   editable,
+  lockReason,
   onSaved,
 }: {
   role: Role;
   catalog?: PermissionGroup[];
   editable: boolean;
+  /** Why the grants cannot be changed by anyone viewing them like this, if a rule says so. */
+  lockReason?: string;
   onSaved: () => Promise<void>;
 }) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set(role.permissions));
@@ -287,8 +320,8 @@ function GrantsSection({
   return (
     <section className={card}>
       <h2 className="text-sm font-semibold">Permissions</h2>
-      {role.is_system ? (
-        <p className="text-xs text-zinc-500">🔒 System roles&apos; permissions are fixed.</p>
+      {lockReason ? (
+        <p className="text-xs text-zinc-500">🔒 {lockReason}</p>
       ) : !editable ? (
         <p className="text-xs text-zinc-500">Read only.</p>
       ) : (
@@ -356,7 +389,16 @@ function GrantsSection({
   );
 }
 
-function DeleteSection({ role, onDeleted }: { role: Role; onDeleted: () => void }) {
+function DeleteSection({
+  role,
+  locked,
+  onDeleted,
+}: {
+  role: Role;
+  /** Elevated role, non-superuser: the API refuses the delete. */
+  locked: boolean;
+  onDeleted: () => void;
+}) {
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
@@ -377,6 +419,8 @@ function DeleteSection({ role, onDeleted }: { role: Role; onDeleted: () => void 
       <h2 className="text-sm font-semibold">Delete role</h2>
       {role.is_system ? (
         <p className="text-sm text-zinc-500">🔒 System roles cannot be deleted.</p>
+      ) : locked ? (
+        <p className="text-sm text-zinc-500">🔒 {ELEVATED_REASON}</p>
       ) : role.user_count > 0 ? (
         <p className="text-sm text-zinc-500">
           {role.user_count} user{role.user_count === 1 ? "" : "s"} still hold this role. Remove it

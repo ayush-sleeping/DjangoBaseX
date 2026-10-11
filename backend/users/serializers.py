@@ -60,3 +60,84 @@ class MeSerializer(serializers.ModelSerializer):
 
     def get_mfa_enabled(self, user) -> bool:
         return user.mfa_devices.filter(confirmed_at__isnull=False).exists()
+
+
+class RoleSummarySerializer(serializers.Serializer):
+    # Read through the reverse relation; users never imports rbac's models (Ch. 2).
+    public_id = serializers.UUIDField()
+    slug = serializers.CharField()
+    name = serializers.CharField()
+
+
+class UserSerializer(serializers.ModelSerializer):
+    mfa_enabled = serializers.SerializerMethodField()
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "public_id",
+            "email",
+            "full_name",
+            "is_active",
+            "is_superuser",
+            "mfa_enabled",
+            "last_login",
+            "created_at",
+            "deactivated_at",
+            "deactivated_reason",
+            "roles",
+        ]
+        read_only_fields = fields
+
+    def get_mfa_enabled(self, user) -> bool:
+        return any(d.confirmed_at for d in user.mfa_devices.all())
+
+    def get_roles(self, user) -> list[dict]:
+        return RoleSummarySerializer([ur.role for ur in user.user_roles.all()], many=True).data
+
+
+class UserCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    full_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+
+class UserUpdateSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=255, allow_blank=True)
+
+
+class DeactivateSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class InvitationSerializer(serializers.Serializer):
+    public_id = serializers.UUIDField()
+    email = serializers.EmailField()
+    role = RoleSummarySerializer()
+    invited_by = serializers.SerializerMethodField()
+    status = serializers.CharField()
+    expires_at = serializers.DateTimeField()
+    accepted_at = serializers.DateTimeField()
+    revoked_at = serializers.DateTimeField()
+    created_at = serializers.DateTimeField()
+
+    def get_invited_by(self, invitation) -> dict | None:
+        inviter = invitation.invited_by
+        return {"public_id": inviter.public_id, "email": inviter.email} if inviter else None
+
+
+class InvitationCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    role = serializers.UUIDField()
+
+
+class AcceptInvitationSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=128)
+    password = serializers.CharField(max_length=4096, trim_whitespace=False)
+    full_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")

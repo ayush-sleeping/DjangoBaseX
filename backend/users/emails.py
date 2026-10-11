@@ -10,20 +10,46 @@ from django.template.loader import render_to_string
 
 
 def send_password_reset(user, raw_token: str) -> None:
-    link = (
-        f"{settings.FRONTEND_BASE_URL.rstrip('/')}/reset-password?{urlencode({'token': raw_token})}"
-    )
-    context = {
-        "user": user,
-        "link": link,
-        "minutes": settings.PASSWORD_RESET_TOKEN_LIFETIME // 60,
-    }
-    message = EmailMultiAlternatives(
+    _send(
+        to=user.email,
         subject="Reset your password",
-        body=render_to_string("users/email/password_reset.txt", context),
-        to=[user.email],
+        template="users/email/password_reset",
+        path="reset-password",
+        raw_token=raw_token,
+        context={"user": user, "minutes": settings.PASSWORD_RESET_TOKEN_LIFETIME // 60},
     )
-    message.attach_alternative(
-        render_to_string("users/email/password_reset.html", context), "text/html"
+
+
+def send_invitation(invitation, raw_token: str) -> None:
+    _send(
+        to=invitation.email,
+        subject="You have been invited",
+        template="users/email/invitation",
+        path="accept-invitation",
+        raw_token=raw_token,
+        context={
+            "invitation": invitation,
+            "days": settings.INVITATION_LIFETIME // 86_400,
+        },
     )
+
+
+def send_account_setup(user, raw_token: str) -> None:
+    _send(
+        to=user.email,
+        subject="Set your password",
+        template="users/email/account_setup",
+        path="reset-password",
+        raw_token=raw_token,
+        context={"user": user, "days": settings.PASSWORD_SETUP_TOKEN_LIFETIME // 86_400},
+    )
+
+
+def _send(*, to, subject, template, path, raw_token, context) -> None:
+    base = settings.FRONTEND_BASE_URL.rstrip("/")
+    context = {**context, "link": f"{base}/{path}?{urlencode({'token': raw_token})}"}
+    message = EmailMultiAlternatives(
+        subject=subject, body=render_to_string(f"{template}.txt", context), to=[to]
+    )
+    message.attach_alternative(render_to_string(f"{template}.html", context), "text/html")
     message.send()

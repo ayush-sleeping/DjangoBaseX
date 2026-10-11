@@ -12,6 +12,9 @@ class RbacConfig(AppConfig):
         from .permissions import GROUP
 
         registry.permissions.register(GROUP)
+        from users.signals import invitation_accepted
+
+        invitation_accepted.connect(_assign_invited_role, dispatch_uid="rbac.assign_invited_role")
         # After every migrate the catalog is in the database, so a fresh one is usable at once.
         post_migrate.connect(_seed_after_migrate, sender=self, dispatch_uid="rbac.seed_catalog")
 
@@ -25,3 +28,12 @@ def _seed_after_migrate(sender, **kwargs):
     sync_catalog()
     ensure_system_roles()
     recompute_administrator()
+
+
+def _assign_invited_role(sender, user, role_id, invited_by=None, **kwargs):
+    # The elevated-role check happened when the invitation was sent (users.services.invitations);
+    # here the system completes what an authorised person already decided.
+    from .models import Role
+    from .services import assign_role
+
+    assign_role(actor=None, user=user, role=Role.objects.get(pk=role_id))

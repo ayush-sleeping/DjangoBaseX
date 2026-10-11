@@ -32,6 +32,8 @@ env = environ.Env(
     LOCKOUT_WINDOW=(int, 900),
     LOCKOUT_DURATION=(int, 900),
     PASSWORD_RESET_TOKEN_LIFETIME=(int, 1800),
+    PASSWORD_SETUP_TOKEN_LIFETIME=(int, 259_200),
+    INVITATION_LIFETIME=(int, 604_800),
     MFA_ENCRYPTION_KEY=(str, ""),
     MFA_ISSUER=(str, "DjangoBaseX"),
     MFA_TOKEN_LIFETIME=(int, 300),
@@ -197,6 +199,9 @@ LOCKOUT_THRESHOLD = env("LOCKOUT_THRESHOLD")
 LOCKOUT_WINDOW = env("LOCKOUT_WINDOW")
 LOCKOUT_DURATION = env("LOCKOUT_DURATION")
 PASSWORD_RESET_TOKEN_LIFETIME = env("PASSWORD_RESET_TOKEN_LIFETIME")  # seconds; a link works once
+# A new account created by an operator gets a set-your-password link (3 days), not a reset (30 min).
+PASSWORD_SETUP_TOKEN_LIFETIME = env("PASSWORD_SETUP_TOKEN_LIFETIME")
+INVITATION_LIFETIME = env("INVITATION_LIFETIME")  # seconds; 7 days (§ 3.5)
 
 # MFA (A16, § 6.8). The key is a Fernet key encrypting TOTP secrets at rest. Empty is allowed so the
 # app boots without MFA configured; enabling MFA then fails loudly (users.mfa).
@@ -233,6 +238,7 @@ REST_FRAMEWORK = {
         "password_reset": "3/hour",  # per identifier — users.throttles.PasswordResetThrottle
         "mfa_verify": "5/min",  # per mfa_token — users.throttles.MfaVerifyThrottle
         "mfa": "10/min",  # per user, across setup/confirm/disable
+        "invitation_accept": "10/hour",  # per IP — users.throttles.InvitationAcceptThrottle
     },
 }
 

@@ -14,6 +14,7 @@ EXPECTED_PUBLIC = {
     "users:password-forgot",
     "users:password-reset",
     "users:mfa-verify",
+    "users:invitation-accept",
 }
 
 

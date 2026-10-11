@@ -1,7 +1,9 @@
 from django.urls import path
 
 from .views import (
+    AcceptInvitationView,
     ForgotPasswordView,
+    InvitationViewSet,
     LoginView,
     LogoutView,
     MeView,
@@ -13,6 +15,7 @@ from .views import (
     RefreshView,
     ResetPasswordView,
     RevokeOtherSessionsView,
+    UserViewSet,
 )
 
 app_name = "users"
@@ -32,5 +35,38 @@ urlpatterns = [
     path("auth/mfa/disable/", MfaDisableView.as_view(), name="mfa-disable"),
     path(
         "auth/sessions/revoke-all/", RevokeOtherSessionsView.as_view(), name="sessions-revoke-all"
+    ),
+    path("auth/invitations/accept/", AcceptInvitationView.as_view(), name="invitation-accept"),
+    # /api/users/ — the Users module (§ 10.2)
+    path("users/", UserViewSet.as_view({"get": "list", "post": "create"}), name="users"),
+    path(
+        "users/invitations/",
+        InvitationViewSet.as_view({"get": "list", "post": "create"}),
+        name="invitations",
+    ),
+    path(
+        "users/invitations/<uuid:public_id>/revoke/",
+        InvitationViewSet.as_view({"post": "revoke"}),
+        name="invitation-revoke",
+    ),
+    path(
+        "users/<uuid:public_id>/",
+        UserViewSet.as_view({"get": "retrieve", "patch": "partial_update"}),
+        name="user",
+    ),
+    path(
+        "users/<uuid:public_id>/deactivate/",
+        UserViewSet.as_view({"post": "deactivate"}),
+        name="user-deactivate",
+    ),
+    path(
+        "users/<uuid:public_id>/activate/",
+        UserViewSet.as_view({"post": "activate"}),
+        name="user-activate",
+    ),
+    path(
+        "users/<uuid:public_id>/sessions/revoke/",
+        UserViewSet.as_view({"post": "revoke_sessions"}),
+        name="user-sessions-revoke",
     ),
 ]

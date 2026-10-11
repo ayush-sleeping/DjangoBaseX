@@ -1,0 +1,4 @@
+<p>You have been invited to sign in as {{ invitation.email }}{% if invitation.invited_by %}, by {{ invitation.invited_by.email }}{% endif %}.</p>
+<p>To accept, choose your password within {{ days }} days. The link works once:</p>
+<p><a href="{{ link }}">Accept the invitation</a></p>
+<p>If you were not expecting this, ignore this email.</p>

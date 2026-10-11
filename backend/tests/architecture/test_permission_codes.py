@@ -17,15 +17,10 @@ from tests.architecture.permission_refs import find_permission_refs
 # Codes declared before anything checks them (their endpoints are not built yet). A ratchet: when a
 # code here gains a reference, test_declared_ahead_of_use_is_current fails until it is removed.
 # Declared before their endpoints exist. Each entry must shrink out as its endpoint lands:
-# users.* with the Users CRUD (BUILD_ORDER 1.5) and invitations (after 1.2), rbac.* with 1.4.
+# users.users.export waits for an export endpoint.
 DECLARED_AHEAD_OF_USE: frozenset[str] = frozenset(
     {
-        "users.invitations.send",
-        "users.sessions.revoke",
-        "users.users.create",
-        "users.users.deactivate",
         "users.users.export",
-        "users.users.update",
     }
 )
 

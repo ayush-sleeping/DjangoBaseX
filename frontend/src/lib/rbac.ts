@@ -2,7 +2,7 @@
  * Roles and their grants (AUTH_BLUEPRINT Ch. 8, § 10.3; BUILD_ORDER 1.4). Pages call these and the
  * message helpers; they never shape a request or read an error body themselves.
  */
-import { api, ApiError } from "./api";
+import { api, ApiError, type Page } from "./api";
 
 /** The code each endpoint enforces. Gate every control on exactly one of these (affordance parity). */
 export const ROLE_CODES = {
@@ -44,8 +44,6 @@ export type Role = {
   created_at: string;
   updated_at: string;
 };
-
-export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
 
 export type NewRole = {
   name: string;
@@ -97,7 +95,26 @@ export async function replaceRolePermissions(
   });
 }
 
-// Role assignment. No screen calls these yet: the users list arrives with BUILD_ORDER 1.5.
+/**
+ * Every role, following the pages. For pickers: a role list is short, but it is still paginated,
+ * and a picker that silently shows page one hides the rest. Stops at `maxPages` as a backstop.
+ */
+export async function listAllRoles(maxPages = 20): Promise<Role[]> {
+  const roles: Role[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const batch = await listRoles(page);
+    roles.push(...batch.results);
+    if (!batch.next) break;
+  }
+  return roles;
+}
+
+/** Roles this user may assign or revoke: an elevated one needs a superuser (§ 8.2). */
+export function assignableBy(role: Pick<Role, "is_elevated">, superuser: boolean): boolean {
+  return superuser || !role.is_elevated;
+}
+
+// Role assignment, used by the user detail screen.
 const userRolesUrl = (userPublicId: string) =>
   `/api/rbac/users/${encodeURIComponent(userPublicId)}/roles/`;
 
@@ -122,7 +139,7 @@ export async function unassignRole(userPublicId: string, rolePublicId: string): 
 export function suggestSlug(name: string): string {
   return name
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
@@ -132,19 +149,6 @@ export function suggestSlug(name: string): string {
 /** How many of a group's permissions are in `granted`: the grants editor's per-group count. */
 export function grantedIn(group: PermissionGroup, granted: ReadonlySet<string>): number {
   return group.permissions.filter((p) => granted.has(p.code)).length;
-}
-
-/** Field → messages, from a 400 `invalid`. Empty when the error is anything else. */
-export function fieldErrors(error: unknown): Record<string, string[]> {
-  if (!(error instanceof ApiError) || error.status !== 400 || error.code !== "invalid") return {};
-  const details = error.details;
-  if (!details || typeof details !== "object" || Array.isArray(details)) return {};
-  const out: Record<string, string[]> = {};
-  for (const [field, messages] of Object.entries(details)) {
-    const list = Array.isArray(messages) ? messages : [messages];
-    out[field] = list.filter((m): m is string => typeof m === "string");
-  }
-  return out;
 }
 
 /** One message safe to show, for every RBAC failure. Handles both error shapes (see below). */

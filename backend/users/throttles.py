@@ -66,3 +66,12 @@ class MfaThrottle(SimpleRateThrottle):
         if not request.user or not request.user.is_authenticated:
             return None
         return self.cache_format % {"scope": self.scope, "ident": request.user.pk}
+
+
+class InvitationAcceptThrottle(SimpleRateThrottle):
+    """10/hour per IP on the public accept endpoint (§ 10.1): long tokens, but not free guesses."""
+
+    scope = "invitation_accept"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": _digest(client_ip(request) or "")}

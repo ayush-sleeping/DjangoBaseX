@@ -111,7 +111,8 @@ with a placeholder in the same change.
 `REMOTE_ADDR` when `TRUSTED_PROXY_COUNT=0` and ignores a spoofed `X-Forwarded-For`, and
 `.env.example` documents every new key.
 
-### 1.1 — Authentication ⬜
+### 1.1 — Authentication ✅
+*Complete 2026-10-11 with invitations (§ 10.2a).*
 *Partly done 2026-10-11, **1.1b** in the blueprint's split (`AUTH_BLUEPRINT.md` § 15):*
 - `UserSession` and `LoginAttempt` (`users/0002`);
 - `users/tokens.py` (issue, rotate with reuse detection and the A23 grace window, revoke);
@@ -233,14 +234,25 @@ default.
 **Done when:** a user with a role holding no permissions is refused by every gated endpoint, and the
 catalog is assembled from registrations rather than a literal.
 
-### 1.5 — Users CRUD ⬜
+### 1.5 — Users CRUD ✅
+**Done 2026-10-11:**
+- `/api/users/` (list with search, create with a set-password email, retrieve, update,
+  deactivate/activate, revoke sessions) and invitations (send, list, revoke, public accept) on
+  `BaseViewSet`;
+- `users/services/{users,invitations}.py` and `users/0005_invitation`;
+- frontend `/users`, `/users/new`, `/users/[publicId]` (with role assignment), `/users/invitations`
+  and `/accept-invitation`.
+
+`AUTH_BLUEPRINT.md` § 10.2a records the decisions.
 The reference module every later module copies. Backend viewset + serializers + services; frontend
 list, detail, create, edit. Follow `DJANGO_STANDARDS.md` § 3 layering exactly — this one is the
 template, so shortcuts here get copied forever.
 
 **Done when:** full CRUD works end to end, is permission-gated, is paginated, and has tests.
 
-### 1.5b — Email and the first account ⬜
+### 1.5b — Email and the first account ✅
+**Done 2026-10-11:** the reset, setup and invitation emails (`.txt` + `.html`, sent on commit, links
+from `FRONTEND_BASE_URL`), plus `manage.py bootstrap_admin` (in `rbac/`, built by the junior).
 *Added 2026-09-21. `AUTH_BLUEPRINT.md` Ch. 18 and § 19.1 — **1.1c and 1.1d cannot be demonstrated
 without this**, because password reset and invitations both send mail, and with `is_active`
 defaulting to `False` nothing can create account one.*

@@ -16,6 +16,7 @@ import {
 import { MFA_ENROLMENT_PATH } from "@/lib/mfa";
 import { can } from "@/lib/permissions";
 import { ROLE_CODES } from "@/lib/rbac";
+import { USER_CODES } from "@/lib/users";
 
 type PanelState =
   | { status: "loading" }
@@ -128,6 +129,11 @@ export function LoginPanel() {
         <Link className="mt-3 block text-sm underline" href={MFA_ENROLMENT_PATH}>
           Account security
         </Link>
+        {can(me, USER_CODES.view) ? (
+          <Link className="mt-1 block text-sm underline" href="/users">
+            Users
+          </Link>
+        ) : null}
         {can(me, ROLE_CODES.view) ? (
           <Link className="mt-1 block text-sm underline" href="/settings/roles">
             Roles

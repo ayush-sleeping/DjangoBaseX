@@ -1743,6 +1743,50 @@ courtesy, not a control.* Every one of these codes is re-checked server-side on 
 | `GET` `POST` | `invitations/` | `users.invitations.send` |
 | `POST` | `invitations/<public_id>/revoke/` | `users.invitations.send` |
 
+### 10.2a As built (1.5 + invitations, 2026-10-11)
+
+`users/services/users.py`, `users/services/invitations.py`, and `UserViewSet` / `InvitationViewSet`
+/ `AcceptInvitationView` in `users/views.py`. This module is **the reference to copy**.
+
+1. **`POST /api/users/` creates an active account with no usable password** and emails a
+   set-your-password link. It reuses `PasswordResetToken` with `PASSWORD_SETUP_TOKEN_LIFETIME`
+   (3 days) and the ordinary `/reset-password` flow. An operator never chooses or sees someone
+   else's password. Invitations remain the self-service path.
+2. **Guards:**
+   - `self_deactivation`: you cannot lock yourself out;
+   - `last_superuser` (§ 8.3, the users half): the last active superuser cannot be deactivated;
+   - deactivation revokes every session with reason `admin` (§ 8.5).
+3. **Invitations:**
+   - `invite()` refuses an existing user (`already_a_user`), a live invitation (`already_invited`)
+     and an elevated role from a non-superuser;
+   - an *expired* live invitation is auto-revoked, so the one-live-per-address constraint cannot
+     block a re-invite forever;
+   - `accept()` creates the account, sends `users.signals.invitation_accepted`, and signs the
+     person in (204 plus cookies);
+   - **`rbac` listens and assigns the role**, so `users` references `rbac.Role` by string only and
+     neither app imports the other (Ch. 2).
+4. **Accept is public, throttled 10/hour per IP**, and listed in `PUBLIC_ROUTES`.
+5. **Shared error envelope:** `core/api/errors.py` (`error_response`, `invalid_response`,
+   `from_exception`) replaces rbac's private helpers. Every module uses it.
+6. **`bootstrap_admin`** (`rbac/management/commands/`, built by the junior):
+   - refuses before the password prompt and again inside the transaction;
+   - the password comes from `getpass` twice or `BOOTSTRAP_ADMIN_PASSWORD`, never an argument, and
+     is checked by `validate_password`;
+   - it always ensures system roles and recomputes `administrator`;
+   - it is all-or-nothing (a failure after creating the user rolls back);
+   - two concurrent runs on an empty table are not guarded; acceptable for a one-shot setup
+     command.
+7. **Frontend** (junior): `/users`, `/users/new`, `/users/[publicId]` (roles assignment),
+   `/users/invitations` and `/accept-invitation`.
+   - Each control is gated on exactly its endpoint's code (`USER_CODES`, `INVITATION_CODES`).
+   - Elevated roles are never offered to non-superusers.
+   - Self-protection mirrors the 409s.
+   - The users list keeps `?page` and `?search` in the URL.
+   - The roles editor now locks elevated roles for non-superusers (last phase's follow-up).
+8. **Known policy gap** (TECH_DEBT **DB-35**): a `users.invitations.send` holder can invite into
+   any non-elevated role, including one more powerful than their own. A "you may only grant what
+   you hold" ceiling is a product decision, not taken here.
+
 ### 10.3 RBAC — `/api/rbac/`
 
 | Method | Path | Permission |

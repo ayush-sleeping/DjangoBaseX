@@ -1,0 +1,7 @@
+You have been invited to sign in as {{ invitation.email }}{% if invitation.invited_by %}, by {{ invitation.invited_by.email }}{% endif %}.
+
+To accept, choose your password here within {{ days }} days. The link works once:
+
+{{ link }}
+
+If you were not expecting this, ignore this email.

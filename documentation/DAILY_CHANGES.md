@@ -26,6 +26,79 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 1.5 + 1.5b + invitations: the Users module, invitations, bootstrap_admin
+**What:**
+- **Backend (lead):**
+  - `Invitation` (`users/0005`, `rbac.Role` by string, one live invitation per address);
+  - `users/services/users.py`: create with a set-password email, update, deactivate (revokes
+    sessions; self and last-superuser guards), activate, revoke sessions;
+  - `users/services/invitations.py`: invite, revoke and accept; on accept, rbac assigns the role
+    through the new `users.signals.invitation_accepted`;
+  - `UserViewSet`, `InvitationViewSet` and `AcceptInvitationView` (public, 10/hour per IP) in
+    `users/views.py`;
+  - invitation and account-setup emails, through one `_send` helper;
+  - `core/api/errors.py`, the one error envelope (rbac moved onto it);
+  - `PASSWORD_SETUP_TOKEN_LIFETIME`, `INVITATION_LIFETIME` and the `invitation_accept` rate.
+- **Junior (`djangobasex-bd`):** `rbac/management/commands/bootstrap_admin.py` with 19 tests, and
+  every 1.5 page (`/users`, `/users/new`, `/users/[publicId]`, `/users/invitations`,
+  `/accept-invitation`) plus `src/lib/{users,invitations}.ts`, the role-assignment UI, and the
+  elevated-role lock on the roles editor.
+
+**Why:** BUILD_ORDER 1.5 (the reference module), 1.5b (account one) and the invitations left
+over from 1.1d. Phase 1 is now complete apart from 1.6 / 1.7.
+**Files:**
+- New: `backend/users/models/invitation.py`, `backend/users/migrations/0005_invitation.py`,
+  `backend/users/services/{users,invitations}.py`,
+  `backend/users/templates/users/email/{invitation,account_setup}.{txt,html}`,
+  `backend/users/tests/test_users_api.py`, `backend/core/api/errors.py`,
+  `backend/rbac/management/commands/bootstrap_admin.py`, `backend/rbac/test_bootstrap_admin.py`,
+  `frontend/src/lib/{users,invitations}.ts`, `frontend/src/app/users/**`,
+  `frontend/src/app/accept-invitation/**`.
+- Changed: `backend/users/{views,urls,serializers,signals,emails,throttles}.py`,
+  `backend/users/models/__init__.py`, `backend/rbac/{apps,views}.py`, `backend/core/routes.py`,
+  `backend/config/{settings,settings_test}.py`, `backend/.env.example`,
+  `backend/tests/architecture/{test_public_routes,test_permission_codes}.py`,
+  `frontend/src/lib/{api,rbac}.ts`, `frontend/src/app/login/login-panel.tsx`,
+  `frontend/src/app/settings/roles/**`, `AGENTS.md`, `README.md`,
+  `documentation/{DAILY_CHANGES,ONBOARDING}.md`, `documentation/core/ARCHITECTURE.md`,
+  `documentation/planning/{BUILD_ORDER,TECH_DEBT}.md`,
+  `documentation/system-design/AUTH_BLUEPRINT.md`.
+
+**Verification:**
+- `uv run pytest`: 346 passed, including 16 Users/invitations API tests and 19 `bootstrap_admin`
+  tests. The 16 API tests passed on their first run.
+- **Mutation checks:**
+  - lead: without the session revocation in `deactivate`, the deactivation test fails; without
+    the elevated check in `invite`, `test_invitation_guards` fails;
+  - junior: no "users exist" refusal (2 failed), no `validate_password` (5), and `assign_role`
+    outside the transaction (1).
+- The catalog ratchet flagged 5 `users.*` codes as now referenced; the allow-list is down to
+  `users.users.export`.
+- `ruff format --check`: the final gate flagged lead file `rbac/apps.py` (a signal-connect line
+  that could sit on one line); formatted. Ruff now clean on 103 files.
+- `manage.py check` clean, `makemigrations --check` no changes, `npm run lint` / `typecheck` clean.
+- **Frontend review:** no invisible characters (scripted scan; the junior had fixed a raw-combining-
+  character regex), no `fetch()` outside `api.ts`, no storage, and `is_staff` never rendered.
+- **End to end on a throwaway SQLite DB** (`DATABASE_URL` overridden; the dev DB untouched),
+  probe server on `:8001`:
+  - `bootstrap_admin`: the first run exits 0; the second exits 1 with "Refusing: users already
+    exist…";
+  - admin login 204 with 13 codes; create role 201; invite 201; the link was found in the console
+    email; accept 204;
+  - the guest's `/me` is `['users.users.view']`; the guest lists users 200 and inviting is refused
+    403;
+  - admin deactivates the guest 200, then the guest's `/me` is 401; admin self-deactivation gives
+    `self_deactivation`;
+  - 0 tracebacks; the DB and log were deleted.
+- Docker: `users/0005` applied on restart. Anonymous calls to `/api/users/` and
+  `/api/users/invitations/` get 401; accepting a bogus token gives 400 `invalid_token`.
+
+**Notes / still open:**
+- **DB-35:** invitations and role assignment have no "grant only what you hold" ceiling; a
+  product decision.
+- No browser click-through of the new screens; the API they code to is covered above.
+- Next: 1.6 (`core/` vs `project/` split) and 1.7 (`auth_cleanup`, key rotation, the admin).
+
 ### BUILD_ORDER 1.3 + 1.4: the registry seam, the declarative gate, system roles, the roles API and screen
 **What:**
 - **1.3** (junior): `core/registry.py` gains navigation (cross-checked against the permission

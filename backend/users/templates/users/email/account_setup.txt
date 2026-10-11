@@ -1,0 +1,7 @@
+An account has been created for {{ user.email }}.
+
+Choose your password here within {{ days }} days. The link works once:
+
+{{ link }}
+
+If you were not expecting this, ignore this email.
