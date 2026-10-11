@@ -4,6 +4,8 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework.permissions import SAFE_METHODS
 
+from core.observability.request_id import USER_ID
+
 from . import tokens
 from .cookies import CSRF_HEADER, cookie_names
 from .models import MfaDevice, User
@@ -51,6 +53,7 @@ class CookieJWTAuthentication(BaseAuthentication):
         if user.mfa_enforced and not self._enrollment_exempt(request):
             if not MfaDevice.objects.confirmed().filter(user=user).exists():
                 raise PermissionDenied(MFA_ENROLLMENT_REQUIRED)
+        USER_ID.set(str(user.public_id))  # every later log line carries who (OBSERVABILITY § 1)
         return (user, claims)
 
     @staticmethod

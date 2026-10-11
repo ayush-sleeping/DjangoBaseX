@@ -26,6 +26,70 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 5.1 + 6.1 (pulled forward): boot refusal, request ids, structured logs, one scrubber
+**What:**
+- **Junior (`djangobasex-bd`):**
+  - `core/env.py` (`is_production_like`, `environment_label`);
+  - `core/config_audit.py`: 14 problems and 6 warnings, `enforce()`, and a report-only
+    `python -m core.config_audit`;
+  - `core/observability/scrub.py`: key rules, text and value rules, and the `[Filtered]` token;
+  - 253 tests across `tests/test_{env,config_audit,env_example,scrub}.py`.
+- **Lead:**
+  - **settings wiring:** `APP_ENV`, `PRODUCTION_LIKE`, `LOG_FORMAT`/`LOG_LEVEL`, the `EMAIL_*`
+    keys, `AUTH_COOKIE_SECURE` defaulting to production-like, `RequestIdMiddleware` first,
+    `EXCEPTION_HANDLER`, `LOGGING = build_logging(...)`, and **`enforce(globals())` as the last
+    line**;
+  - `core/observability/{request_id,logging}.py` and `core/api/exceptions.py`;
+  - `USER_ID` stamped by `CookieJWTAuthentication`;
+  - `APP_ENV` in Docker (`development`) and CI (`ci`), new keys in `.env.example`;
+  - the owner-approved `APP_ENV=development` appended to `backend/.env` (non-secret).
+- **Tests (lead):**
+  - `tests/test_production_boot.py`: the real settings in a subprocess with no `.env`;
+  - `tests/observability/test_request_id_and_logging.py`: 16 tests.
+- **Docs:** DB-7, DB-9 and DB-19 closed; `DEPLOYMENT.md` rows 4 and 6; OBSERVABILITY's
+  replacement token set to `[Filtered]`.
+
+**Why:** `BUILD_ORDER` says 5.1 and 6.1 are small and make every later task safer. Phase 3 also
+waits on `PLATFORM_BLUEPRINT.md` § 5.
+**Files:**
+- New: `backend/core/{env,config_audit}.py`,
+  `backend/core/observability/{__init__,request_id,logging,scrub}.py`,
+  `backend/core/api/exceptions.py`,
+  `backend/tests/{test_env,test_config_audit,test_env_example,test_scrub,test_production_boot}.py`,
+  `backend/tests/observability/{__init__,test_request_id_and_logging}.py`.
+- Changed: `backend/config/{settings,settings_test}.py`, `backend/users/authentication.py`,
+  `backend/.env.example`, `docker-compose.yml`, `.github/workflows/ci.yml`, `README.md`,
+  `documentation/DAILY_CHANGES.md`, `documentation/planning/{BUILD_ORDER,TECH_DEBT}.md`,
+  `documentation/system-design/{DEPLOYMENT,OBSERVABILITY}.md`.
+
+**Verification:**
+- `uv run pytest`: 655 passed. 23 of the subprocess and observability tests were confirmed as
+  PASSED, none skipped.
+- **Junior catch:** my positive-control canary (`CANARY-<hex>`) was redacted by the high-entropy
+  rule, so "no canary in logs" was partly passing on entropy. It is now lowercase hex, proving the
+  key rules.
+- **Mutation checks:**
+  - removing `enforce(globals())` failed 6 boot tests;
+  - "reset the id in `finally`" was **not caught at first** (DRF builds the 500 body before the
+    middleware returns). The spec's streaming-log test was added, and the mutation now fails it.
+    Restored;
+  - junior: equality placeholder matching (3 failed), a production deny-list (4), a value in the
+    message (1), substring key matching (7), no double-redaction guard (4), no cycle guard (1).
+    One junior run was initially vacuous (a zsh word-split) and was re-run.
+- **Settings edit safety:** applied with an automatic restore on failure; `manage.py check` and the
+  test-settings import passed first time.
+- Ruff clean. `manage.py check` clean (in development it reports would-refuse findings as
+  warnings, by design).
+- **Docker** (recreated): `APP_ENV=development`; `X-Request-ID` on responses; a 401 body carries
+  `request_id`; console logs.
+
+**Notes / still open:**
+- The dev warnings print on every `manage.py` run (about 10 lines). That's by spec; it could later
+  be shortened to a one-line summary.
+- View-built error envelopes (login failures and so on) do not carry `request_id` yet;
+  exception-built ones do.
+- Not yet: Celery/command ids, registered log fields, the frontend scrubber.
+
 ### BUILD_ORDER 1.6 + 1.7: platform/product split (ADR-0010), key rotation, session cap, auth_cleanup — Phase 1 complete
 **What:**
 - **1.6 (lead, backend):**

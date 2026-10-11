@@ -9,6 +9,8 @@ a DATABASE_URL, a cache) cannot change what a test sees.
 import os
 
 _PINNED_ENV = {
+    "APP_ENV": "test",
+    "LOG_FORMAT": "console",
     "SECRET_KEY": "test-only-insecure-key-never-used-outside-pytest",
     "DEBUG": "False",
     "ALLOWED_HOSTS": "testserver,localhost",

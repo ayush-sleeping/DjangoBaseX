@@ -37,6 +37,7 @@ services:
     environment:
       ALLOWED_HOSTS: localhost,127.0.0.1,backend
       CACHE_URL: redis://redis:6379/0
+      APP_ENV: development  # CONFIGURATION.md § 4: anything else would refuse dev settings
     command: >
       sh -c "uv run --frozen python manage.py migrate --noinput &&
              exec uv run --frozen python manage.py runserver 0.0.0.0:8000"

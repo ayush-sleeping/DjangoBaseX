@@ -10,11 +10,23 @@ from pathlib import Path
 import environ
 from corsheaders.defaults import default_headers
 
+from core.config_audit import enforce
+from core.env import is_production_like
+from core.observability.logging import build_logging
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Environment
 # -------------------------------------------------------------------------------------------- ::
 env = environ.Env(
+    APP_ENV=(str, ""),  # required, no real default: unset is production-like (CONFIGURATION § 4)
+    LOG_FORMAT=(str, ""),
+    LOG_LEVEL=(str, "INFO"),
+    EMAIL_HOST=(str, ""),
+    EMAIL_PORT=(int, 587),
+    EMAIL_HOST_USER=(str, ""),
+    EMAIL_HOST_PASSWORD=(str, ""),
+    EMAIL_USE_TLS=(bool, True),
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3000"]),
@@ -48,6 +60,11 @@ env = environ.Env(
     AUTH_COOKIE_PREFIX=(str, "dbx"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
+
+# The one environment identity. Only development/local/test/ci are non-production; anything else,
+# a typo or "staging" included, gets production's refusals (core.env.is_production_like).
+APP_ENV = env("APP_ENV")
+PRODUCTION_LIKE = is_production_like(APP_ENV)
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
@@ -88,6 +105,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 MIDDLEWARE = [
+    # First, before CORS: every response, preflights included, carries an id (OBSERVABILITY § 1).
+    "core.observability.request_id.RequestIdMiddleware",
     "corsheaders.middleware.CorsMiddleware",  # must sit above CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -183,6 +202,11 @@ TRUSTED_PROXY_COUNT = env("TRUSTED_PROXY_COUNT")
 ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=DEBUG)
 # Console in development, so a missing SMTP configuration is visible rather than silent (Ch. 18).
 EMAIL_BACKEND = env("EMAIL_BACKEND")
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = env("EMAIL_PORT")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env("EMAIL_USE_TLS")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 # Where emailed links point. Never derived from the request's Host header.
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL")
@@ -206,7 +230,8 @@ SESSION_LIVENESS_CACHE_TTL = env("SESSION_LIVENESS_CACHE_TTL")
 AUTH_COOKIE_DOMAIN = env("AUTH_COOKIE_DOMAIN")
 AUTH_COOKIE_PREFIX = env("AUTH_COOKIE_PREFIX")
 # Never hard-code False: it would ship to production.
-AUTH_COOKIE_SECURE = env.bool("AUTH_COOKIE_SECURE", default=not DEBUG)
+# Secure whenever production-like — not "when not DEBUG" (CONFIGURATION § 4, Conflicts #4).
+AUTH_COOKIE_SECURE = env.bool("AUTH_COOKIE_SECURE", default=PRODUCTION_LIKE)
 
 # Progressive lockout (A17): THRESHOLD failures within WINDOW seconds lock the identifier or IP
 # for DURATION seconds. Counted from users_login_attempt, so it survives a cache flush.
@@ -244,6 +269,7 @@ REST_FRAMEWORK = {
         "core.permissions.DefaultDeny",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "core.api.exceptions.handler",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_THROTTLE_CLASSES": [
@@ -267,3 +293,11 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# Logging (OBSERVABILITY § 2): JSON in production (the audit refuses anything else), console in dev.
+LOG_FORMAT = env("LOG_FORMAT") or ("json" if PRODUCTION_LIKE else "console")
+LOGGING = build_logging(log_format=LOG_FORMAT, level=env("LOG_LEVEL"))
+
+# Boot refusal (CONFIGURATION § 5) — MUST stay the last line. In a production-like environment any
+# problem raises ImproperlyConfigured listing every one; elsewhere they are logged as warnings.
+enforce(globals())

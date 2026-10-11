@@ -316,17 +316,17 @@ substring match on `token`, which redacted `token_count` and missed `Authorizati
   **allow** set keeps obvious non-secrets readable (`cache_key`, `sort_key`, `public_key`,
   `idempotency_key`, `kid`) — each addition is a reviewed line with a reason.
 - **Values in free text:** `Bearer <token>` anywhere in a string; anything JWT-shaped
-  (`eyJ…​.…​.…`); URL userinfo (`scheme://user:pass@host` → `scheme://user:[redacted]@host`);
+  (`eyJ…​.…​.…`); URL userinfo (`scheme://user:pass@host` → `scheme://user:[Filtered]@host`);
   and the **values** of sensitive query parameters in any URL-looking substring — `token`,
   `access_token`, `refresh_token`, `id_token`, `code`, `state`, `key`, `api_key`, `password`,
   `secret`, `client_secret`, `signature`, `sig`, `reset_token`, `invite_token`. The parameter name
-  is kept (`?code=[redacted]`) so the reader still knows what flow they are looking at.
+  is kept (`?code=[Filtered]`) so the reader still knows what flow they are looking at.
 - **Headers:** `authorization`, `proxy-authorization`, `cookie`, `set-cookie`, `x-csrf-token`,
   `x-api-key`, and any header matching the key rules.
 - **Recursive, bounded.** Dicts, lists, tuples, nested JSON-in-a-string where it parses cheaply.
   Depth cap (10) and size cap; cycles detected. Beyond the cap the value becomes `[truncated]` —
   never "passed through unscrubbed because it was deep".
-- **One replacement token: `[redacted]`.** Never a partial mask (`abcd…wxyz`) in logs — four
+- **One replacement token: `[Filtered]`** (`core.observability.scrub.REDACTED`; the Sentry convention, chosen 2026-10-11 over `[redacted]`). Never a partial mask (`abcd…wxyz`) in logs — four
   characters of a short token is a meaningful fraction of it.
 - **Stable ids stay; identities go.** `user_id` is kept. Email address and IP are removed from
   Sentry events and never become log fields. The IP stays in `LoginAttempt`/`ActivityLog`, where it

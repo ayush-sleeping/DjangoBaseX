@@ -439,7 +439,20 @@ plugins when the first product that needs them arrives — [`../system-design/RE
 
 *Spec: [`../system-design/CONFIGURATION.md`](../system-design/CONFIGURATION.md).*
 
-### 5.1 — Environment identity and the boot refusal ⬜
+### 5.1 — Environment identity and the boot refusal ✅
+**Done 2026-10-11 (pulled forward):**
+- `core/env.py::is_production_like()` (the allow-list `development/local/test/ci`; everything
+  else, including unset, `staging` and `Production`, is production-like);
+- `core/config_audit.py` (`cfg.E002`–`E015`, `W001`–`W008`) runs as **the last line of
+  `config/settings.py`** and refuses a production-like boot listing every problem, naming keys
+  never values;
+- `python -m core.config_audit` is the report-only pre-deploy step;
+- `APP_ENV` is required (blank = production-like) and `.env.example` ships `development`;
+  `AUTH_COOKIE_SECURE` defaults to production-like.
+
+The done-when is met by `tests/test_production_boot.py`, which imports the real settings in a
+subprocess without a `.env`. The CI step runs as part of pytest. Omitted rules are recorded in
+`core/config_audit.py`.
 One `is_production_like()` predicate (unknown `APP_ENV` counts as production), used by every check. The
 production audit runs **at settings import** and raises `ImproperlyConfigured` listing every problem at once —
 placeholder or short secrets, secrets equal to each other, `DEBUG`, console mail, localhost CORS, plain-text logs.
@@ -495,7 +508,20 @@ still renders on old rows; the API never returns a display-formatted date.
 *Specs: [`OBSERVABILITY.md`](../system-design/OBSERVABILITY.md), [`DATA_LIFECYCLE.md`](../system-design/DATA_LIFECYCLE.md),
 [`DOMAIN_PRIMITIVES.md`](../system-design/DOMAIN_PRIMITIVES.md), [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md) § encryption.*
 
-### 6.1 — Request id, structured logs, one scrubber ⬜
+### 6.1 — Request id, structured logs, one scrubber ✅
+**Done 2026-10-11 (pulled forward):**
+- `core/observability/request_id.py`: `MIDDLEWARE[0]`, validated, trusted only behind a proxy,
+  reset on `request_finished` (never in `finally`);
+- `core/observability/logging.py`: JSON in production with allow-listed fields, a context filter
+  on every handler, one traceback per 500, library loggers pinned;
+- `core/observability/scrub.py` (the junior's): one scrubber;
+- `core/api/exceptions.py`: request ids in error bodies, 500 → `server_error`, validation logged
+  as codes.
+
+The done-when is met by `tests/observability/` (canary with a positive control, and the streaming
+test that catches the reset-in-finally bug). **Not yet:** Celery/command ids (no Celery),
+registered module log fields, a request id in every *view-built* error envelope (only
+exception-built ones carry it today), and the frontend scrubber.
 Validated `X-Request-ID` in a contextvar set first and reset only after the response is built; JSON logs in
 production (enforced by 5.1); one scrubber used by logging and Sentry. Closes **DB-9**.
 
