@@ -156,5 +156,5 @@ uv run python manage.py makemigrations --check --dry-run   # after ANY model cha
 uv run pytest
 ```
 
-There is **no CI yet** — so running these by hand is the whole safety net. Report their real output,
+CI runs the same checks on every push and PR, against PostgreSQL 16. Run them before pushing anyway. Report their real output,
 including failures (`AGENTS.md` § 1, rule 9).

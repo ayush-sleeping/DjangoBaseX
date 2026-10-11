@@ -3,7 +3,7 @@
 > ## ⚠️ § 0 — Read this first
 >
 > **This application has never been deployed.** There is no staging environment, no production
-> environment, no CI, no process manager, no reverse proxy, and no container setup. This document is
+> environment, no process manager, no reverse proxy, and no container setup. This document is
 > a **gap analysis and the shape of a runbook** — not steps you can follow today.
 >
 > **Do not deploy this to any internet-reachable environment until the blockers below are closed.**
@@ -15,7 +15,7 @@
 | # | Blocker | Required change |
 |---|---------|-----------------|
 | 1 | **No authentication at all** | There is no login, no token, no `/me`. DRF's `IsAuthenticated` default fails closed, so the API is effectively closed rather than open — but there is also nothing to protect yet. A product deploying from this must land auth first. See [ROADMAP](../planning/ROADMAP.md) |
-| 2 | **No CI, and a young test suite** | Nothing runs the checks automatically: the gate in `AGENTS.md` § 2 (now including `uv run pytest`) is run by a person, by hand, when they remember. `TECH_DEBT` **DB-5** / **DB-6** |
+| 2 | **A young test suite** | CI (`.github/workflows/ci.yml`) runs the `AGENTS.md` § 2 gate on every push and PR, with backend tests on PostgreSQL 16 — but coverage is thin until Phase 1's features land with their tests, and there are no frontend tests. `TECH_DEBT` **DB-5** |
 | 3 | **No production topology** | No release image or production Compose (the `Dockerfile.dev` files and `docker-compose.yml` are a development stack: `runserver`, `next dev`, source bind mounts), no Nginx/TLS terminator, no WSGI/ASGI server config, no static-file strategy. `runserver` is a development server and must never face the internet |
 | 4 | **No monitoring or structured logging** | `settings.py` has no `LOGGING` config, so a 500 in production goes to stdout and is lost. No error tracker, no aggregation, no retention |
 | 5 | **SQLite is the default** | `DATABASE_URL` must be set to PostgreSQL. A deploy that forgets it silently runs on a file that vanishes with the container ([ADR-0005](../adr/0005-sqlite-for-dev-postgres-by-url.md)) |

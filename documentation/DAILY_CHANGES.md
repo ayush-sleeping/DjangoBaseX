@@ -26,6 +26,46 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 2.3: CI on GitHub Actions, backend tests on PostgreSQL 16
+**What:**
+- `.github/workflows/ci.yml` has two jobs, so one failing still reports the other:
+  - **backend**: `uv sync --frozen`, Ruff lint and format, `manage.py check`,
+    `makemigrations --check --dry-run`, and `pytest`, against a `postgres:16` service;
+  - **frontend**: `npm ci`, lint, typecheck and `next build`.
+- No `continue-on-error`, read-only `contents` permission, and a superseded run is cancelled.
+- `psycopg[binary]` is now a runtime dependency, since products deploy on Postgres.
+- `AGENTS.md` and the README, ONBOARDING, ARCHITECTURE, DEPLOYMENT, DJANGO_STANDARDS,
+  DATABASE_MIGRATIONS and TESTING_STRATEGY docs no longer say "no CI".
+- `TECH_DEBT`: DB-6 closed; DB-12 lowered to 🟢 (mitigated); DB-5 reworded.
+
+**Why:** `BUILD_ORDER` 2.3. Until now the gate ran only when someone remembered. Running the suite
+on the database products deploy, not SQLite, is the point of the Postgres service (ADR-0005, DB-12).
+**Files:**
+- New: `.github/workflows/ci.yml`.
+- Changed: `backend/pyproject.toml`, `backend/uv.lock`, `AGENTS.md`, `README.md`,
+  `documentation/{DAILY_CHANGES,ONBOARDING}.md`, `documentation/core/ARCHITECTURE.md`,
+  `documentation/planning/{BUILD_ORDER,TECH_DEBT,TESTING_STRATEGY}.md`,
+  `documentation/system-design/{DATABASE_MIGRATIONS,DEPLOYMENT,DJANGO_STANDARDS}.md`.
+
+**Verification (local, before the first CI run):**
+- Against a throwaway `postgres:16-alpine` on `127.0.0.1:55432`, `pytest`: 43 passed. The suite
+  created and dropped its own `test_app`; only `app` remained. The container was then removed.
+- **The 2.1 guard gap is now closed end to end:** a staging host and an empty database name were
+  each refused before connecting (exit 4, "host 'staging-db.example.com' is not in
+  TEST_DB_ALLOWED_HOSTS" / "the database name is empty…"), and the password appeared in neither.
+- `npm run build`: passed (`/` dynamic, `/_not-found` static).
+- `actionlint` 1.7.7 on the workflow: clean. The first invocation used an invalid flag and only
+  printed its help; re-run correctly, exit 0.
+- The first CI run result is reported in the session, not here, because it happens after this
+  commit.
+
+**Notes / still open:**
+- **2.3 is not ticked.** Its "Done when" needs a deliberately red PR beside a green one, which means
+  pushing a throwaway branch to the public repository. That waits for the owner's approval.
+- `.next/` from the local build is gitignored.
+- The Docker image picks up `psycopg` on its next build, or on container start via
+  `uv run --frozen`.
+
 ### BUILD_ORDER 2.2: architecture tests — route enforcement and migrations
 **What:**
 - New `core/routes.py` `PUBLIC_ROUTES`, the exemption ledger: `core:health`, `schema` and

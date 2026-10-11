@@ -124,6 +124,6 @@ Stated plainly, because assuming otherwise wastes time:
 - **No authorization beyond DRF's `IsAuthenticated`.** No roles, no groups wired up, no object-level
   permissions.
 - **One model.** `users.User` ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)); no domain models yet.
-- **A young backend test suite.** `uv run pytest` with `config.settings_test`, a root `conftest.py` (test-database guard, cache isolation) and factories in `backend/tests/`. No frontend runner, no CI.
-- **No CI.** Nothing runs the verification gate except a person.
+- **A young backend test suite.** `uv run pytest` with `config.settings_test`, a root `conftest.py` (test-database guard, cache isolation) and factories in `backend/tests/`. No frontend runner.
+- **CI** (`.github/workflows/ci.yml`): the `AGENTS.md` § 2 gate in two jobs, backend against a PostgreSQL 16 service, frontend including `next build`.
 - **Docker for development only, no deployment.** `docker-compose.yml` runs both apps with live reload ([`README.md`](../../README.md) § Getting Started). See [`../system-design/DEPLOYMENT.md`](../system-design/DEPLOYMENT.md) § 0.

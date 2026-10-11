@@ -7,7 +7,7 @@ A secure, modular, production-ready base project using **Django 5 + Django REST 
 
 > **Status:** early scaffold with a settled architecture. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following the [Django-Nextjs-Journey](https://github.com/ayush-sleeping/Django-Nextjs-Journey) Level 2 plan.
 >
-> **Not deployable yet.** No auth, no RBAC, no CI, a young test suite, no production Docker (a development Compose stack exists). That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
+> **Not deployable yet.** No auth, no RBAC, a young test suite, no production Docker (a development Compose stack exists). That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
 
 ## Overview
 
@@ -292,7 +292,7 @@ Stated plainly, because assuming otherwise wastes time.
 - **Authentication** — no login, no tokens, no `/me`
 - **RBAC** — nothing beyond DRF's `IsAuthenticated` default
 - **Models** — only `users.User`; no domain models yet
-- **Tests** — a backend pytest suite (harness, `users.User`, `client_ip()`, health); no frontend runner and no CI, so **nothing fails a build automatically yet**
+- **Tests** — a backend pytest suite (harness, `users.User`, `client_ip()`, health); no frontend runner yet. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
 - **CI** — no workflows
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
@@ -386,7 +386,7 @@ cd backend  && uv run python manage.py makemigrations --check --dry-run   # afte
 cd backend  && uv run pytest
 cd frontend && npm run lint && npm run typecheck
 ```
-There is **no CI yet**, so running these by hand is the entire safety net. Report their real output,
+CI runs the same gate on every push and PR, but run it before you push: a red CI is a slower way to learn the same thing. Report their real output,
 including failures — a green summary over a red run is the one unrecoverable mistake.
 
 **Adding to the core**

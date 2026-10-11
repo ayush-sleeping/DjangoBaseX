@@ -257,6 +257,9 @@ In `backend/tests/architecture/`, per [`TESTING_STRATEGY.md`](TESTING_STRATEGY.m
 migration) makes the right test fail with a readable message.
 
 ### 2.3 — CI ⬜
+*In place since 2026-10-11:* `.github/workflows/ci.yml` as specified below. The suite was run
+locally against PostgreSQL 16 first (43 passed), and the frontend `next build` passed. **Still
+open:** the "Done when" proof below, a deliberately red PR next to a green one.
 `.github/workflows/ci.yml`, **two jobs** so a Python failure still reports the TypeScript result:
 backend (`ruff check` · `ruff format --check` · `manage.py check` · `makemigrations --check
 --dry-run` · `pytest`) and frontend (`npm ci` · `lint` · `typecheck` · `next build`).

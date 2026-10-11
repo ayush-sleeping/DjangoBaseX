@@ -4,7 +4,7 @@
 migrations from "the four tests" exist; architecture boundaries and plugin conventions wait for
 the `project/` split and plugins (Phase 3). Step 1: `uv run pytest` with
 pytest-django, factory_boy and pytest-cov, a test-database guard and a hermetic harness. The
-frontend still has no runner, and without CI nothing can fail a build.
+frontend still has no runner. CI runs the backend suite on every push and PR (2.3).
 
 **Status:** plan. Resolves [`TECH_DEBT.md`](TECH_DEBT.md) DB-5 and DB-6.
 
