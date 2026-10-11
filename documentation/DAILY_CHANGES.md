@@ -26,6 +26,28 @@ Newest first.
 
 ## 2026-10-11
 
+### Fix: `npm run typecheck` failed on any fresh clone — CI's first run caught it
+**What:** `typecheck` is now `next typegen && tsc --noEmit`. `actions/checkout` and
+`actions/setup-node` moved from v4 to v5.
+**Why:** CI's first run (`d1df76a`) went red at the frontend Typecheck step:
+`src/app/layout.tsx(20,50): error TS2304: Cannot find name 'LayoutProps'`. Next.js 16 generates
+`PageProps`/`LayoutProps` into `.next/types/`, which is gitignored along with `next-env.d.ts`, so
+only a machine that had already run `next dev` or `next build` could typecheck. Every local
+"`tsc` clean" in this log was true only for this machine. The backend job, including all tests on
+PostgreSQL 16, was green on that same run. The action bump answers the run's Node 20 deprecation
+warning for both actions.
+**Files:** `frontend/package.json`, `.github/workflows/ci.yml`, `AGENTS.md` (§ 2 comment),
+`documentation/system-design/NEXTJS_STANDARDS.md`, `documentation/DAILY_CHANGES.md`.
+**Verification:**
+- In a fresh `git clone` of the repo (no `.next/`, no `next-env.d.ts`), the old script reproduced
+  CI's exact error (exit 2). With `next typegen` first, it exited 0.
+- `npm run typecheck` in the working tree: exit 0. `actionlint` 1.7.7: clean.
+- The CI result for this commit is reported in the session.
+
+**Notes:** The bundled Next.js docs (`06-cli/next.md`, "`next typegen` options") prescribe this
+pairing for CI. `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19 (CI annotation); no change needed
+yet.
+
 ### BUILD_ORDER 2.3: CI on GitHub Actions, backend tests on PostgreSQL 16
 **What:**
 - `.github/workflows/ci.yml` has two jobs, so one failing still reports the other:

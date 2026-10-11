@@ -86,7 +86,7 @@ cd backend && uv run pytest                              # tests (in-memory DB/c
 
 # Frontend
 cd frontend && npm run lint                              # eslint
-cd frontend && npm run typecheck                         # tsc --noEmit
+cd frontend && npm run typecheck                         # next typegen && tsc --noEmit
 
 # Agent tooling — when .claude/hooks/ changed
 python3 .claude/hooks/test_agent_guard.py

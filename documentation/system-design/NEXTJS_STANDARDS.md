@@ -96,7 +96,9 @@ exactly why the generation is worth doing.
 - **No `any`.** `unknown` plus a narrow, if you genuinely don't know
 - **No `@ts-ignore`** without a comment saying why and what would remove it
 - Type props explicitly; do not rely on inference across a module boundary
-- `npm run typecheck` (`tsc --noEmit`) must pass
+- `npm run typecheck` must pass. It is `next typegen && tsc --noEmit`: the global `PageProps` /
+  `LayoutProps` helpers live in generated `.next/types/`, which a fresh clone or CI does not have.
+  Bare `tsc --noEmit` passes only on a machine that has already run `next dev`
 
 ---
 
