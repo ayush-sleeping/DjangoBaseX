@@ -54,7 +54,10 @@ authorization problem, not an identifier problem.** If a route leaks data by gue
 object-level permission is missing — a UUID would only hide the bug. Revisit per-model if a product
 exposes public URLs where volume leakage matters.
 
-### 🚧 D3 — Is there multi-tenancy in the core?
+### ✅ D3 — Is there multi-tenancy in the core?
+
+> **Decided 2026-10-11: no organisation in the core** —
+> [ADR-0011](../adr/0011-no-organisation-in-core.md). The `visible_to()` rule in § 5 is the reason.
 
 **The most structural of the five.** Do rows belong to an `Organisation`, or only to a `User`?
 
@@ -209,7 +212,7 @@ without anyone noticing. Treat it as a review blocker.
 
 - [x] D1 decided and an ADR written; `AUTH_USER_MODEL` set if custom — ADR-0008, 2026-10-11
 - [ ] D2 decided and recorded (even if the answer is "keep the default")
-- [ ] D3 decided — and if "no", the `visible_to()` rule is documented as the reason
+- [x] D3 decided — no (ADR-0011, 2026-10-11); the `visible_to()` rule in § 5 is the documented reason
 - [ ] D4 decided; base models written if soft delete is in
 - [ ] D5 decided; stamp columns on the base model
 - [ ] `core/models/base.py` exists and the first real model inherits from it

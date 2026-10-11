@@ -80,7 +80,9 @@ def _api_views(patterns=None, prefix="", namespace=None):
             if entry.namespace:
                 ns = f"{namespace}:{entry.namespace}" if namespace else entry.namespace
             yield from _api_views(entry.url_patterns, prefix + part, ns)
-        elif isinstance(entry, URLPattern) and (prefix + part).startswith("api/"):
+        elif isinstance(entry, URLPattern) and (prefix + part).startswith(
+            f"{settings.API_PREFIX}/"
+        ):
             name = entry.name and (f"{namespace}:{entry.name}" if namespace else entry.name)
             cls = getattr(entry.callback, "cls", None) or getattr(
                 entry.callback, "view_class", None
@@ -92,17 +94,19 @@ def _api_views(patterns=None, prefix="", namespace=None):
 def check_routes_are_gated(app_configs, **kwargs):
     """
     dbx.E001: every /api/ route is a BaseAPIView/BaseViewSet that declares its permissions or is
-    public. dbx.E007: `public = True` and core.routes.PUBLIC_ROUTES agree, both directions, and
+    public. dbx.E007: `public = True` and registry.public_routes agree, both directions, and
     every ledger entry resolves and carries a reason.
     """
     from .api.views import BaseAPIView
     from .api.viewsets import BaseViewSet
-    from .routes import PUBLIC_ROUTES
+    from .routes import public_routes
+
+    ledger = public_routes()  # the union every app registered (DB-22)
 
     errors, seen = [], set()
     for name, cls, path in _api_views():
         seen.add(name)
-        if name in PUBLIC_ROUTES and not (cls and issubclass(cls, (BaseAPIView, BaseViewSet))):
+        if name in ledger and not (cls and issubclass(cls, (BaseAPIView, BaseViewSet))):
             continue  # third-party public views (the OpenAPI schema and docs), ledger-listed
         if not (cls and issubclass(cls, (BaseAPIView, BaseViewSet))):
             errors.append(
@@ -111,28 +115,34 @@ def check_routes_are_gated(app_configs, **kwargs):
                 )
             )
             continue
-        if cls.public and name not in PUBLIC_ROUTES:
+        if cls.public and name not in ledger:
             errors.append(
-                Error(f"/{path} ({name}) is public but not in PUBLIC_ROUTES.", id="dbx.E007")
+                Error(
+                    f"/{path} ({name}) is public but not in registry.public_routes.", id="dbx.E007"
+                )
             )
-        if not cls.public and name in PUBLIC_ROUTES:
+        if not cls.public and name in ledger:
             errors.append(
-                Error(f"PUBLIC_ROUTES lists {name}, whose view is not public.", id="dbx.E007")
+                Error(
+                    f"registry.public_routes lists {name}, whose view is not public.", id="dbx.E007"
+                )
             )
         if not cls.public and cls.required_permissions is None:
             errors.append(
                 Error(
                     f"/{path} ({name}) declares neither required_permissions nor public.",
                     hint="It denies everyone. Declare its codes, [] for any signed-in user, or "
-                    "make it public with a PUBLIC_ROUTES entry. AUTH_BLUEPRINT § 9.1.",
+                    "make it public with a registry.public_routes entry. AUTH_BLUEPRINT § 9.1.",
                     id="dbx.E001",
                 )
             )
-    for name, reason in PUBLIC_ROUTES.items():
+    for name, reason in ledger.items():
         if name not in seen:
             errors.append(
-                Error(f"PUBLIC_ROUTES lists {name}, which is not a route.", id="dbx.E007")
+                Error(f"registry.public_routes lists {name}, which is not a route.", id="dbx.E007")
             )
         if len(reason.strip()) < 20:
-            errors.append(Error(f"PUBLIC_ROUTES[{name!r}] has no real reason.", id="dbx.E007"))
+            errors.append(
+                Error(f"registry.public_routes[{name!r}] has no real reason.", id="dbx.E007")
+            )
     return errors

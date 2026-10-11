@@ -98,7 +98,7 @@ rebuilt. This is a **development** stack only — SQLite, `runserver`, `next dev
    ```sh
    cp .env.example .env
    # generate a SECRET_KEY and paste it into .env
-   uv run python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+   uv run python -c "import secrets; print(secrets.token_urlsafe(50))"
    ```
    - SQLite is used by default. For PostgreSQL set `DATABASE_URL=postgres://user:pass@localhost:5432/djangobasex`.
 

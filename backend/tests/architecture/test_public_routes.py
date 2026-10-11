@@ -1,8 +1,8 @@
-"""The PUBLIC_ROUTES ledger stays honest (AUTH_BLUEPRINT.md § 14)."""
+"""The public-route ledger (registry.public_routes) stays honest (AUTH_BLUEPRINT.md § 14)."""
 
 from django.urls import NoReverseMatch, reverse
 
-from core.routes import PUBLIC_ROUTES
+from core.routes import public_routes
 
 # Pinned. Opening a route to the internet means editing this set in the same reviewed change.
 EXPECTED_PUBLIC = {
@@ -19,22 +19,22 @@ EXPECTED_PUBLIC = {
 
 
 def test_the_ledger_has_not_grown_without_review():
-    added = set(PUBLIC_ROUTES) - EXPECTED_PUBLIC
-    removed = EXPECTED_PUBLIC - set(PUBLIC_ROUTES)
+    added = set(public_routes()) - EXPECTED_PUBLIC
+    removed = EXPECTED_PUBLIC - set(public_routes())
     assert not added, f"new public routes {sorted(added)}: justify each, then update this test"
     assert not removed, f"routes no longer public {sorted(removed)}: remove them from this test"
 
 
 def test_every_entry_resolves():
     missing = []
-    for name in PUBLIC_ROUTES:
+    for name in public_routes():
         try:
             reverse(name)
         except NoReverseMatch:
             missing.append(name)
-    assert not missing, f"PUBLIC_ROUTES names routes that do not exist: {missing}"
+    assert not missing, f"public_routes() names routes that do not exist: {missing}"
 
 
 def test_every_entry_carries_a_reason():
-    blank = [name for name, reason in PUBLIC_ROUTES.items() if len(reason.strip()) < 20]
-    assert not blank, f"PUBLIC_ROUTES entries without a real reason: {blank}"
+    blank = [name for name, reason in public_routes().items() if len(reason.strip()) < 20]
+    assert not blank, f"public_routes() entries without a real reason: {blank}"

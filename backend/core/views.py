@@ -8,7 +8,7 @@ from .api.views import BaseAPIView
 class HealthView(BaseAPIView):
     """Public liveness/readiness probe."""
 
-    public = True  # core.routes.PUBLIC_ROUTES
+    public = True  # registry.public_routes
     authentication_classes: list = []
 
     def get(self, request):

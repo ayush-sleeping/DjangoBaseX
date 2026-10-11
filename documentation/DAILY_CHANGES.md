@@ -26,6 +26,82 @@ Newest first.
 
 ## 2026-10-11
 
+### PLATFORM_BLUEPRINT § 5 cleanup + BUILD_ORDER 3.1 plugin discovery; ADR-0011 (no organisation in core)
+**What:**
+- **Junior (`djangobasex-bd`):**
+  - `core/registry.py` gains `registry.public_routes`: `register(url_name, reason)`, `routes()`,
+    `URL_NAME_PATTERN`, `MIN_REASON_LENGTH = 20`, and `RESERVED_PREFIXES` widened to admin, api,
+    auth, core, docs, extensions, health, me, meta, rbac, schema, users;
+  - `core/plugins.py`: `discover`, `add_to_path`, `importable`, `installed_apps`, with the minimal
+    `plugin.toml` schema (`EXTENSIBILITY.md` § 17 as-built). Unknown keys are errors, every prefix
+    derives from the label, and labels, packages and table prefixes are checked for collisions;
+  - `tests/test_registry.py` and `tests/test_plugins.py`.
+- **Lead:**
+  - **DB-22:** the ledger is now registrations. Core's are in `core/routes.py`
+    (`CORE_PUBLIC_ROUTES`, from `CoreConfig.ready()`), and `users`' in the new
+    `users/public_routes.py` (from `UsersConfig.ready()`). `dbx.E007`,
+    `test_route_enforcement.py` and `test_public_routes.py` read the union through
+    `core.routes.public_routes()`.
+  - **3.1:** `config/settings.py` runs `INSTALLED_APPS += installed_apps(BASE_DIR / "plugins")`.
+  - **DB-30:** DRF `NUM_PROXIES = TRUSTED_PROXY_COUNT`, with JSON parser and renderer classes
+    pinned (browsable only outside production); `tests/test_throttle_identity.py`.
+  - **DB-24:** `API_PREFIX` in settings. `config/urls.py`, `dbx.E001`'s walk, the no-store
+    middleware and the cookie paths derive from it.
+  - **DB-20:** a `{prefix}_session` marker cookie (`Path=/`, httpOnly, constant `"1"`) set and
+    cleared with the session.
+  - **DB-25:** the `SECRET_KEY` recipe is now `secrets.token_urlsafe(50)` in `README.md`,
+    `NEW_PROJECT.md`, `ONBOARDING.md` and `backend/.env.example`.
+  - **ADR-0011:** D3 is decided, with no organisation in core. The retrofit cost (~258 function
+    signatures) is recorded, and `visible_to()` is the documented reason.
+  - **Closed:** DB-18, 20, 22, 23, 24, 25, 26, 30 and 31. DB-26 and DB-31 had already been fixed
+    in 1.1b and are now verified against code and tests.
+  - **Deferred:** DB-21, by the owner ("decide later", before the first API-token endpoint).
+**Why:** `PLATFORM_BLUEPRINT.md` § 5 found 11 places where the specs were wrong. All but one are now
+fixed. Phase 3 needed discovery, and a plugin needs a public-route seam that doesn't mean editing core.
+**Files:** `README.md`; `backend/.env.example`; `backend/config/{settings,urls}.py`;
+`backend/core/{apps,checks,middleware,permissions,plugins,registry,routes,views}.py`;
+`backend/core/api/views.py`; `backend/users/{apps,cookies,public_routes,urls,views}.py`;
+`backend/users/tests/test_auth_flow.py`;
+`backend/tests/{test_registry,test_plugins,test_throttle_identity}.py`;
+`backend/tests/architecture/{test_public_routes,test_route_enforcement}.py`;
+`documentation/{ADR,DAILY_CHANGES,NEW_PROJECT,ONBOARDING}.md`;
+`documentation/adr/0011-no-organisation-in-core.md`;
+`documentation/planning/{BUILD_ORDER,PLATFORM_BLUEPRINT,TECH_DEBT}.md`;
+`documentation/system-design/{API_DESIGN,AUTH_BLUEPRINT,DATA_MODEL,EXTENSIBILITY,REUSABLE_MODULES}.md`.
+**Verification:**
+- `ruff check .` ✅; `ruff format --check .` ✅ (131 files).
+- `manage.py check` ✅, and `makemigrations --check --dry-run` ✅ (No changes detected).
+- `pytest` ✅ (737 passed).
+- **Mutation checks:**
+  - With `users:refresh` dropped from `users/public_routes.py`, `dbx.E007` reports
+    "/api/auth/refresh/ (users:refresh) is public but not in registry.public_routes" and 3
+    architecture tests fail. Restored.
+  - Before the DB-30 fix, the throttle test showed a fresh bucket per rotated `X-Forwarded-For`.
+- **Plugin smoke against a real `backend/plugins/demo/`, removed afterwards:**
+  - present → `djx_demo.apps.DemoConfig` installed;
+  - an import of a missing module inside it → boot fails with `ModuleNotFoundError`;
+  - package dir missing → warning ("Is the submodule initialised?") and the check passes;
+  - `table = "users_"` → `PluginError` naming the file and `plugin.prefixes.table`.
+- **Docker stack:**
+  - `/api/health/` 200; anonymous `/api/auth/me/` 401;
+  - a throwaway active user's sign-in → 204 with `dbx_access` (`Path=/api/`), `dbx_refresh`,
+    `dbx_csrf` and `dbx_session=1` (`Path=/`, HttpOnly); `/api/auth/me/` with the cookies → 200;
+  - the user was deleted afterwards.
+- **Skipped:** the frontend gate (no frontend file changed), and the hook tests (no hook or
+  `AGENTS.md` change).
+**Notes:**
+- **The backend container exited during this work.** The two `settings.py` edits landed seconds
+  apart, and runserver's autoreloader picked up the first before the import line existed
+  (`NameError: installed_apps`). The file on disk is correct; `docker compose up -d backend`
+  recovered it.
+- Remember that `create_user` leaves an account inactive (ADR-0008) when smoke-testing a sign-in.
+- **Still open in Phase 3:**
+  - 3.2 conventions test;
+  - 3.3 `scripts/plugins.py`;
+  - 3.4 example plugin;
+  - 3.5 frontend mounting (DB-28: `turbopack.root` in the protected `next.config.ts`).
+- **Not built:** `list_plugins()`, `validate_plugins` and `dbx.E10x`.
+
 ### BUILD_ORDER 5.1 + 6.1 (pulled forward): boot refusal, request ids, structured logs, one scrubber
 **What:**
 - **Junior (`djangobasex-bd`):**

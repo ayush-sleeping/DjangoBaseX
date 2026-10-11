@@ -83,7 +83,7 @@ use those prefixes (`billing_ledger_entry`, `approvals.proposals.decide`).
 17. **Every nav route has a help article or a written exemption**, and every feature ships its help
     page in the same change. → [§ 8](#8-knowledge-base--in-app-help-centre--tier-3--module--process-rule)
 18. **A tenant header is display, never authority.** Resolution precedence is verified custom domain,
-    then subdomain, then header — and the header only for reads. → [§ 10](#10-organisations-tenancy--white-label--tier-3--module-pending-d3)
+    then subdomain, then header — and the header only for reads. → [§ 10](#10-organisations-tenancy--white-label--tier-3--module-product-owned-adr-0011)
 19. **Search and the AI assistant can never see more than the list endpoint would show** — every hit
     and every tool result passes through `visible_to(user)`. → [§ 11](#11-global-search--tier-2--core-seam--tier-3--module), [§ 12](#12-ai-assistant--tier-3--module)
 20. **User-supplied text is data, never instructions.** Any automation that feeds it to a model or an
@@ -1562,11 +1562,11 @@ internal state), customer portal, CSAT page, SLA policy editor with a calendar p
 
 ---
 
-## 10. Organisations, tenancy & white-label — **Tier 3 · Module** (pending D3)
+## 10. Organisations, tenancy & white-label — **Tier 3 · Module** (product-owned; ADR-0011)
 
-> 🚧 **This section depends on an open decision** — [`DATA_MODEL.md`](DATA_MODEL.md) **D3** ("Is
-> there multi-tenancy in the core?"). It presents the evidence and the design either way. **Do not
-> build it until D3 is an ADR.**
+> ✅ **D3 is decided: option A, no tenant in core** —
+> [ADR-0011](../adr/0011-no-organisation-in-core.md) (2026-10-11). This section remains the design
+> a product or a tenancy plugin follows if it adds organisations. It is not core work.
 
 ### 10.1 The decision evidence
 

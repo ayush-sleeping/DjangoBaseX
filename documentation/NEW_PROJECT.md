@@ -59,7 +59,7 @@ Nothing below is optional. Work top to bottom.
 
 ```bash
 cd backend && cp .env.example .env
-uv run python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+uv run python -c "import secrets; print(secrets.token_urlsafe(50))"
 # paste into SECRET_KEY in backend/.env
 ```
 

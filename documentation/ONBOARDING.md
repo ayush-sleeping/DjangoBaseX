@@ -33,7 +33,7 @@ all — `uv` installs Python 3.12 itself.
 cd backend
 uv sync                                   # installs Python 3.12, creates .venv, installs deps
 cp .env.example .env
-uv run python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+uv run python -c "import secrets; print(secrets.token_urlsafe(50))"
 # paste that into SECRET_KEY in .env
 uv run python manage.py migrate
 uv run python manage.py createsuperuser

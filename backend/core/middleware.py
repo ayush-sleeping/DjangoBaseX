@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils.cache import patch_cache_control
 
 
@@ -15,6 +16,8 @@ class NoStoreForAuthenticatedMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         user = getattr(request, "user", None)
-        if request.path.startswith("/api/auth/") or (user is not None and user.is_authenticated):
+        if request.path.startswith(f"/{settings.API_PREFIX}/auth/") or (
+            user is not None and user.is_authenticated
+        ):
             patch_cache_control(response, no_store=True, private=True)
         return response

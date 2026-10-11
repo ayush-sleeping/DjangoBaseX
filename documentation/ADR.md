@@ -27,6 +27,7 @@ Template: [`adr/0000-template.md`](adr/0000-template.md).
 | [0008](adr/0008-custom-user-model-email-identity.md) | A custom `users.User`, identified by email, with boolean states | Accepted | 2026-10-11 |
 | [0009](adr/0009-jwt-in-httponly-cookies.md) | Browser auth is JWT in `httpOnly` cookies, backed by a database session row | Accepted | 2026-10-11 |
 | [0010](adr/0010-platform-layer-is-logical.md) | The platform is a logical layer (`core`, `users`, `rbac`); product code lives in `project/` | Accepted | 2026-10-11 |
+| [0011](adr/0011-no-organisation-in-core.md) | No organisation model in the core; scoping lives behind `visible_to()` | Accepted | 2026-10-11 |
 
 ---
 

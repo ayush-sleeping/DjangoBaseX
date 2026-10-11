@@ -7,6 +7,7 @@ flags are decided.
 | access  | 10-minute JWT         | no          | /api/ (/ when __Host- applies)              |
 | refresh | rotating refresh JWT  | no          | /api/auth/refresh/ only — not sent elsewhere |
 | csrf    | session-bound token   | yes         | / (the frontend echoes it in X-CSRF-Token)  |
+| session | the constant "1"      | no          | / — a marker for page navigations (DB-20)   |
 
 With Secure on and no shared cookie domain, access and csrf get the `__Host-` prefix: the browser
 then refuses any Set-Cookie for them that carries a Domain or a non-/ path, which shuts out cookie
@@ -19,7 +20,7 @@ from dataclasses import dataclass
 from django.conf import settings
 from django.utils import timezone
 
-REFRESH_PATH = "/api/auth/refresh/"
+REFRESH_PATH = f"/{settings.API_PREFIX}/auth/refresh/"  # derived (DB-24)
 CSRF_HEADER = "HTTP_X_CSRF_TOKEN"  # X-CSRF-Token
 
 
@@ -28,6 +29,7 @@ class CookieNames:
     access: str
     refresh: str
     csrf: str
+    session: str
     host_prefixed: bool
 
 
@@ -39,6 +41,7 @@ def cookie_names() -> CookieNames:
         access=f"{prefix}{base}_access",
         refresh=f"{base}_refresh",
         csrf=f"{prefix}{base}_csrf",
+        session=f"{prefix}{base}_session",
         host_prefixed=host_prefixed,
     )
 
@@ -52,7 +55,7 @@ def _common() -> dict:
 
 
 def _access_path(names: CookieNames) -> str:
-    return "/" if names.host_prefixed else "/api/"
+    return "/" if names.host_prefixed else f"/{settings.API_PREFIX}/"
 
 
 def set_auth_cookies(response, issued) -> None:
@@ -77,6 +80,12 @@ def set_auth_cookies(response, issued) -> None:
     response.set_cookie(
         names.csrf, issued.csrf, max_age=session_seconds, path="/", httponly=False, **_common()
     )
+    # TECH_DEBT DB-20: the session MARKER. Path=/ so a page navigation (a Next.js route guard)
+    # can tell "probably signed in, refresh on the client" from "signed out" once the /api/-scoped
+    # access cookie has expired. It holds no credential: the value is a constant, never a token.
+    response.set_cookie(
+        names.session, "1", max_age=session_seconds, path="/", httponly=True, **_common()
+    )
 
 
 def clear_auth_cookies(response) -> None:
@@ -85,3 +94,4 @@ def clear_auth_cookies(response) -> None:
     response.delete_cookie(names.access, path=_access_path(names), **common)
     response.delete_cookie(names.refresh, path=REFRESH_PATH, **common)
     response.delete_cookie(names.csrf, path="/", **common)
+    response.delete_cookie(names.session, path="/", **common)

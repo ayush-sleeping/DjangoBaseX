@@ -13,6 +13,7 @@ from corsheaders.defaults import default_headers
 from core.config_audit import enforce
 from core.env import is_production_like
 from core.observability.logging import build_logging
+from core.plugins import installed_apps
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -93,6 +94,10 @@ INSTALLED_APPS = [
 # This product's code, loaded only when present: deleting project/ must leave a working platform.
 if (BASE_DIR / "project").is_dir():
     INSTALLED_APPS.append("project")
+
+# Plugins (BUILD_ORDER 3.1): every backend/plugins/*/plugin.toml, validated before any plugin code
+# runs. Adding one edits no list here. An absent submodule is skipped; a broken one fails boot.
+INSTALLED_APPS += installed_apps(BASE_DIR / "plugins")
 
 # Set before the first migration and never changed after (ADR-0008).
 AUTH_USER_MODEL = "users.User"
@@ -260,6 +265,10 @@ REAUTH_WINDOW_MINUTES = env("REAUTH_WINDOW_MINUTES")
 
 # Django REST Framework
 # -------------------------------------------------------------------------------------------- ::
+# Every API path derives from this one constant: URLs, cookie paths, the no-store rule, the route
+# checks (TECH_DEBT DB-24). A code constant, not env: moving it (e.g. to "api/v1") is a release.
+API_PREFIX = "api"
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "users.authentication.CookieJWTAuthentication",
@@ -272,6 +281,16 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.api.exceptions.handler",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    # JSON in and out. Pinned, so a form or multipart parser is never an accidental attack surface;
+    # the browsable API exists only outside production.
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        *([] if PRODUCTION_LIKE else ["rest_framework.renderers.BrowsableAPIRenderer"]),
+    ],
+    # TECH_DEBT DB-30: unset, DRF keys AnonRateThrottle on the WHOLE client-supplied
+    # X-Forwarded-For, so rotating the header defeats the limit. Same trust as client_ip().
+    "NUM_PROXIES": TRUSTED_PROXY_COUNT,
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",

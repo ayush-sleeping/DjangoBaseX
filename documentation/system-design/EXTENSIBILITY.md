@@ -644,6 +644,15 @@ its own route inline — and the second is exactly what the exemption ledger exi
   uniqueness test rather than shadowing a core path.
 - **An API mount's prefix equals its owner's label.** No second spelling.
 
+> **As built (2026-10-11, DB-22):** `registry.public_routes.register(url_name, reason)` — a plain
+> pair, not a `PublicRoute` object. The URL name must match `URL_NAME_PATTERN` (`[ns:]name`), the
+> reason must be at least `MIN_REASON_LENGTH` (20) characters, and registering a name twice raises.
+> Core's entries are registered from `CoreConfig.ready()` (`core/routes.py`), `users`' from
+> `UsersConfig.ready()` (`users/public_routes.py`). `core.routes.public_routes()` is the union that
+> `dbx.E007` and both route tests read. The reserved prefixes (`core/registry.py::RESERVED_PREFIXES`)
+> as built are `admin`, `api`, `auth`, `core`, `docs`, `extensions`, `health`, `me`, `meta`, `rbac`,
+> `schema` and `users`.
+
 **Django + Next shape.**
 
 ```python
@@ -798,6 +807,17 @@ So discovery reads **declarations**, never code: `plugin.toml` with the stdlib `
 the `layer` of in-repo apps — the `AppConfig` class body with `ast`. And it removes the unowned parent
 edits: adding a plugin used to mean editing a settings list, a URL line and a permissions merge, all
 of which authors forgot and no plugin test could catch.
+
+> **As built (2026-10-11, BUILD_ORDER 3.1):** `config/settings.py` runs
+> `INSTALLED_APPS += installed_apps(BASE_DIR / "plugins")`. `discover()` returns `[]` when
+> `backend/plugins/` does not exist, validates every manifest before anything is imported, sorts by
+> `(order, name)` and refuses colliding labels, packages or table prefixes (a `crm_` prefix
+> overlapping `crm_ext_` counts). It then appends each plugin root to `sys.path` (appended, so
+> nothing is shadowed) and imports each package under the § 13 rule. Smoke-run against a real
+> `plugins/demo/`: present → installed; broken import → boot fails; package missing → warning and
+> skipped; a table prefix not derived from the label → `PluginError` naming the file and field. The
+> in-repo `layer` read by `ast` is not built. Today's in-repo apps are the platform and `project/`
+> (ADR-0010).
 
 **Rules.**
 - **`plugin.toml` is the manifest** (§ 17). Discovery reads `name`, `package`, `order`; nothing else
@@ -1120,6 +1140,17 @@ installed plugin provides X" from declarations alone.
 a fixture, `validate_plugins` exit code.
 
 **Configurable, not hard-coded.** Declarative per plugin.
+
+> **As built (2026-10-11, BUILD_ORDER 3.1): the minimal schema, enforced by `core/plugins.py`.**
+> Required: `name`; `label` (explicit, and equal to `name`, which avoids the § 3 app-label trap);
+> `package` (`"djx_" + name`); `version`; and `[plugin.prefixes]` with all four of `table`
+> (`"<label>_"`), `permission`, `route` and `frontend` (each `"<label>"`), each **derived from the
+> label**, never chosen freely. Optional: `app` (a dotted `AppConfig` inside the package, defaulting
+> to the package) and `order` (default 100, a tie-break only). `description`, `sdk_target`,
+> `requires`, `provides`, `consumes`, `docs_url` and `[plugin.frontend]` are accepted but not acted
+> on yet. **Unknown keys are an error.** The label may not be a reserved core prefix or label.
+> `list_plugins()`, `validate_plugins` and the `dbx.E10x` / `W10x` severities above are not built.
+> Tests: `tests/test_plugins.py`.
 
 ---
 

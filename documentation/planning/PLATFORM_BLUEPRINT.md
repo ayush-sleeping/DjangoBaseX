@@ -289,6 +289,11 @@ is wrong — or found an outright defect. Each is now a [`TECH_DEBT.md`](TECH_DE
 | 10 | `config/settings.py` (**live code**) — `AnonRateThrottle` with DRF `NUM_PROXIES` unset | DRF then keys the throttle on the whole client-supplied `X-Forwarded-For`, so the limit is bypassable by rotating the header | Set `NUM_PROXIES` from `TRUSTED_PROXY_COUNT` or route identity through `client_ip()`; pin renderer and parser classes | DB-30 |
 | 11 | `AUTH_BLUEPRINT.md` § 11 — the client refreshes on 401 | DRF answers 403, not 401, when the authenticator has no `authenticate_header()` | Specify `authenticate_header()` on the cookie authenticator; test anonymous → 401 | DB-31 |
 
+**Status, 2026-10-11:** every row except 4 is resolved; each fix is recorded in
+[`TECH_DEBT.md`](TECH_DEBT.md) § Closed. Row 6 is [ADR-0011](../adr/0011-no-organisation-in-core.md).
+Row 4 (DB-21, machine callers) the owner deferred. It must be decided before the first API-token
+endpoint is built.
+
 ---
 
 ## 6. Pending decisions for the repository owner

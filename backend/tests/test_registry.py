@@ -24,6 +24,7 @@ from core.registry import (
     PermissionGroupSpec,
     PermissionRegistry,
     PermissionSpec,
+    PublicRouteRegistry,
     Registry,
     RegistryError,
 )
@@ -211,7 +212,8 @@ def test_the_registry_holds_every_catalog_each_instance_its_own():
     assert isinstance(a.navigation, NavigationRegistry)
     assert isinstance(a.health, HealthRegistry)
     assert isinstance(a.api_routes, ApiRouteRegistry)
-    for name in ("permissions", "navigation", "health", "api_routes"):
+    assert isinstance(a.public_routes, PublicRouteRegistry)
+    for name in ("permissions", "navigation", "health", "api_routes", "public_routes"):
         assert getattr(a, name) is not getattr(b, name)
 
 
@@ -545,3 +547,85 @@ def test_no_core_or_config_file_names_the_throwaway_app():
         if "throwaway" in path.read_text(encoding="utf-8")
     ]
     assert not offenders, f"core names the plugin it should know nothing about: {offenders}"
+
+
+# === Public routes (DB-22) ======================================================================
+
+REASON = "Authenticated by the signed callback itself; verified before any read."
+
+
+def test_public_routes_are_readable_sorted_and_read_only():
+    routes = PublicRouteRegistry()
+    routes.register("users:login", "The front door. Same answer for every failure.")
+    routes.register("billing:payments:callback", REASON)
+    routes.register("schema", "  OpenAPI document: describes the surface, holds no data.  ")
+    ledger = routes.routes()
+    assert list(ledger) == ["billing:payments:callback", "schema", "users:login"]
+    assert ledger["schema"] == "OpenAPI document: describes the surface, holds no data."
+    with pytest.raises(TypeError):
+        ledger["anything"] = "x" * 30  # type: ignore[index]
+
+
+def test_reading_public_routes_seals_them():
+    routes = PublicRouteRegistry()
+    routes.routes()
+    with pytest.raises(RegistryError, match=r"'late:route'.*sealed"):
+        routes.register("late:route", REASON)
+
+
+@pytest.mark.parametrize(
+    "url_name",
+    ["", "Users:login", "users:", ":login", "users::login", "users login", "/api/login/", 42],
+)
+def test_a_malformed_url_name_is_refused(url_name):
+    routes = PublicRouteRegistry()
+    with pytest.raises(RegistryError, match="not a URL name"):
+        routes.register(url_name, REASON)
+    assert routes.routes() == {}
+
+
+@pytest.mark.parametrize("reason", ["", "   ", "Public.", "x" * 19, "  " + "y" * 19 + "  ", None])
+def test_a_reason_under_twenty_characters_is_refused(reason):
+    routes = PublicRouteRegistry()
+    with pytest.raises(RegistryError, match="a sentence a reviewer can disagree with"):
+        routes.register("billing:callback", reason)
+    assert routes.routes() == {}
+
+
+def test_exactly_twenty_characters_is_enough():
+    routes = PublicRouteRegistry()
+    routes.register("billing:callback", "z" * 20)
+    assert "billing:callback" in routes.routes()
+
+
+def test_a_duplicate_names_both_registrants():
+    routes = PublicRouteRegistry()
+
+    def register_from(module_name: str) -> None:
+        code = compile("routes.register('billing:callback', REASON)", module_name, "exec")
+        exec(code, {"__name__": module_name, "routes": routes, "REASON": REASON})
+
+    register_from("billing.apps")
+    with pytest.raises(RegistryError) as exc:
+        register_from("payments.apps")
+    message = str(exc.value)
+    assert "'billing:callback' is already registered by billing.apps" in message
+    assert "registered again by payments.apps" in message
+    assert dict(routes.routes()) == {"billing:callback": REASON}
+
+
+def test_todays_public_routes_ledger_migrates_cleanly():
+    # The ledger moves into this registry next: every entry it holds today must be accepted.
+    from core.routes import CORE_PUBLIC_ROUTES
+    from users.public_routes import PUBLIC_ROUTES as USERS_PUBLIC_ROUTES
+
+    PUBLIC_ROUTES = {**CORE_PUBLIC_ROUTES, **USERS_PUBLIC_ROUTES}
+
+    routes = PublicRouteRegistry()
+    for url_name, reason in PUBLIC_ROUTES.items():
+        routes.register(url_name, reason)
+    assert set(routes.routes()) == set(PUBLIC_ROUTES)
+
+
+def test_the_reserved_list_includes_the_extensibility_mounts():
+    assert {"me", "meta", "extensions"} <= RESERVED_PREFIXES

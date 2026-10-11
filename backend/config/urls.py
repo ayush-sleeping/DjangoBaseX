@@ -15,17 +15,19 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.registry import registry
 
+API = settings.API_PREFIX  # every API path derives from it (DB-24)
+
 urlpatterns = [
-    path("api/", include("core.urls")),
-    path("api/", include("users.urls")),
-    path("api/rbac/", include("rbac.urls")),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path(f"{API}/", include("core.urls")),
+    path(f"{API}/", include("users.urls")),
+    path(f"{API}/rbac/", include("rbac.urls")),
+    path(f"{API}/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(f"{API}/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ]
 
 # Whatever project/ and plugins registered (CORE_ARCHITECTURE_PLAN.md § 2): core names none of them.
 urlpatterns += [
-    path(f"api/{route.prefix}/", include(route.urlconf)) for route in registry.api_routes.routes()
+    path(f"{API}/{route.prefix}/", include(route.urlconf)) for route in registry.api_routes.routes()
 ]
 
 # A second authentication and authorization system beside the API's; off unless asked for.

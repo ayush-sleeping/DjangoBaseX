@@ -13,3 +13,7 @@ class UsersConfig(AppConfig):
 
         signals.connect()
         registry.permissions.register(GROUP)
+        from .public_routes import PUBLIC_ROUTES
+
+        for url_name, reason in PUBLIC_ROUTES.items():
+            registry.public_routes.register(url_name, reason)

@@ -94,6 +94,17 @@ def test_cookies_are_httponly_secure_lax_and_scoped(client):
     assert access["path"] == "/" and token["path"] == "/"
 
 
+def test_a_path_root_session_marker_rides_with_the_session_and_carries_no_credential(client):
+    response = sign_in(client, UserFactory().email)
+    marker = response.cookies[NAMES.session]
+    assert marker.value == "1"  # a constant, never a token
+    assert marker["path"] == "/" and marker["httponly"] and marker["secure"]
+    assert NAMES.session.startswith("__Host-")
+
+    logout = client.post(LOGOUT, **csrf(client))
+    assert logout.cookies[NAMES.session].value == ""  # cleared with the session
+
+
 def test_auth_responses_are_never_cached(client):
     assert "no-store" in sign_in(client, UserFactory().email)["Cache-Control"]
     assert "no-store" in client.get(ME)["Cache-Control"]

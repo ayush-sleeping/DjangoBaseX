@@ -16,9 +16,11 @@ A registry holds a key, a label and at most a callable, never an app's model or 
 """
 
 import re
+import sys
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
+from types import MappingProxyType
 
 # "<module>.<feature>.<action>". The action is deliberately not checked against a fixed list:
 # the vocabulary in § 7.1 is guidance, and real codes need verbs like "send" and "revoke".
@@ -34,8 +36,26 @@ _DOTTED_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)
 # users (users.urls, mounted at /api/), rbac, schema and docs (config/urls.py), health (core.urls),
 # and admin, core and api, which would read as something they are not.
 RESERVED_PREFIXES = frozenset(
-    {"admin", "api", "auth", "core", "docs", "health", "rbac", "schema", "users"}
+    {
+        "admin",
+        "api",
+        "auth",
+        "core",
+        "docs",
+        "extensions",  # EXTENSIBILITY § 9: the Extensions page's API
+        "health",
+        "me",
+        "meta",
+        "rbac",
+        "schema",
+        "users",
+    }
 )
+# A Django URL name, optionally namespaced (nested namespaces allowed): "schema", "users:login",
+# "billing:payments:callback". Hyphens and underscores, as Django's own names use both.
+URL_NAME_PATTERN = re.compile(r"^(?:[a-z][a-z0-9_-]*:)*[a-z][a-z0-9_-]*$")
+# The ledger's rule (AUTH_BLUEPRINT § 9.2): a reason is a sentence a reviewer can disagree with.
+MIN_REASON_LENGTH = 20
 
 
 # --- Specs: what an app hands in ------------------------------------------------------------------
@@ -377,6 +397,60 @@ class ApiRouteRegistry(_Catalog):
         return tuple(sorted(self._routes.values(), key=lambda r: r.prefix))
 
 
+# --- Public routes ------------------------------------------------------------------------------
+
+
+class PublicRouteRegistry(_Catalog):
+    """
+    The exemption ledger as a seam (AUTH_BLUEPRINT § 9.2; EXTENSIBILITY § 9; TECH_DEBT DB-22).
+
+    Every /api/ route refuses an anonymous caller unless its URL name is registered here with a
+    reason. Core registers its own entries the same way a plugin does, so the route test and
+    dbx.E007 read one union and a plugin never edits core to open an endpoint.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._routes: dict[str, str] = {}
+        self._owners: dict[str, str] = {}
+
+    def register(self, url_name: str, reason: str) -> None:
+        owner = _caller_module()
+        with self._lock:
+            name = f"public route {url_name!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(url_name, str) or not URL_NAME_PATTERN.match(url_name):
+                raise RegistryError(
+                    f"{name}: not a URL name. Use 'name' or 'namespace:name' (lowercase letters, "
+                    "digits, _ and -)."
+                )
+            if not isinstance(reason, str) or len(reason.strip()) < MIN_REASON_LENGTH:
+                raise RegistryError(
+                    f"{name}: the reason must be a sentence a reviewer can disagree with, at least "
+                    f"{MIN_REASON_LENGTH} characters. It opens an endpoint to the internet."
+                )
+            if url_name in self._routes:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owners[url_name]}; registered again "
+                    f"by {owner}. One route, one reason."
+                )
+            self._routes[url_name] = reason.strip()
+            self._owners[url_name] = owner
+
+    def routes(self) -> Mapping[str, str]:
+        """url_name → reason, sorted by name, read-only."""
+        self.seal()
+        return MappingProxyType(dict(sorted(self._routes.items())))
+
+
+def _caller_module() -> str:
+    """The module that called register(), for naming both sides of a duplicate. Best effort."""
+    try:
+        return sys._getframe(2).f_globals.get("__name__", "an unknown module")
+    except ValueError:
+        return "an unknown module"
+
+
 # --- The whole seam -----------------------------------------------------------------------------
 
 
@@ -389,6 +463,7 @@ class Registry:
         self.navigation = NavigationRegistry(self.permissions)
         self.health = HealthRegistry()
         self.api_routes = ApiRouteRegistry()
+        self.public_routes = PublicRouteRegistry()
 
 
 # The process-wide instance. Tests build their own and never touch this one.

@@ -3,13 +3,13 @@ Every /api/ route refuses an anonymous caller (AUTH_BLUEPRINT.md § 9.3, BUILD_O
 
 Each route is called unauthenticated with every method. Anything but 401/403 fails, and a 404
 fails too, because it means the handler looked something up before checking who was asking.
-The only exemptions are core.routes.PUBLIC_ROUTES, each with a written reason.
+The only exemptions are registry.public_routes (core.routes.public_routes()), each with a reason.
 """
 
 import pytest
 from django.test import override_settings
 
-from core.routes import PUBLIC_ROUTES
+from core.routes import public_routes
 from tests.architecture.url_walk import Route, iter_routes
 
 METHODS = ("get", "post", "put", "patch", "delete")
@@ -38,13 +38,13 @@ def failure_message(problems: list[str]) -> str:
     return (
         "these routes answer an anonymous caller with something other than 401/403:\n  "
         + "\n  ".join(problems)
-        + "\nGate the view, or argue for an entry in core/routes.py PUBLIC_ROUTES."
+        + "\nGate the view, or argue for a public_routes entry in the owning app's ready()."
     )
 
 
 @pytest.mark.django_db
 def test_every_api_route_refuses_anonymous_callers(client):
-    protected = [r for r in api_routes() if r.name not in PUBLIC_ROUTES]
+    protected = [r for r in api_routes() if r.name not in public_routes()]
     problems = unenforced(client, protected)
     assert not problems, failure_message(problems)
 

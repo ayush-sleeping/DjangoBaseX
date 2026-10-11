@@ -8,7 +8,7 @@ A view states what it needs on the class, in one place:
     required_permissions = ["a.b.c"]     → every listed code (BaseAPIView)
     required_permissions = {"list": [...], "create": [...]}   → per action (BaseViewSet);
                                            an action missing from the dict denies
-    public = True                        → anyone; the URL name must be in core.routes.PUBLIC_ROUTES
+    public = True                        → anyone; the URL name must be in registry.public_routes
 """
 
 from rest_framework.permissions import BasePermission

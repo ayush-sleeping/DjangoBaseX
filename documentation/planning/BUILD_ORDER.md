@@ -366,9 +366,15 @@ Closes **DB-5** / **DB-6**.
 
 ## Phase 3 — the plugin system
 
-### 3.1 — Plugin discovery ⬜
+### 3.1 — Plugin discovery ✅
 `backend/core/plugins.py` — scan `backend/plugins/*/plugin.toml`, add to `sys.path`, append to
 `INSTALLED_APPS`. Per `CORE_ARCHITECTURE_PLAN.md` § 1.
+
+*Done 2026-10-11.* `config/settings.py` runs `INSTALLED_APPS += installed_apps(BASE_DIR / "plugins")`.
+Manifests are validated before any plugin code runs (the minimal schema is in `EXTENSIBILITY.md`
+§ 17), and absent vs broken follows DB-18. The public-route ledger became `registry.public_routes`
+(DB-22) in the same change, so a plugin can declare its anonymous routes. Tests:
+`tests/test_plugins.py`, `tests/test_registry.py`.
 
 ### 3.2 — Conventions test ⬜
 Every plugin has `plugin.toml`, an **explicit** `app_label`, and the four prefixes (table,

@@ -688,6 +688,13 @@ frontend/src/
 | **Access** | **10 minutes** | `httpOnly` cookie `dbx_access` | `HttpOnly, Secure, SameSite=Lax, Path=/api/` |
 | **Refresh** | **14 days** absolute, **7 days** idle | `httpOnly` cookie `dbx_refresh` | `HttpOnly, Secure, SameSite=Lax, Path=/api/auth/refresh/` |
 | **CSRF** | matches refresh | **readable** cookie `dbx_csrf` | `Secure, SameSite=Lax` — **not** `HttpOnly` |
+| **Session marker** | matches refresh | `httpOnly` cookie `dbx_session`, value the constant `1` | `HttpOnly, Secure, SameSite=Lax, Path=/`. **No credential.** It lets a page navigation (a Next.js route guard) tell "signed in, refresh on the client" from "signed out" after the `/api/`-scoped access cookie has expired (TECH_DEBT DB-20) |
+
+> **As built:** every path above derives from `settings.API_PREFIX` (`"api"`, TECH_DEBT DB-24).
+> When Secure is on and no shared cookie domain is set, access, CSRF and the session marker take
+> the `__Host-` prefix and the access cookie moves to `Path=/`, because `__Host-` requires it. The
+> refresh cookie keeps its narrow path and no prefix (DB-26). `users/cookies.py` is the only place
+> these names, paths and flags are decided.
 
 **Three properties this buys, each of them commonly missing:**
 
@@ -1434,7 +1441,7 @@ def deactivate(*, actor, user, reason) -> None:
    - **Every existing endpoint was moved onto `BaseAPIView`.** The `has_permission(...)` factory
      from 1.2 is gone, because two ways to gate a view is the cost that compounds.
 2. **Boot checks:** `dbx.E001` (every `/api/` route inherits a base and declares something) and
-   `dbx.E007` (`public = True` ⇔ `core.routes.PUBLIC_ROUTES`, every entry resolves and has a
+   `dbx.E007` (`public = True` ⇔ `registry.public_routes`, every entry resolves and has a
    reason). Third-party public views (the schema and docs) pass by being in the ledger. The ledger
    **replaces** the "`# public: <reason>` comment" of § 9.1: the reason lives in one file a check
    can read.
@@ -1613,6 +1620,14 @@ Keys are URL **names**, so a renamed route fails the check instead of quietly lo
 Every value is a sentence a reviewer can disagree with. **The list only shrinks by argument** — an
 addition is a PR that has to justify opening something to the internet, which is the whole point of
 keeping it in one file rather than as an `AllowAny` scattered across eight views.
+
+> **As built (2026-10-11, TECH_DEBT DB-22):** the ledger is a registry, `registry.public_routes`,
+> so a plugin can declare its own anonymous surface without editing core. Core's entries live in
+> `core/routes.py` (`CORE_PUBLIC_ROUTES`, registered from `CoreConfig.ready()`; the health route is
+> `core:health`), and the `users` entries, `users:mfa-verify` among them, live in
+> `users/public_routes.py` (registered from `UsersConfig.ready()`). `dbx.E007`, the route test and
+> `test_public_routes.py` read the union through `core.routes.public_routes()`. The pinned set in
+> `test_public_routes.py` is still the single reviewed list: a registration it doesn't name fails CI.
 
 > ⚠️ `/api/schema/` and `/api/docs/` exist in `config/urls.py` **today** and are not viewsets. They
 > are the first thing `dbx.E001` will fail on, and the reflex — an `AllowAny` on each — is exactly

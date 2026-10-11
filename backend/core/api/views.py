@@ -11,7 +11,7 @@ from core.permissions import HasPermission
 class BaseAPIView(APIView):
     """
     required_permissions: None denies everyone; [] means any signed-in user; ["a.b.c"] needs each.
-    public = True opens it to anyone, and its URL name must be in core.routes.PUBLIC_ROUTES
+    public = True opens it to anyone, and its URL name must be in registry.public_routes
     (dbx.E007). See core.permissions for the full rule.
     """
 

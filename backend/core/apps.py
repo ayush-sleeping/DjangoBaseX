@@ -7,3 +7,8 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from . import checks  # noqa: F401 — registers the dbx.* system checks
+        from .registry import registry
+        from .routes import CORE_PUBLIC_ROUTES
+
+        for url_name, reason in CORE_PUBLIC_ROUTES.items():
+            registry.public_routes.register(url_name, reason)

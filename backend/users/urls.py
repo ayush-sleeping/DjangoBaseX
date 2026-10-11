@@ -20,7 +20,7 @@ from .views import (
 
 app_name = "users"
 
-# Mounted under /api/ by config/urls.py. Login and refresh are public: core.routes.PUBLIC_ROUTES.
+# Mounted under /api/ by config/urls.py. Login and refresh are public: registry.public_routes.
 urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="login"),
     path("auth/refresh/", RefreshView.as_view(), name="refresh"),

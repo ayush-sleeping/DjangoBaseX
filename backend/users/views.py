@@ -85,9 +85,9 @@ INVALID_TOKEN = {
 
 
 class LoginView(BaseAPIView):
-    # Public (core.routes.PUBLIC_ROUTES). No authenticators: a stale access cookie must not turn
+    # Public (registry.public_routes). No authenticators: a stale access cookie must not turn
     # a sign-in attempt into a 401 before the credentials are even read.
-    public = True  # core.routes.PUBLIC_ROUTES
+    public = True  # registry.public_routes
     authentication_classes: list = []
     throttle_classes = [LoginThrottle]  # step 1: 5/min per (address, IP) pair
 
@@ -110,7 +110,7 @@ class LoginView(BaseAPIView):
 
 class RefreshView(BaseAPIView):
     # Public: it authenticates by the refresh cookie itself, not by an access token.
-    public = True  # core.routes.PUBLIC_ROUTES
+    public = True  # registry.public_routes
     authentication_classes: list = []
 
     def post(self, request):
@@ -154,7 +154,7 @@ class MeView(BaseAPIView):
 
 class ForgotPasswordView(BaseAPIView):
     # Public. Always 204, whether or not the address exists (§ 6.6).
-    public = True  # core.routes.PUBLIC_ROUTES
+    public = True  # registry.public_routes
     authentication_classes: list = []
     throttle_classes = [PasswordResetThrottle]  # 3/hour per address
 
@@ -167,7 +167,7 @@ class ForgotPasswordView(BaseAPIView):
 
 class ResetPasswordView(BaseAPIView):
     # Public: authenticated by the reset token itself.
-    public = True  # core.routes.PUBLIC_ROUTES
+    public = True  # registry.public_routes
     authentication_classes: list = []
 
     def post(self, request):
@@ -208,7 +208,7 @@ class PasswordConfirmView(BaseAPIView):
 
 class MfaVerifyView(BaseAPIView):
     # Public: authenticated by the password step's mfa_token, which grants nothing else.
-    public = True  # core.routes.PUBLIC_ROUTES
+    public = True  # registry.public_routes
     authentication_classes: list = []
     throttle_classes = [MfaVerifyThrottle]
 
@@ -388,7 +388,7 @@ class InvitationViewSet(BaseViewSet, mixins.ListModelMixin):
 
 
 class AcceptInvitationView(BaseAPIView):
-    # Public (core.routes.PUBLIC_ROUTES): authenticated by the invitation token itself.
+    # Public (registry.public_routes): authenticated by the invitation token itself.
     public = True
     authentication_classes: list = []
     throttle_classes = [InvitationAcceptThrottle]
