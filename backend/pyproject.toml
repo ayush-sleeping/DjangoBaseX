@@ -21,6 +21,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "factory-boy>=3.3",
+    "pytest>=8",
+    "pytest-cov>=6",
+    "pytest-django>=4.9",
     "ruff>=0.16.6",
 ]
 
@@ -37,4 +41,11 @@ exclude = ["migrations", ".venv"]
 select = ["E", "F", "I", "B", "UP", "DJ"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "core", "users"]
+known-first-party = ["config", "core", "tests", "users"]
+
+[tool.pytest.ini_options]
+# The only settings tests ever use: pinned env, in-memory cache/email/storage (ENGINEERING_PRACTICES § 5).
+DJANGO_SETTINGS_MODULE = "config.settings_test"
+python_files = ["tests.py", "test_*.py"]
+# A typo'd marker fails, and every skip prints its reason.
+addopts = "--strict-markers -ra"

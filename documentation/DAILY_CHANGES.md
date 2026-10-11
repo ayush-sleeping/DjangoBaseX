@@ -26,6 +26,66 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 2.1: pytest, with a guarded and hermetic harness
+**What:**
+- `pytest`, `pytest-django`, `factory-boy` and `pytest-cov` added to the `dev` group.
+  `[tool.pytest.ini_options]` selects `config.settings_test`, `--strict-markers -ra`.
+- **`config/settings_test.py`** pins every env value the base settings read *before* importing them,
+  so a developer's `.env` cannot leak in. The database is in-memory SQLite unless `TEST_DATABASE_URL`
+  is set; cache, email and storage are in memory; MD5 is the hasher.
+- **Root `backend/conftest.py`:** the test-database guard (`tests/harness/db_guard.py`,
+  `OPERATIONS.md` § 11) runs in `pytest_configure`, before any database is created, and refuses an
+  empty name, a non-`test_` name, a test name equal to the real one, or a host outside
+  `TEST_DB_ALLOWED_HOSTS`. An autouse fixture clears the cache around every test.
+- **`tests/factories.py`** has `UserFactory`.
+- **Tests (34):**
+  - the guard: 6 refusals, 6 allowed configurations, and this suite's own settings;
+  - isolation: a row and a cache key do not survive into the next test;
+  - every factory builds with defaults;
+  - a `/api/health/` smoke test;
+  - 9 `users.User` tests, which replace the one-off shell check of the 0.1 entry;
+  - the 7 `client_ip()` tests, now run by pytest.
+- `"typecheck": "tsc --noEmit"` in `frontend/package.json`.
+- `AGENTS.md` § 2 and the `/verify` skill now include `uv run pytest` and `npm run typecheck`.
+
+**Why:** `BUILD_ORDER` recommends pulling 2.1 ahead of Phase 1, so the "has tests" criteria in
+1.1–1.5 can be met as each lands.
+**Files:**
+- New: `backend/config/settings_test.py`, `backend/conftest.py`,
+  `backend/tests/{__init__,factories,test_factories,test_health}.py`,
+  `backend/tests/harness/{__init__,db_guard,test_harness_db_guard,test_harness_isolation}.py`.
+- Changed: `backend/users/tests.py`, `backend/pyproject.toml`, `backend/uv.lock`,
+  `frontend/package.json`, `AGENTS.md`, `.claude/skills/verify/SKILL.md`, `README.md`,
+  `documentation/{DAILY_CHANGES,ONBOARDING}.md`, `documentation/core/ARCHITECTURE.md`,
+  `documentation/planning/{BUILD_ORDER,ROADMAP,TECH_DEBT,TESTING_STRATEGY}.md`,
+  `documentation/system-design/{DATABASE_MIGRATIONS,DEPLOYMENT,DJANGO_STANDARDS,NEXTJS_STANDARDS}.md`.
+
+**Verification:**
+- `uv run pytest`: 34 passed. Inside the backend container, where `CACHE_URL` is the live Redis,
+  34 passed and the test settings resolved to `LocMemCache`, so tests never touch the real cache.
+- **Positive controls:**
+  - a throwaway settings module whose SQLite test file equals its real file made the session stop
+    with `ERROR: refusing to test against 'default'…`, exit 4, and the file was never created;
+  - deleting the cache-clearing fixture failed `test_state_from_previous_test_is_gone` with
+    `'leaked'`. Restored, 34 passed.
+- A `TEST_DATABASE_URL` naming a staging Postgres host **could not reach the guard**: `django.setup()`
+  fails first because no Postgres driver is installed. Still safe (no database is created), but the
+  Postgres path of the guard is covered only by its unit tests until a driver lands.
+- `ruff check`: passed. `ruff format --check`: the first run failed on 2 new files (hand-wrapped
+  lists); `ruff format` fixed them, and the re-run reports 31 files formatted.
+- `manage.py check`: no issues. `makemigrations --check`: no changes. `npm run lint`: clean.
+  `npm run typecheck`: clean. Coverage: 99% of 356 statements (measured, no floor set).
+
+**Notes / still open:**
+- Not yet:
+  - `time-machine` / `frozen_now`, and the outbound-HTTP block (add with the first HTTP client);
+  - pytest-xdist;
+  - coverage floors, to be set to measured reality later (`TESTING_STRATEGY.md` step 4);
+  - frontend Vitest.
+- `.claude/settings.json`'s allow-list does not include `uv run pytest` yet, so Claude Code asks
+  before running it. It is a protected file; add it if wanted.
+- Next in order: 2.2, the architecture tests (route enforcement, migrations, boundaries), then 1.1.
+
 ### BUILD_ORDER 1.0: dependencies, cache, client IP, admin switch, Redis in Docker
 **What:**
 - `pyjwt`, `pyotp`, `cryptography`, `argon2-cffi` and `redis` added with `uv add`

@@ -1,7 +1,7 @@
 ---
 name: verify
 description: Run the AGENTS.md § 2 verification gate on what changed, and report the real output. Use before saying any task is done, before asking to commit, and after a subagent hands work back.
-allowed-tools: Bash(git status *) Bash(git diff *) Bash(uv run ruff check *) Bash(uv run ruff format --check *) Bash(uv run python manage.py check) Bash(uv run python manage.py makemigrations --check --dry-run) Bash(npm run lint) Bash(npx tsc --noEmit) Bash(python3 .claude/hooks/test_agent_guard.py)
+allowed-tools: Bash(git status *) Bash(git diff *) Bash(uv run ruff check *) Bash(uv run ruff format --check *) Bash(uv run python manage.py check) Bash(uv run python manage.py makemigrations --check --dry-run) Bash(uv run pytest) Bash(uv run pytest *) Bash(npm run lint) Bash(npm run typecheck) Bash(python3 .claude/hooks/test_agent_guard.py)
 ---
 
 # Verify
@@ -16,10 +16,10 @@ ever disagree, `AGENTS.md` wins. Fix this file.
 ## Procedure
 
 1. **Pick the halves from the paths above.** Run every check for each half that changed.
-   - Anything under `backend/`: `ruff check .`, `ruff format --check .` and `manage.py check`, each run from
-     `backend/` with `uv run`.
+   - Anything under `backend/`: `ruff check .`, `ruff format --check .`, `manage.py check` and `pytest`, each
+     run from `backend/` with `uv run`.
    - Also any `models.py` or `migrations/` path: `makemigrations --check --dry-run`. This one is never optional.
-   - Anything under `frontend/`: `npm run lint` and `npx tsc --noEmit`, from `frontend/`.
+   - Anything under `frontend/`: `npm run lint` and `npm run typecheck`, from `frontend/`.
    - Anything under `.claude/hooks/`: `python3 .claude/hooks/test_agent_guard.py`.
    - Documentation only: no code gate. Check that every link you added resolves and every path you cite exists.
 2. **Run each command separately** so that one failure doesn't hide the next.

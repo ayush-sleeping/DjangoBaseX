@@ -23,7 +23,7 @@ DATABASE_URL=postgres://user:password@localhost:5432/djangobasex
 > ⚠️ **SQLite is a development convenience, not a deployment target.** It differs from PostgreSQL in
 > ways that bite: constraint enforcement timing, `JSONField` operator support, no concurrent writers,
 > and `django.contrib.postgres` fields (`ArrayField`, `HStoreField`) that do not exist at all.
-> **Nothing currently catches a Postgres-only feature that works locally** — no tests, no CI. If your
+> **Nothing currently catches a Postgres-only feature that works locally** — the test suite runs on SQLite, and there is no CI. If your
 > change touches Postgres-specific behaviour, set `DATABASE_URL` and develop against Postgres.
 
 `db.sqlite3` is gitignored. Never commit it — it would ship your local rows to every copy of this

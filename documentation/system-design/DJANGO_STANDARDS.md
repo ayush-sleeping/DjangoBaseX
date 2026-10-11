@@ -153,7 +153,8 @@ uv run ruff check .
 uv run ruff format --check .
 uv run python manage.py check
 uv run python manage.py makemigrations --check --dry-run   # after ANY model change
+uv run pytest
 ```
 
-There is **no test suite yet** — so these four are the whole safety net. Report their real output,
+There is **no CI yet** — so running these by hand is the whole safety net. Report their real output,
 including failures (`AGENTS.md` § 1, rule 9).

@@ -29,7 +29,7 @@ Then state: "Ready to work. What would you like me to work on?"
 [`frontend/package.json`](frontend/package.json). A version quoted from prose goes stale silently.
 (In Claude Code a SessionStart hook prints the locked versions, branch and next task — still verify.)
 
-**Know what does not exist yet:** **no authentication, no RBAC, no test suite, no CI, no production
+**Know what does not exist yet:** **no authentication, no RBAC, no frontend tests, no CI, no production
 Docker** (`docker-compose.yml` is a development stack only). The only model is `users.User`
 ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)). If a task assumes one of
 those exists, check the [Roadmap](documentation/planning/ROADMAP.md) first.
@@ -74,7 +74,7 @@ with your work. Frontend rules go here or in `documentation/system-design/NEXTJS
 ## 2. Verification gate
 
 **Nothing is "done" until it has been run.** These are the only checks the repository has (no CI, no
-test suite yet):
+frontend tests yet):
 
 ```bash
 # Backend
@@ -82,10 +82,11 @@ cd backend && uv run ruff check .                        # lint
 cd backend && uv run ruff format --check .               # format
 cd backend && uv run python manage.py check              # Django system checks
 cd backend && uv run python manage.py makemigrations --check --dry-run   # after ANY model change
+cd backend && uv run pytest                              # tests (in-memory DB/cache/email — safe anytime)
 
 # Frontend
 cd frontend && npm run lint                              # eslint
-cd frontend && npx tsc --noEmit                          # typecheck (no `typecheck` script yet — DB-2)
+cd frontend && npm run typecheck                         # tsc --noEmit
 
 # Agent tooling — when .claude/hooks/ changed
 python3 .claude/hooks/test_agent_guard.py

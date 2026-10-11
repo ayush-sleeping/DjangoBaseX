@@ -96,7 +96,7 @@ exactly why the generation is worth doing.
 - **No `any`.** `unknown` plus a narrow, if you genuinely don't know
 - **No `@ts-ignore`** without a comment saying why and what would remove it
 - Type props explicitly; do not rely on inference across a module boundary
-- `npx tsc --noEmit` must pass. There is no `typecheck` script yet (`TECH_DEBT` **DB-2**)
+- `npm run typecheck` (`tsc --noEmit`) must pass
 
 ---
 
@@ -131,7 +131,7 @@ bundler decides what to ship to the browser.
 ```bash
 cd frontend
 npm run lint
-npx tsc --noEmit
+npm run typecheck
 ```
 
 ⚠️ **`npm run build` is not part of the routine gate** — it is slow and it writes `.next/`, which the

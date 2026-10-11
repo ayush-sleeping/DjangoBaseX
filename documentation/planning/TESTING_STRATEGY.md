@@ -1,7 +1,8 @@
 # Testing Strategy
 
-**There are zero tests today.** `backend/core/tests.py` is Django's stub and the frontend has no
-runner installed. Nothing in this repository can fail a build.
+**Step 1 of the order below is done (2026-10-11, `BUILD_ORDER` 2.1):** `uv run pytest` with
+pytest-django, factory_boy and pytest-cov, a test-database guard and a hermetic harness. The
+frontend still has no runner, and without CI nothing can fail a build.
 
 **Status:** plan. Resolves [`TECH_DEBT.md`](TECH_DEBT.md) DB-5 and DB-6.
 

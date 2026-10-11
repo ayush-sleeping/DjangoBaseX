@@ -53,9 +53,10 @@ cookies, backed by DB session rows, built to `AUTH_BLUEPRINT.md` Ch. 6 with `pyj
 `config/settings.py` still sets `SessionAuthentication` until `BUILD_ORDER` 1.1b replaces it with
 `CookieJWTAuthentication`. No endpoint authenticates before then.
 
-### 2. Tests before or after the first real feature
+### 2. Tests before or after the first real feature ✅ tests first
 
-There are zero tests. Every module added before the suite exists is a module whose tests get written
+**Settled 2026-10-11:** pytest landed (`BUILD_ORDER` 2.1) before any auth code. Kept for the
+reasoning: there were zero tests. Every module added before the suite exists is a module whose tests get written
 later, or never — and "later" has a known success rate. Adding pytest + pytest-django is cheap now
 and gets more expensive with every module.
 

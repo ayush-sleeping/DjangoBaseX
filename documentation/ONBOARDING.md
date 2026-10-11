@@ -77,7 +77,7 @@ knowing before you plan anything:
 `IsAuthenticated` by default · Next 16 + React 19 + Tailwind 4 · a typed API wrapper · Ruff ·
 a custom `users.User` (email login) · a development `docker compose` stack
 
-❌ **No authentication. No RBAC. No domain models. No tests. No CI. No production Docker. No deployment.**
+❌ **No authentication. No RBAC. No domain models. No frontend tests. No CI. No production Docker. No deployment.**
 
 The ❌ list is not a criticism — it is a one-commit-old scaffold. But assuming otherwise is the
 fastest way to waste an afternoon. [`planning/ROADMAP.md`](planning/ROADMAP.md) has the plan.
@@ -94,10 +94,11 @@ and AI agents alike, and it is short. The parts people get caught by:
 3. **Run the verification gate before saying anything is done** — § 2 of the contract:
    ```bash
    cd backend  && uv run ruff check . && uv run ruff format --check . && uv run python manage.py check
-   cd frontend && npm run lint && npx tsc --noEmit
+   cd backend  && uv run pytest
+   cd frontend && npm run lint && npm run typecheck
    ```
    After any model change, also `uv run python manage.py makemigrations --check --dry-run`.
-   **There is no test suite** — these are the entire safety net.
+   **There is no CI** — running these by hand is the entire safety net.
 4. **Log the change** in [`DAILY_CHANGES.md`](DAILY_CHANGES.md), in the same commit as the code.
 5. **Report honestly.** A failed check gets reported with its output. A green summary over a red run
    is the one unrecoverable mistake, because it destroys the value of every other report.

@@ -219,7 +219,14 @@ fallback key still verifies; `/admin/` is absent with `ADMIN_ENABLED=False`.
 advisory — including every rule Phase 1 just wrote down. **2.1 is the one task worth pulling forward
 into Phase 1**; see "The order, and why it is this one" above.*
 
-### 2.1 — Install the test stack ⬜
+### 2.1 — Install the test stack ✅
+**Done 2026-10-11, pulled forward ahead of 1.1 as recommended above.** `uv run pytest` runs 34
+tests on `config.settings_test`. That settings module pins every env value and puts the cache, email
+and storage in memory. A root `conftest.py` runs the `OPERATIONS.md` § 11 test-database guard before
+any database is created and clears the cache per test. There are factories in `tests/factories.py`,
+meta-tests for the guard, isolation and factories, and a `/api/health/` smoke test.
+`npm run typecheck` exists. **Not yet:** `time-machine`, the outbound-HTTP block, xdist, and
+coverage floors (`TESTING_STRATEGY.md` step 4).
 Add `pytest`, `pytest-django`, `factory_boy`, `pytest-cov` to the `dev` dependency group in
 `backend/pyproject.toml`. Add `pytest.ini_options` to `pyproject.toml` with `DJANGO_SETTINGS_MODULE`.
 Add `"typecheck": "tsc --noEmit"` to `frontend/package.json` (closes `TECH_DEBT` **DB-2**).
