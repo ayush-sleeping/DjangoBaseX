@@ -23,6 +23,13 @@ env = environ.Env(
     EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
     DEFAULT_FROM_EMAIL=(str, "no-reply@example.com"),
     FRONTEND_BASE_URL=(str, "http://localhost:3000"),
+    ACCESS_TOKEN_LIFETIME=(int, 600),
+    REFRESH_TOKEN_LIFETIME=(int, 1_209_600),
+    REFRESH_IDLE_LIFETIME=(int, 604_800),
+    REFRESH_ROTATION_GRACE=(int, 15),
+    SESSION_LIVENESS_CACHE_TTL=(int, 60),
+    AUTH_COOKIE_DOMAIN=(str, ""),
+    AUTH_COOKIE_PREFIX=(str, "dbx"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -51,6 +58,10 @@ INSTALLED_APPS = [
 # Set before the first migration and never changed after (ADR-0008).
 AUTH_USER_MODEL = "users.User"
 
+# Authenticates inactive users too, so login can record *why* it refused (AUTH_BLUEPRINT § 6.2).
+# The is_active decision is made in users.services.auth, never by the backend.
+AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.AllowAllUsersModelBackend"]
+
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # must sit above CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
@@ -60,6 +71,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.NoStoreForAuthenticatedMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -150,11 +162,27 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 # Where emailed links point. Never derived from the request's Host header.
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL")
 
+# Cookie JWT auth (ADR-0009, AUTH_BLUEPRINT Ch. 6 and § 12)
+# -------------------------------------------------------------------------------------------- ::
+# Separate from SECRET_KEY: rotating one must not invalidate the other. No default — required.
+JWT_SIGNING_KEY = env("JWT_SIGNING_KEY")
+ACCESS_TOKEN_LIFETIME = env("ACCESS_TOKEN_LIFETIME")  # seconds
+REFRESH_TOKEN_LIFETIME = env("REFRESH_TOKEN_LIFETIME")  # seconds, absolute
+REFRESH_IDLE_LIFETIME = env("REFRESH_IDLE_LIFETIME")  # seconds since last refresh
+# Two tabs refreshing at once is ordinary use, not theft. 0 disables this and logs people out (A23).
+REFRESH_ROTATION_GRACE = env("REFRESH_ROTATION_GRACE")
+# The revocation-latency trade (§ 6.4): how long "is this session live" is cached. 0 = always ask.
+SESSION_LIVENESS_CACHE_TTL = env("SESSION_LIVENESS_CACHE_TTL")
+AUTH_COOKIE_DOMAIN = env("AUTH_COOKIE_DOMAIN")
+AUTH_COOKIE_PREFIX = env("AUTH_COOKIE_PREFIX")
+# Never hard-code False: it would ship to production.
+AUTH_COOKIE_SECURE = env.bool("AUTH_COOKIE_SECURE", default=not DEBUG)
+
 # Django REST Framework
 # -------------------------------------------------------------------------------------------- ::
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "users.authentication.CookieJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

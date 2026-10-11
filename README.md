@@ -7,7 +7,7 @@ A secure, modular, production-ready base project using **Django 5 + Django REST 
 
 > **Status:** early scaffold with a settled architecture. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following the [Django-Nextjs-Journey](https://github.com/ayush-sleeping/Django-Nextjs-Journey) Level 2 plan.
 >
-> **Not deployable yet.** No auth, no RBAC, a young test suite, no production Docker (a development Compose stack exists). That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
+> **Not deployable yet.** Auth is partial (login/refresh/logout/me; no password reset, MFA or throttling yet), no RBAC, a young test suite, no production Docker (a development Compose stack exists). That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
 
 ## Overview
 
@@ -283,17 +283,17 @@ Stated plainly, because assuming otherwise wastes time.
 - CORS/CSRF configured for a separate-origin frontend, DRF throttling, `IsAuthenticated` by default
 - Next.js 16 + React 19 + Tailwind 4, typed API wrapper, home page reading live backend health
 - `uv` + Ruff on the backend, ESLint + strict TypeScript on the frontend
+- **Sign in** — cookie-JWT auth per [ADR-0009](documentation/adr/0009-jwt-in-httponly-cookies.md): login, refresh with rotation and reuse detection, logout, sign-out-everywhere-else, `/api/auth/me/`, and a minimal page at `/login`
 - A custom `users.User` (email login, no username) as `AUTH_USER_MODEL` — [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)
 - `docker compose up` development stack with live reload on both halves, plus Redis as the shared cache
 - Argon2 password hashing; a proxy-aware `client_ip()` with tests (`manage.py test core`); `/admin/` only when `ADMIN_ENABLED`
 - Full documentation set, 9 ADRs, an agent contract, and a ranked tech-debt register
 
 **❌ Not built yet**
-- **Authentication** — no login, no tokens, no `/me`
+- **Authentication, the rest** — password reset, invitations, MFA, login throttling and lockout (`BUILD_ORDER` 1.1c–1.1d)
 - **RBAC** — nothing beyond DRF's `IsAuthenticated` default
 - **Models** — only `users.User`; no domain models yet
 - **Tests** — a backend pytest suite (harness, `users.User`, `client_ip()`, health); no frontend runner yet. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
-- **CI** — no workflows
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
 **✅ Both foundational decisions are settled:** custom `User` model ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md))

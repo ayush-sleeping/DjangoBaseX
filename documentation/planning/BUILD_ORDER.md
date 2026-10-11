@@ -112,6 +112,18 @@ with a placeholder in the same change.
 `.env.example` documents every new key.
 
 ### 1.1 — Authentication ⬜
+*Partly done 2026-10-11, **1.1b** in the blueprint's split (`AUTH_BLUEPRINT.md` § 15):*
+- `UserSession` and `LoginAttempt` (`users/0002`);
+- `users/tokens.py` (issue, rotate with reuse detection and the A23 grace window, revoke);
+- `CookieJWTAuthentication` with the session-bound CSRF check;
+- login, refresh, logout, sign-out-everywhere-else and `/me`, with `Cache-Control: no-store`;
+- the frontend half in `src/lib/api.ts` + `src/lib/auth.ts`, a minimal `/login` page, and the
+  client-side rule in `NEXTJS_STANDARDS.md` § 3.
+
+Both acceptance criteria below pass (`users/tests/test_auth_flow.py`), and so does
+`test_route_enforcement.py`. **Still to do for 1.1:** password reset, the change cascade,
+throttling and lockout (1.1c); invitations, MFA and re-auth (1.1d). There is no self-registration:
+accounts arrive by invitation (A25).
 Implement what 0.2 decided: register, login, logout, `/me`, password reset, and the frontend half in
 `src/lib/api.ts`.
 

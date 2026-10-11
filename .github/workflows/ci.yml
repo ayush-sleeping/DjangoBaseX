@@ -43,6 +43,7 @@ jobs:
     # CI-only throwaway values. There is no .env in CI, and nothing here is a real secret.
     env:
       SECRET_KEY: ci-only-insecure-key-not-a-secret
+      JWT_SIGNING_KEY: ci-only-insecure-jwt-key-not-a-secret
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/app
       TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/app
 

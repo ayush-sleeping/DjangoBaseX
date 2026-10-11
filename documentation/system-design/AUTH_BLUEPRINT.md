@@ -830,6 +830,39 @@ Revokes **the current session row only** (`reason="logout"`), clears all three c
 `POST /api/auth/sessions/revoke-all/` revokes every row for the user except the current one — the
 "sign out everywhere" the `Session` table exists for.
 
+### 6.5a As built (1.1b, 2026-10-11) — where the code settles what this chapter left open
+
+Chapters 6.1–6.5 are implemented in `users/` (`tokens.py`, `cookies.py`, `authentication.py`,
+`services/auth.py`, `views.py`). Five details had to be decided while building. Each is recorded
+here so nobody "fixes" one back:
+
+1. **The A23 grace re-issue needs a successor jti that can be recomputed.** Only hashed jtis are
+   stored, so "re-issue the successor's cookies" was not implementable as written. A successor's
+   jti is `HMAC(JWT_SIGNING_KEY, "rotate:" + parent_jti)`. A racing tab holding the parent can
+   derive the *same* successor (both tabs converge on one session), and nobody without the parent
+   can. Outside the window it is still reuse, and the family dies.
+2. **CSRF is bound to the session row's `public_id`** (the access token's `sid`), not to the
+   refresh jti. That keeps the refresh jti out of the access token. The token rotates with every
+   refresh, because each rotation is a new row.
+3. **`__Host-` forces `Path=/` on the access cookie too.** § 17.5 names the refresh cookie as the
+   only conflict, but the access cookie's `Path=/api/` (§ 6.1) is equally incompatible. When the
+   prefix applies (Secure and no `AUTH_COOKIE_DOMAIN`), access and CSRF use `Path=/`. Over plain
+   HTTP in development there is no prefix, and access keeps `/api/`. The refresh cookie keeps its
+   narrow path and never gets the prefix.
+4. **Revocation deletes the cached liveness answer**, so on a shared cache a revoked session stops
+   at once, not after `SESSION_LIVENESS_CACHE_TTL`. The TTL now bounds only a cache that missed
+   the delete.
+5. **No `Authorization: Bearer` fallback** in `CookieJWTAuthentication`, per `API_PLATFORM.md` § 21
+   row 2. Machine callers get their own authenticator.
+
+**Not yet, and owned elsewhere:**
+- step 6 (MFA) of § 6.2, in 1.1d;
+- `LoginThrottle` and lockout (steps 1–2), in 1.1c;
+- `log_activity` writes to the `audit` logger until `ActivityLog` exists (`core/audit.py`);
+- `JWT_SIGNING_KEY_FALLBACKS`, in 1.7;
+- the one error shape for every error, in `API_PLATFORM.md`. Today only login and refresh return
+  `{"error": {...}}`; DRF's own errors still return `{"detail": ...}`.
+
 ### 6.6 Password reset — two endpoints
 
 `POST /api/auth/password/forgot/` — **always answers `204`**, whether or not the address exists.

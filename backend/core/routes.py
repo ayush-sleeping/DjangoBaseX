@@ -15,4 +15,6 @@ PUBLIC_ROUTES: dict[str, str] = {
         "To be served only when DEBUG or SCHEMA_PUBLIC (AUTH_BLUEPRINT.md § 9.2)."
     ),
     "swagger-ui": "Docs UI over the schema. Same condition as the schema.",
+    "users:login": "The front door. Same answer for every failure; attempts recorded (Ch. 6.2).",
+    "users:refresh": "Authenticated by the refresh cookie itself, not an access token (Ch. 6.3).",
 }

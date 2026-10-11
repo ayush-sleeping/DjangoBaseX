@@ -120,7 +120,7 @@ truth; read them rather than recalling.
 
 Stated plainly, because assuming otherwise wastes time:
 
-- **No authentication.** No login, no tokens, no `/me`.
+- **Authentication is partial.** Cookie-JWT login, refresh, logout and `/me` exist (`users/`, ADR-0009); password reset, invitations, MFA, throttling and lockout do not.
 - **No authorization beyond DRF's `IsAuthenticated`.** No roles, no groups wired up, no object-level
   permissions.
 - **One model.** `users.User` ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)); no domain models yet.

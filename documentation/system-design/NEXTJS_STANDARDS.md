@@ -84,8 +84,13 @@ exactly why the generation is worth doing.
   handler, or a browser API
 - Push `"use client"` **as far down the tree as possible.** A `"use client"` on a layout makes
   everything beneath it a client component
-- **Authenticated requests are client-side for now** — there is no server-side session forwarding
-  implemented. When auth lands this needs a deliberate decision, not an accident
+- **Authenticated data is fetched client-side; public data server-side** (ADR-0009). The session
+  is an `httpOnly` cookie, and a server component's own `fetch()` does not carry the browser's
+  cookies, so an authenticated call made there **succeeds, anonymously, and renders the empty
+  state**. Nothing errors. A server component that genuinely needs authenticated data must read the
+  cookies with `cookies()` from `next/headers` and forward them explicitly; that is a reviewed
+  exception, not a pattern. Client components use `src/lib/auth.ts` / `api()`, which send cookies,
+  echo the CSRF cookie on unsafe methods, and refresh-and-retry once on a 401
 - Never put business logic in a page or a component (`AGENTS.md` § 3). It goes in `src/lib/`
 
 ---

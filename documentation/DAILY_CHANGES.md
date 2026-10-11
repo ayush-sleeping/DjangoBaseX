@@ -26,6 +26,83 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 1.1b: cookie-JWT sign-in — sessions, rotation, CSRF, login/refresh/logout/me
+**What:**
+- **Models:** `UserSession` (§ 3.2) and `LoginAttempt` (§ 3.3), in migration `users/0002`.
+- **`users/tokens.py`:**
+  - access and refresh JWTs (`pyjwt`, HS256, `typ`-checked);
+  - one session row per refresh token, with the jti stored as SHA-256;
+  - rotation in one family under `select_for_update`;
+  - reuse outside the grace window revokes the family;
+  - the A23 two-tab grace window, with an HMAC-derived successor jti;
+  - liveness cached per session, and deleted on revoke.
+- **`users/cookies.py`:** the three cookies, with `__Host-` when Secure and no domain.
+- **`users/authentication.py`:** `CookieJWTAuthentication`, including the session-bound CSRF check
+  on unsafe methods. It replaces `SessionAuthentication`.
+- **`users/services/auth.py`** (login, refresh, logout, revoke-others) and thin views for
+  `/api/auth/` `login/`, `refresh/`, `logout/`, `me/` and `sessions/revoke-all/`.
+- **Settings:** `AllowAllUsersModelBackend`, `JWT_SIGNING_KEY` (required, no default), the token
+  lifetimes, `REFRESH_ROTATION_GRACE`, `SESSION_LIVENESS_CACHE_TTL` and the `AUTH_COOKIE_*` keys.
+- **`core/`:** `NoStoreForAuthenticatedMiddleware`, and `core/audit.log_activity` (logs for now).
+- **Public routes:** `users:login` and `users:refresh` added to `PUBLIC_ROUTES`.
+- **Frontend:**
+  - `src/lib/api.ts`: `ApiError`, the CSRF header, and single-flight refresh-and-retry;
+  - `src/lib/auth.ts`;
+  - a minimal `/login` page (server page plus a client panel), linked from the home page.
+- **Docs and config:** the client-side rule in `NEXTJS_STANDARDS.md` § 3, the as-built notes in
+  `AUTH_BLUEPRINT.md` § 6.5a, and `JWT_SIGNING_KEY` in `.env.example` (blank), `settings_test.py`
+  and CI.
+- **Owner-approved:** a generated `JWT_SIGNING_KEY` was appended to the owner's `backend/.env`. The
+  value was never printed.
+
+**Why:** BUILD_ORDER 1.1 / blueprint 1.1b. It is the first authenticated surface, built exactly to
+ADR-0009.
+**Files:**
+- New: `backend/users/{tokens,cookies,authentication,serializers}.py`,
+  `backend/users/models/{session,login_attempt}.py`,
+  `backend/users/services/{__init__,auth}.py`,
+  `backend/users/migrations/0002_loginattempt_usersession.py`,
+  `backend/users/tests/{__init__,test_auth_flow}.py`, `backend/core/{audit,middleware}.py`,
+  `frontend/src/lib/auth.ts`, `frontend/src/app/login/{page,login-panel}.tsx`.
+- Moved: `backend/users/tests.py` to `backend/users/tests/test_user_model.py`.
+- Changed: `backend/config/settings.py`, `backend/config/settings_test.py`,
+  `backend/users/{models/__init__,urls,views}.py`, `backend/core/routes.py`,
+  `backend/tests/architecture/test_public_routes.py`, `backend/.env.example`,
+  `.github/workflows/ci.yml`, `frontend/src/lib/api.ts`, `frontend/src/app/page.tsx`, `AGENTS.md`,
+  `README.md`, `documentation/{DAILY_CHANGES,ONBOARDING,VERSION_SUMMARY}.md`,
+  `documentation/core/ARCHITECTURE.md`, `documentation/planning/BUILD_ORDER.md`,
+  `documentation/system-design/{AUTH_BLUEPRINT,DEPLOYMENT,NEXTJS_STANDARDS}.md`.
+
+**Verification:**
+- `uv run pytest`: 60 passed (17 new auth-flow tests). The first run had 1 failure: the 0.1-era
+  `test_inactive_user_cannot_authenticate_until_activated`, which assumed the stock backend refuses
+  inactive users. § 6.2 deliberately changes that, so the test was rewritten to pin the new
+  contract, and the refusal is asserted in `test_every_login_failure_answers_identically`.
+- **Mutation checks:**
+  - disabling the CSRF check failed exactly `test_unsafe_requests_need_the_session_bound_csrf_token`;
+  - disabling the grace window failed exactly `test_two_tabs_refreshing_together_share_one_successor`;
+  - restored, 60 passed.
+- `ruff check`: the first run found 7 lines over 100 characters, fixed by `ruff format` plus
+  shortened comments; now clean. `ruff format --check` clean. `manage.py check` clean.
+  `makemigrations --check` reports no changes. `npm run lint` and `npm run typecheck` clean.
+- **End to end on the Docker stack** (`curl` with a cookie jar and `Origin: localhost:3000`):
+  - CORS preflight allows the origin, credentials and `x-csrf-token`;
+  - anonymous `/me` is 401;
+  - wrong password and unknown address return the identical 401 body;
+  - sign-in with a mixed-case, padded email returns 204 with 3 cookies, `no-store`, and no body;
+  - `/me` returns 200 for the right user;
+  - logout is 403 without CSRF and 204 with it, and `/me` is then 401.
+  - The probe user was created for the run and deleted after. Its `LoginAttempt` rows remain in the
+    dev DB with the user link set to NULL.
+
+**Notes / still open:**
+- **Not deployable as is:** no `LoginThrottle` or lockout yet (1.1c). Only DRF's generic 60/min
+  anonymous throttle stands in front of `login/`.
+- Not in this step: password reset (1.1c), invitations, MFA and re-auth (1.1d), RBAC
+  (`/me.permissions` is `[]`), and the global `{"error": …}` shape for DRF errors.
+- The CI run for `6bfdcdf` (the typecheck fix) **could not be checked**: the anonymous GitHub API
+  rate limit was exhausted by a broken poller earlier in the session. Its result is still unverified.
+
 ### Fix: `npm run typecheck` failed on any fresh clone — CI's first run caught it
 **What:** `typecheck` is now `next typegen && tsc --noEmit`. `actions/checkout` and
 `actions/setup-node` moved from v4 to v5.

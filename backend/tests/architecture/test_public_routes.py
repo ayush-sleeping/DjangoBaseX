@@ -5,7 +5,7 @@ from django.urls import NoReverseMatch, reverse
 from core.routes import PUBLIC_ROUTES
 
 # Pinned. Opening a route to the internet means editing this set in the same reviewed change.
-EXPECTED_PUBLIC = {"core:health", "schema", "swagger-ui"}
+EXPECTED_PUBLIC = {"core:health", "schema", "swagger-ui", "users:login", "users:refresh"}
 
 
 def test_the_ledger_has_not_grown_without_review():

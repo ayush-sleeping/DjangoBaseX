@@ -22,6 +22,16 @@ _PINNED_ENV = {
     "EMAIL_BACKEND": "django.core.mail.backends.locmem.EmailBackend",
     "DEFAULT_FROM_EMAIL": "no-reply@example.com",
     "FRONTEND_BASE_URL": "http://localhost:3000",
+    "JWT_SIGNING_KEY": "test-only-jwt-key-never-used-outside-pytest",
+    "ACCESS_TOKEN_LIFETIME": "600",
+    "REFRESH_TOKEN_LIFETIME": "1209600",
+    "REFRESH_IDLE_LIFETIME": "604800",
+    "REFRESH_ROTATION_GRACE": "15",
+    "SESSION_LIVENESS_CACHE_TTL": "60",
+    "AUTH_COOKIE_DOMAIN": "",
+    "AUTH_COOKIE_PREFIX": "dbx",
+    # Production-like: Secure cookies with the __Host- prefix, the path most deployments take.
+    "AUTH_COOKIE_SECURE": "True",
 }
 os.environ.update(_PINNED_ENV)
 

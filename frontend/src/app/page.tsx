@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { api, API_URL } from "@/lib/api";
 
 type Health = {
@@ -53,6 +55,10 @@ export default async function Home() {
 
       <p className="text-xs text-zinc-500">
         API docs: <a className="underline" href={`${API_URL}/api/docs/`}>{API_URL}/api/docs/</a>
+        {" · "}
+        <Link className="underline" href="/login">
+          Sign in
+        </Link>
       </p>
     </main>
   );

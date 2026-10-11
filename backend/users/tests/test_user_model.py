@@ -34,13 +34,13 @@ def test_create_user_requires_an_email():
         User.objects.create_user("", "x-long-enough-password")
 
 
-def test_inactive_user_cannot_authenticate_until_activated():
+def test_backend_checks_credentials_only_and_leaves_is_active_to_the_login_service():
+    # AllowAllUsersModelBackend (AUTH_BLUEPRINT § 6.2): it returns an inactive user so the login
+    # service can record `inactive` rather than `bad_password`. The refusal itself is asserted in
+    # test_auth_flow.test_every_login_failure_answers_identically.
     user = UserFactory(is_active=False)
-    assert authenticate(email=user.email, password=DEFAULT_PASSWORD) is None
-
-    user.is_active = True
-    user.save()
     assert authenticate(email=user.email, password=DEFAULT_PASSWORD) == user
+    assert authenticate(email=user.email, password="wrong-password") is None
 
 
 def test_create_superuser_is_the_one_path_that_activates():
