@@ -24,6 +24,21 @@ Newest first.
 
 ---
 
+## 2026-10-11
+
+### Fix `attribution` in `.claude/settings.json`: string values, not booleans
+**What:** `attribution.commit` and `attribution.pr` changed from `false` to `""`.
+**Why:** Claude Code types both keys as strings, where the value is the text appended and an empty string
+disables it. With booleans, Claude Code rejected the settings at startup ("Expected string, but received
+boolean") and dropped the values. Attribution was never actually turned off, and Claude Code kept prompting
+for a `Co-Authored-By` trailer that only the `agent_guard.py` commit check caught.
+**Files:** `.claude/settings.json`, `documentation/DAILY_CHANGES.md`.
+**Verification:** the settings file parses as JSON, with `attribution = {'commit': '', 'pr': ''}`;
+`python3 .claude/hooks/test_agent_guard.py` ran 18 tests, OK.
+**Notes:** `AGENT_TOOLING.md` and ADR-0007 say "attribution off" without naming a value, so they still hold.
+
+---
+
 ## 2026-10-07
 
 ### Agent tooling: `.claude/` guard rails, skills and subagents; a contract under budget
