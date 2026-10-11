@@ -1105,7 +1105,7 @@ not a fact" state model (`live · quiet · never · off · untracked`).
 names the backend ignored. Five backend call sites and the frontend held separate copies of one billing constant
 that disagreed.
 
-**Django / Next form.** Hand-written response types in `src/lib/` (`TECH_DEBT` DB-4); permission codes typed as
+**Django / Next form.** Hand-written response types in `src/core/lib/` (`TECH_DEBT` DB-4); permission codes typed as
 string literals in `can("…")`; enums duplicated in TypeScript; unknown filters silently ignored by the API.
 
 **Guard.** API_PLATFORM § 17's three drift checks and the exported-constants test; unknown query parameters

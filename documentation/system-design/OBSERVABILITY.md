@@ -116,7 +116,7 @@ application returns. Both are the obvious implementation. Both were shipped.
   sends the id as `X-Request-ID` to internal services only — never to third parties, where it is a
   correlation handle nobody asked us to give away.
 - **Next.js.** `src/proxy.ts` (Next 16's renamed middleware) does not mint ids — the edge proxy has
-  already set one on every request. Server-side fetches in `src/lib/api.ts` read it with
+  already set one on every request. Server-side fetches in `src/core/lib/api.ts` read it with
   `(await headers()).get("x-request-id")` (async in Next 16) and forward it to `INTERNAL_API_URL`,
   so a server component's API call and the page request share one id. `instrumentation.ts`'s
   `onRequestError` logs `digest` **and** `request_id` together — the only place the two are joined.
@@ -261,7 +261,7 @@ class JsonFormatter(logging.Formatter):
 the thing that crashes a request. JSON-encoding escapes `\n`, which is the structural defence
 against log forging; the request-id validation in § 1 is the second.
 
-Frontend: server-side code logs through `src/lib/log.ts` — `console.log(JSON.stringify(scrub(...)))`
+Frontend: server-side code logs through `src/core/lib/log.ts` — `console.log(JSON.stringify(scrub(...)))`
 in production, the same field names as the backend, `request_id` included. An optional
 `POST /api/client-logs/` intake for browser errors is **Tier 3** (rate-limited, schema-validated,
 batched, and it must not use the authenticated transport — a 401 redirect while logging the 401 is a
@@ -1159,7 +1159,7 @@ page. Rendering is [`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md)'s; the contrac
   (they come from the generated rules, which read the cookie-name settings).
 
 **Enforced by.** `sentry-config.test.ts` (§ 4), `scrub.test.ts` (§ 3), an ESLint rule banning
-`console.*` outside `src/lib/log.ts`.
+`console.*` outside `src/core/lib/log.ts`.
 
 ---
 

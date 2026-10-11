@@ -23,7 +23,7 @@ A starter kit for developers who want to skip repetitive setup work and start bu
 
 **Included right now**
 - Backend → Django 5.2, DRF, `django-cors-headers`, `django-environ`, `drf-spectacular` (Swagger UI), public `/api/health/` probe.
-- Frontend → Next.js 16, React 19, Tailwind 4, `src/lib/api.ts` fetch wrapper, home page showing live backend health.
+- Frontend → Next.js 16, React 19, Tailwind 4, `src/core/lib/api.ts` fetch wrapper, home page showing live backend health.
 - Dev Tools → `uv` (Python), Ruff (lint + format), ESLint, TypeScript strict.
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
@@ -260,7 +260,7 @@ plugin's name.
 
 ```
 Browser ──► Next.js 16 (App Router)  ──►  Django 5.2 + DRF  ──►  PostgreSQL
-            src/lib/api.ts                /api/…                  (SQLite in dev)
+            src/core/lib/api.ts                /api/…                  (SQLite in dev)
             the only module that
             makes HTTP calls
 ```

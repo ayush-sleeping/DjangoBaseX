@@ -1079,7 +1079,7 @@ blind to a file that was never committed.
    frontend/src/generated/api.d.ts`; CI runs `git ls-files --error-unmatch` on it (fails if untracked) **and**
    `git diff --exit-code` (fails if stale). The check runs before `typecheck`.
 3. **Bidirectional key-set assertions.** Where the UI narrows a generated type (`CurrentUser` for the shell),
-   `frontend/src/lib/api-contract.ts` asserts the key sets are equal in **both** directions and that narrowed
+   `frontend/src/core/lib/api-contract.ts` asserts the key sets are equal in **both** directions and that narrowed
    fields stay assignable. The assertion returns a tuple naming the offending key, not `false`. A field the backend
    *added* is the one usually missed; the first run of this check in one studied codebase found a field the UI
    declared and the backend never sent.

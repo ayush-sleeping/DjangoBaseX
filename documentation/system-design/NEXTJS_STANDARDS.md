@@ -38,8 +38,8 @@ next `next dev`. Commit it with your work to keep the tree clean. **Frontend rul
 | Path | Holds |
 |------|-------|
 | `src/app/` | Routes only. A folder with `page.tsx` is a route |
-| `src/lib/` | Everything that is not a route or a component — API client, helpers, types |
-| `src/lib/api.ts` | **The only module that makes HTTP calls** |
+| `src/core/lib/` | Everything that is not a route or a component — API client, helpers, types |
+| `src/core/lib/api.ts` | **The only module that makes HTTP calls** |
 | `public/` | Static assets, served from `/` |
 
 🔜 A `src/components/` directory is not yet present; add it when the second component appears, not
@@ -49,7 +49,7 @@ before.
 
 ## 2. The API boundary — the one rule that matters most
 
-**All backend calls go through `src/lib/api.ts`. Never `fetch()` inside a component.**
+**All backend calls go through `src/core/lib/api.ts`. Never `fetch()` inside a component.**
 
 That wrapper is where the base URL, error shape, headers, and (🔜) auth token handling and refresh
 live. A component that calls `fetch()` directly opts out of all of it, and the failure is not
@@ -73,10 +73,24 @@ picks between them. Never read either variable anywhere else (`OPERATIONS.md` §
 **Type every response.** An untyped API response is an `any` that spreads through the component tree.
 
 🔜 Generating types from the backend's `/api/schema/` is planned (`TECH_DEBT` **DB-4**). Until then
-response types are hand-written in `src/lib/`, and they can silently drift from the API — which is
+response types are hand-written in `src/core/lib/`, and they can silently drift from the API — which is
 exactly why the generation is worth doing.
 
 ---
+
+## 2a. Platform and product ([ADR-0010](../adr/0010-platform-layer-is-logical.md))
+
+| Code | Lives in | May import |
+|------|----------|-----------|
+| Platform library | `src/core/lib/` | `src/core/**` |
+| Platform routes | `src/app/(core)/` (route group: URLs carry no `(core)`) | `src/core/**` |
+| Product library | `src/project/` | anything, including `@/core/...` |
+| Product routes | `src/app/(project)/` | anything |
+
+**The platform never imports the product.** An ESLint `no-restricted-imports` rule in
+`eslint.config.mjs` fails `npm run lint` on any `@/project/...`, `@/app/(project)/...` or relative
+reach into them from platform files. Two route groups must never serve the same path; Next.js
+refuses to build if they do.
 
 ## 3. Server and client components
 
@@ -89,14 +103,14 @@ exactly why the generation is worth doing.
   cookies, so an authenticated call made there **succeeds, anonymously, and renders the empty
   state**. Nothing errors. A server component that genuinely needs authenticated data must read the
   cookies with `cookies()` from `next/headers` and forward them explicitly; that is a reviewed
-  exception, not a pattern. Client components use `src/lib/auth.ts` / `api()`, which send cookies,
+  exception, not a pattern. Client components use `src/core/lib/auth.ts` / `api()`, which send cookies,
   echo the CSRF cookie on unsafe methods, and refresh-and-retry once on a 401
 - **A page whose URL carries a secret** (a reset or invitation token) sets
   `metadata.referrer = "no-referrer"` and `robots: { index: false, follow: false }`. Without
   that, the token leaves in the `Referer` header of any outbound link or third-party asset. It reads
   the token server-side from `searchParams` (async in Next.js 16) and passes it to the client form as
-  a prop. See `src/app/reset-password/page.tsx`
-- Never put business logic in a page or a component (`AGENTS.md` § 3). It goes in `src/lib/`
+  a prop. See `src/app/(core)/reset-password/page.tsx`
+- Never put business logic in a page or a component (`AGENTS.md` § 3). It goes in `src/core/lib/`
 
 ---
 

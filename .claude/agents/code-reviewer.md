@@ -22,7 +22,7 @@ full. Use Bash only for read-only commands: `git diff`, `git log`, `git show`, `
    a protected file edited, and a missing `documentation/DAILY_CHANGES.md` entry (rule 8).
 2. **Layer boundaries**: `AGENTS.md` § 3. Views stay thin, logic lives in `services.py`, serializers do no
    queries, querysets sit on the model, and settings come from `.env`. On the frontend, data goes through
-   `src/lib/api.ts` with no inline `fetch()`. Also check that the change does not introduce a second way of
+   `src/core/lib/api.ts` with no inline `fetch()`. Also check that the change does not introduce a second way of
    doing something.
 3. **The owning standards doc**: `documentation/system-design/DJANGO_STANDARDS.md` or `NEXTJS_STANDARDS.md`,
    plus `API_DESIGN.md` for endpoints and `DATA_MODEL.md` / `DATABASE_MIGRATIONS.md` for models.

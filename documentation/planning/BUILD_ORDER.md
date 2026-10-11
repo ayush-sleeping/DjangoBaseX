@@ -118,7 +118,7 @@ with a placeholder in the same change.
 - `users/tokens.py` (issue, rotate with reuse detection and the A23 grace window, revoke);
 - `CookieJWTAuthentication` with the session-bound CSRF check;
 - login, refresh, logout, sign-out-everywhere-else and `/me`, with `Cache-Control: no-store`;
-- the frontend half in `src/lib/api.ts` + `src/lib/auth.ts`, a minimal `/login` page, and the
+- the frontend half in `src/core/lib/api.ts` + `src/core/lib/auth.ts`, a minimal `/login` page, and the
   client-side rule in `NEXTJS_STANDARDS.md` § 3.
 
 Both acceptance criteria below pass (`users/tests/test_auth_flow.py`), and so does
@@ -146,7 +146,7 @@ Both acceptance criteria below pass (`users/tests/test_auth_flow.py`), and so do
 them straight after 1.2 introduces roles. There is no self-registration:
 accounts arrive by invitation (A25).
 Implement what 0.2 decided: register, login, logout, `/me`, password reset, and the frontend half in
-`src/lib/api.ts`.
+`src/core/lib/api.ts`.
 
 ⚠️ **If the decision was any cookie-based scheme:** an `httpOnly` cookie **cannot be forwarded from a
 Next.js server component**, so authenticated data must be fetched client-side and public data
@@ -264,7 +264,15 @@ from `transaction.on_commit()` and never inside the transaction; links built fro
 **Done when:** a reset email appears on the console in dev and its link works; `bootstrap_admin`
 run twice creates one account and exits non-zero the second time.
 
-### 1.6 — `core/` vs `project/` split ⬜
+### 1.6 — `core/` vs `project/` split ✅
+**Done 2026-10-11, [ADR-0010](../adr/0010-platform-layer-is-logical.md)** (the owner chose a
+*logical* layer):
+- `core`, `users` and `rbac` are the platform; `backend/project/` (with `wiring.py`) is product
+  code, loaded only when present;
+- `config/urls.py` mounts `registry.api_routes`;
+- `tests/architecture/test_core_boundary.py` (AST) and `test_platform_without_project.py` (copies
+  the backend without `project/` and boots it, with a positive control);
+- frontend `src/core/` plus `src/app/(core)/` and `src/project/`, with an ESLint boundary rule.
 Split the backend into `core/` (platform) and `project/` (product) with `config/` as composition
 root; mirror on the frontend. Add the boundary tests: `core/` must not import `project`, and
 `frontend/src/core/` must not import `src/project/`.
@@ -273,7 +281,15 @@ root; mirror on the frontend. Add the boundary tests: `core/` must not import `p
 
 ---
 
-### 1.7 — Operations and the admin decision ⬜
+### 1.7 — Operations and the admin decision ✅
+**Done 2026-10-11:**
+- `manage.py auth_cleanup [--dry-run]`;
+- `MAX_SESSIONS_PER_USER`;
+- `JWT_SIGNING_KEY_FALLBACKS` with a `kid` header;
+- the admin is behind `ADMIN_ENABLED` (since 1.0), `rbac` is unregistered (since 1.2), and the
+  user admin is read-mostly with `is_staff` and `is_superuser` read-only (since 0.1).
+
+`AUTH_BLUEPRINT.md` § 19.3a records the details. **Phase 1 is complete.**
 *Added 2026-09-21. `AUTH_BLUEPRINT.md` § 19.2–19.3 and Ch. 20.*
 
 `manage.py auth_cleanup` (retention for sessions, login attempts and reset tokens —

@@ -107,8 +107,8 @@ python3 .claude/hooks/test_agent_guard.py
 | Models | Field definitions, constraints, `Meta`, and simple derived properties only |
 | Querysets | Custom `Manager`/`QuerySet` methods on the model — not repeated `.filter()` chains in views |
 | Settings | Every environment-dependent value comes from `.env` via `django-environ`. Never hard-code a host, key or URL in `settings.py` |
-| Frontend data | Through `src/lib/api.ts`. **Never `fetch()` inline in a component** |
-| Business logic (frontend) | Never in a page or component — put it in `src/lib/` |
+| Frontend data | Through `src/core/lib/api.ts`. **Never `fetch()` inline in a component** |
+| Business logic (frontend) | Never in a page or component — put it in `src/core/lib/` (product code: `src/project/`) |
 
 **Match the surrounding code's style. Don't introduce a second way of doing something.** Two patterns for
 one job is the cost that compounds.

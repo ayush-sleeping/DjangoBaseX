@@ -167,7 +167,7 @@ class Money:
   `COERCE_DECIMAL_TO_STRING` stays `True` (asserted by test). Request money fields use a
   `StrictMoneyField` that **rejects JSON numbers**, because `json.loads` has already turned them into
   floats before any serializer sees them; it also rejects more decimal places than the currency allows.
-- **Frontend**: amounts stay strings. Display goes through one formatter in `src/lib/money.ts`
+- **Frontend**: amounts stay strings. Display goes through one formatter in `src/core/lib/money.ts`
   (`Intl.NumberFormat` with the response's currency and the bootstrap locale). **No float arithmetic
   on money, ever**: a live preview (a cart, a quote) asks the server; if a client computation is truly
   unavoidable, it uses a decimal library inside `money.ts` and nowhere else.
@@ -176,7 +176,7 @@ class Money:
 
 **Django + Next shape.** `core/money.py` (`Money`, `Rate`, `to_money`, `allocate`, `CurrencyMismatch`,
 `PriceNotFound`), `core/models/fields.py` (`money_fields`), `core/api/fields.py` (`MoneySerializerField`,
-`StrictMoneyField`), `frontend/src/lib/money.ts` (`formatMoney`, the branded `MoneyString` type used by
+`StrictMoneyField`), `frontend/src/core/lib/money.ts` (`formatMoney`, the branded `MoneyString` type used by
 generated API types).
 
 **Enforced by.**

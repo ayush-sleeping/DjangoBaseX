@@ -27,6 +27,12 @@ uv run ruff format .
 
 ## 2. Creating a new app
 
+> **Platform or product?** ([ADR-0010](../adr/0010-platform-layer-is-logical.md)) The platform is
+> `core`, `users` and `rbac`. In this boilerplate a new **platform** app is added to
+> `PLATFORM_APPS` in `tests/architecture/test_core_boundary.py`. In a product copy, product code
+> goes in `backend/project/` (or a product app beside it), registers through
+> `project/wiring.py`, and is never imported by the platform.
+
 ```bash
 cd backend && uv run python manage.py startapp <name>
 ```

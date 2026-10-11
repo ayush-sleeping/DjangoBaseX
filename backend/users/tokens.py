@@ -57,33 +57,78 @@ def hash_jti(raw_jti: str) -> str:
     return hashlib.sha256(raw_jti.encode()).hexdigest()
 
 
-def _hmac(message: str) -> bytes:
-    return hmac.new(settings.JWT_SIGNING_KEY.encode(), message.encode(), hashlib.sha256).digest()
+# --- Keys and rotation (§ 19.3) ------------------------------------------------------------------
+# New material is always made with JWT_SIGNING_KEY; JWT_SIGNING_KEY_FALLBACKS only VERIFY. Rotating:
+# move the old key into the fallbacks, deploy, wait out REFRESH_TOKEN_LIFETIME, drop it. Every
+# key-derived value — JWTs, the CSRF token, the successor jti — accepts the fallbacks, or a rotation
+# would 403 every write and trip reuse detection on every refresh in flight.
+
+
+def key_id(key: str) -> str:
+    """The JWT `kid` header: names the key without revealing it."""
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+
+def _verifying_keys() -> list[str]:
+    return [settings.JWT_SIGNING_KEY, *[k for k in settings.JWT_SIGNING_KEY_FALLBACKS if k]]
+
+
+def _hmac(message: str, key: str | None = None) -> bytes:
+    key = key or settings.JWT_SIGNING_KEY
+    return hmac.new(key.encode(), message.encode(), hashlib.sha256).digest()
+
+
+def _b64(digest: bytes) -> str:
+    return base64.urlsafe_b64encode(digest).decode().rstrip("=")
 
 
 def csrf_token_for(sid: str) -> str:
     """Session-bound CSRF value (A22): a planted cookie cannot match the victim's session."""
-    return base64.urlsafe_b64encode(_hmac(f"csrf:{sid}")).decode().rstrip("=")
+    return _b64(_hmac(f"csrf:{sid}"))
 
 
 def csrf_matches(sid: str, presented: str | None) -> bool:
-    return bool(presented) and hmac.compare_digest(csrf_token_for(sid), presented)
+    if not presented:
+        return False
+    return any(
+        hmac.compare_digest(_b64(_hmac(f"csrf:{sid}", key)), presented) for key in _verifying_keys()
+    )
 
 
-def _successor_jti(raw_jti: str) -> str:
-    return base64.urlsafe_b64encode(_hmac(f"rotate:{raw_jti}")).decode().rstrip("=")
+def _successor_jti(raw_jti: str, key: str | None = None) -> str:
+    return _b64(_hmac(f"rotate:{raw_jti}", key))
+
+
+def _encode(claims: dict) -> str:
+    key = settings.JWT_SIGNING_KEY
+    return jwt.encode(claims, key, ALGORITHM, headers={"kid": key_id(key)})
 
 
 def decode(token: str, expected_type: str) -> dict:
     try:
-        claims = jwt.decode(
-            token,
-            settings.JWT_SIGNING_KEY,
-            algorithms=[ALGORITHM],
-            options={"require": ["exp", "iat", "sub", "sid", "typ"]},
-        )
+        kid = jwt.get_unverified_header(token).get("kid")
     except jwt.PyJWTError as exc:
         raise TokenError(f"invalid {expected_type} token: {exc}") from exc
+    keys = _verifying_keys()
+    if kid is not None:
+        keys = [k for k in keys if key_id(k) == kid]
+        if not keys:
+            raise TokenError(f"invalid {expected_type} token: unknown signing key")
+    for key in keys:
+        try:
+            claims = jwt.decode(
+                token,
+                key,
+                algorithms=[ALGORITHM],
+                options={"require": ["exp", "iat", "sub", "sid", "typ"]},
+            )
+            break
+        except jwt.InvalidSignatureError:
+            continue  # a kid-less token: try the next key
+        except jwt.PyJWTError as exc:
+            raise TokenError(f"invalid {expected_type} token: {exc}") from exc
+    else:
+        raise TokenError(f"invalid {expected_type} token: signature verification failed")
     if claims["typ"] != expected_type:
         raise TokenError(f"expected a {expected_type} token, got {claims['typ']!r}")
     return claims
@@ -92,14 +137,8 @@ def decode(token: str, expected_type: str) -> dict:
 def _mint(session: UserSession, raw_jti: str, now: datetime) -> IssuedTokens:
     base = {"sub": str(session.user.public_id), "sid": str(session.public_id), "iat": now}
     access_exp = now + timedelta(seconds=settings.ACCESS_TOKEN_LIFETIME)
-    access = jwt.encode(
-        {**base, "typ": ACCESS, "exp": access_exp}, settings.JWT_SIGNING_KEY, ALGORITHM
-    )
-    refresh = jwt.encode(
-        {**base, "typ": REFRESH, "jti": raw_jti, "exp": session.expires_at},
-        settings.JWT_SIGNING_KEY,
-        ALGORITHM,
-    )
+    access = _encode({**base, "typ": ACCESS, "exp": access_exp})
+    refresh = _encode({**base, "typ": REFRESH, "jti": raw_jti, "exp": session.expires_at})
     return IssuedTokens(access, refresh, csrf_token_for(str(session.public_id)), session)
 
 
@@ -153,7 +192,17 @@ def issue_pair(user, request) -> IssuedTokens:
         ip=client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:255],
     )
+    _enforce_session_cap(user)
     return _mint(session, raw_jti, now)
+
+
+def _enforce_session_cap(user) -> None:
+    """§ 19.2: past MAX_SESSIONS_PER_USER live sessions, the oldest are revoked (reason expired).
+    Without a cap, one integration looping a login is an unbounded write on the auth hot path."""
+    live = list(UserSession.objects.for_user(user).live().order_by("-issued_at", "-pk"))
+    surplus = live[settings.MAX_SESSIONS_PER_USER :]
+    if surplus:
+        _revoke_rows(surplus, UserSession.RevokedReason.EXPIRED)
 
 
 def rotate(refresh_token: str, request) -> IssuedTokens:
@@ -234,8 +283,16 @@ def _grace_reissue(session: UserSession, raw_jti: str, now: datetime) -> IssuedT
         return None
     if now - session.revoked_at > timedelta(seconds=settings.REFRESH_ROTATION_GRACE):
         return None
-    successor_raw = _successor_jti(raw_jti)
-    if hash_jti(successor_raw) != session.replaced_by_jti:
+    # The successor was derived with whichever key was current at rotation time.
+    successor_raw = next(
+        (
+            candidate
+            for candidate in (_successor_jti(raw_jti, key) for key in _verifying_keys())
+            if hash_jti(candidate) == session.replaced_by_jti
+        ),
+        None,
+    )
+    if successor_raw is None:
         return None
     successor = (
         UserSession.objects.select_related("user").filter(jti=session.replaced_by_jti).first()
@@ -291,7 +348,7 @@ def issue_mfa_token(user) -> str:
         "iat": now,
         "exp": now + timedelta(seconds=settings.MFA_TOKEN_LIFETIME),
     }
-    return jwt.encode(claims, settings.JWT_SIGNING_KEY, ALGORITHM)
+    return _encode(claims)
 
 
 def read_mfa_token(token: str) -> dict:

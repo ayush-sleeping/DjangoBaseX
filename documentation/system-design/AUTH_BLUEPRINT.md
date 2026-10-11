@@ -1472,9 +1472,9 @@ def deactivate(*, actor, user, reason) -> None:
      `{"detail": ...}`.
 7. **Deactivation cascade (§ 8.5)** waits for `users.services.deactivate` (1.5).
 8. **Frontend:**
-   - `src/lib/permissions.ts`: `can` / `canAny` / `isSuperuser` are pure over `/me`, plus
+   - `src/core/lib/permissions.ts`: `can` / `canAny` / `isSuperuser` are pure over `/me`, plus
      `usePermissions()`; they hide UI and never decide;
-   - `src/lib/rbac.ts` maps each control to exactly its endpoint's code (affordance parity);
+   - `src/core/lib/rbac.ts` maps each control to exactly its endpoint's code (affordance parity);
    - `/settings/roles` and `/settings/roles/[publicId]`: system roles show a lock badge, with
      rename, delete and grants disabled; `is_elevated` is editable by superusers only; `PATCH`
      sends changed fields only; the grants editor saves one full-replacement `PUT`;
@@ -1802,7 +1802,7 @@ courtesy, not a control.* Every one of these codes is re-checked server-side on 
 ## 11. The frontend contract
 
 ```ts
-// src/lib/api.ts — the ONLY place fetch() is called (AGENTS.md § 3)
+// src/core/lib/api.ts — the ONLY place fetch() is called (AGENTS.md § 3)
 //  · credentials: "include" on every request
 //  · X-CSRF-Token header read from the dbx_csrf cookie on unsafe methods
 //  · on 401: attempt ONE refresh, replay the request, then redirect to /login
@@ -1811,7 +1811,7 @@ courtesy, not a control.* Every one of these codes is re-checked server-side on 
 ```
 
 ```ts
-// src/lib/permissions.ts
+// src/core/lib/permissions.ts
 export function can(code: string): boolean
 export function canAny(codes: string[]): boolean
 export function isSuperuser(): boolean
@@ -2307,6 +2307,31 @@ fallbacks, wait out `REFRESH_TOKEN_LIFETIME`, drop it.
 > attacker minted with it, so the list is an overlap window and not a place to accumulate history.
 > Same shape as Django's own `SECRET_KEY_FALLBACKS`, for the same reason.
 
+
+### 19.3a As built (1.7, 2026-10-11)
+
+- **Keys:**
+  - every JWT carries `kid = sha256(key)[:16]`;
+  - `decode()` picks the key by `kid` from `[JWT_SIGNING_KEY, *JWT_SIGNING_KEY_FALLBACKS]`, refuses
+    an unknown `kid`, and tries each key for a `kid`-less token from before this change;
+  - nothing is ever *signed* with a fallback.
+- **Every key-derived value accepts the fallbacks,** not only the JWTs: the session-bound CSRF
+  token (`csrf_matches`) and the successor jti of the two-tab grace window (`_grace_reissue`).
+  Without the first, every write would 403 until the cookies rotated. Without the second, a
+  refresh racing the deploy would trip reuse detection and revoke a live family. Both are tested,
+  and the CSRF path is mutation-checked.
+- **`MAX_SESSIONS_PER_USER`:** `issue_pair()` revokes the oldest live sessions past the cap, with
+  reason `expired`.
+- **`auth_cleanup`** (the junior's) implements § 19.2:
+  - `--dry-run` only counts;
+  - batches of 5000, each in its own transaction;
+  - a retention below 1 day is clamped, with a warning;
+  - it touches no table but the three.
+  - **A revoked session row is kept until its refresh token has also expired**: deleting it early
+    would turn "reuse detected, family revoked" into a plain "unknown token" for a replayed stolen
+    token. The rule is `expires_at < cutoff OR (revoked_at < cutoff AND expires_at < now)`.
+  - Reset tokens age from when they stopped being usable (`used_at` / `expires_at`), not from
+    `created_at`.
 ---
 
 ## 20. The Django admin

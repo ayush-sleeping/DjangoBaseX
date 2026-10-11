@@ -17,7 +17,7 @@ Browser
 │  React 19 · Tailwind 4 · TS  │
 │                              │
 │  src/app/      routes        │
-│  src/lib/api.ts  ← the ONLY  │
+│  src/core/lib/api.ts  ← the ONLY  │
 │                  place that  │
 │                  talks HTTP  │
 └──────────────┬───────────────┘
@@ -94,12 +94,12 @@ Everything environment-dependent comes from `.env` through `django-environ`, rea
 | Path | Holds |
 |------|-------|
 | `frontend/src/app/` | Routes. App Router — a folder with `page.tsx` is a route |
-| `frontend/src/lib/api.ts` | The typed fetch wrapper. **The only module that makes HTTP calls** |
+| `frontend/src/core/lib/api.ts` | The typed fetch wrapper. **The only module that makes HTTP calls** |
 | `frontend/public/` | Static assets served from `/` |
 
 ### The API boundary
 
-`src/lib/api.ts` exists so that the base URL, error handling, headers and (🔜) auth token refresh are
+`src/core/lib/api.ts` exists so that the base URL, error handling, headers and (🔜) auth token refresh are
 written once. A component that calls `fetch()` directly bypasses all of it and will be wrong in a way
 that only shows up in production. `AGENTS.md` § 3 makes this a hard rule.
 

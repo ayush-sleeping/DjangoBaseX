@@ -72,7 +72,7 @@ Dependency-ordered, not priority-ordered — each step is hard to do well before
 1. **pytest + pytest-django + factory_boy**, and a CI workflow that runs the `AGENTS.md` § 2 gate.
    Everything below is safer with this in place, and it is the cheapest it will ever be
 2. ~~**Resolve DB-1** (auth model) and write the ADR~~ — ✅ ADR-0009
-3. **Auth** — cookie JWT per ADR-0009 (`pyjwt`), `/me`, refresh rotation, and the frontend half in `src/lib/api.ts`
+3. **Auth** — cookie JWT per ADR-0009 (`pyjwt`), `/me`, refresh rotation, and the frontend half in `src/core/lib/api.ts`
 4. **RBAC** — groups, permission classes, object-level checks. Fail closed, like the DRF default
 5. ~~**A custom `User` model**~~ — ✅ done 2026-10-11: `users.User`, email login
    ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)), the project's first migration

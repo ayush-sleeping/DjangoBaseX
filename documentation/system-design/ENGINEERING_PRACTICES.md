@@ -237,7 +237,7 @@ The initial guard catalogue (each a file under `tests/architecture/`, each with 
 | `test_no_duplicate_definitions.py` | no class defines the same method twice (property setters excepted) | AST |
 | `test_file_size_caps.py` | per-layer line caps ([§ 22](#22-file-size-caps-as-a-ratchet-per-layer--process)) | line count, ratchet |
 | `test_repo_root_hops.py` | no test reaches the repo root with `parents[N]`; use `tests/_paths.py::REPO_ROOT` | regex |
-| `frontend/tests/architecture/no-raw-fetch.test.ts` | `fetch(` only under `src/lib/api/` | TS AST |
+| `frontend/tests/architecture/no-raw-fetch.test.ts` | `fetch(` only under `src/core/lib/api/` | TS AST |
 | `frontend/tests/architecture/boundaries.test.ts` | `src/core/` imports neither `src/project/` nor `src/plugins/`; no product route *strings* in core | TS AST + string scan |
 | `frontend/tests/architecture/load-states.test.ts` | no page renders an empty state on the error branch | TS AST, ratchet (owned by [`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md)) |
 
@@ -979,10 +979,10 @@ other. Where ESLint cannot see the invariant (render order, cross-file contracts
 
 - `no-restricted-imports`: `src/core/**` may not import `@/project/*` or `@/plugins/*`; a plugin may not import
   another plugin (the per-plugin patterns are **generated** from the plugin registry, not hand-listed).
-- `no-restricted-globals` for `fetch` outside `src/lib/api/**`.
+- `no-restricted-globals` for `fetch` outside `src/core/lib/api/**`.
 - `no-restricted-syntax`: raw `<table>` in `src/app/**` (use the DataTable), `dangerouslySetInnerHTML` outside the
   one sanitising component, declarations named like formatters (`format(Currency|Money|Bytes|Date…)`) outside
-  `src/lib/format/`, hand-rolled full-screen overlays.
+  `src/core/lib/format/`, hand-rolled full-screen overlays.
 - **Do not blanket-disable a rule that has caught real defects.** When a hooks rule's error count rises with every
   component, the architecture (fetch-on-mount) is the cause — fix that, not the rule.
 - Disables are line-level, carry a reason, and are counted by a ratchet.
@@ -1035,7 +1035,7 @@ written only in prose was never enforced.
 | a models module | 600 |
 | a frontend `page.tsx` | 400 |
 | a frontend component | 300 |
-| an API client namespace (`src/lib/api/<domain>.ts`) | none — split by domain, never at an arbitrary line |
+| an API client namespace (`src/core/lib/api/<domain>.ts`) | none — split by domain, never at an arbitrary line |
 
 - **A grandfathered file may shrink, never grow**; the baseline records its current length and is lowered when it
   shrinks.

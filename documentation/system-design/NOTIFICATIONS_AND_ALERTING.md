@@ -475,7 +475,7 @@ Endpoints (own rows only, via `visible_to()`): `GET /api/notifications/` (filter
   an in-app notification to its actor, and the page that started it also raises a toast on the
   transition ([`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md)).
 
-**Django + Next shape.** `src/lib/api` client functions for summary/list/read; a `useNotificationSummary()`
+**Django + Next shape.** `src/core/lib/api` client functions for summary/list/read; a `useNotificationSummary()`
 hook in the data layer specified by [`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md); a `<NotificationBell>`
 component in `src/core/`. No `fetch()` in the component.
 

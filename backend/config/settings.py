@@ -34,6 +34,11 @@ env = environ.Env(
     PASSWORD_RESET_TOKEN_LIFETIME=(int, 1800),
     PASSWORD_SETUP_TOKEN_LIFETIME=(int, 259_200),
     INVITATION_LIFETIME=(int, 604_800),
+    JWT_SIGNING_KEY_FALLBACKS=(list, []),
+    MAX_SESSIONS_PER_USER=(int, 10),
+    LOGIN_ATTEMPT_RETENTION_DAYS=(int, 90),
+    SESSION_RETENTION_DAYS=(int, 30),
+    PASSWORD_RESET_TOKEN_RETENTION_DAYS=(int, 7),
     MFA_ENCRYPTION_KEY=(str, ""),
     MFA_ISSUER=(str, "DjangoBaseX"),
     MFA_TOKEN_LIFETIME=(int, 300),
@@ -62,10 +67,15 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     # Local
+    # The platform layer (ADR-0010): never imports project.
     "core",
     "users",
     "rbac",
 ]
+
+# This product's code, loaded only when present: deleting project/ must leave a working platform.
+if (BASE_DIR / "project").is_dir():
+    INSTALLED_APPS.append("project")
 
 # Set before the first migration and never changed after (ADR-0008).
 AUTH_USER_MODEL = "users.User"
@@ -181,6 +191,11 @@ FRONTEND_BASE_URL = env("FRONTEND_BASE_URL")
 # -------------------------------------------------------------------------------------------- ::
 # Separate from SECRET_KEY: rotating one must not invalidate the other. No default — required.
 JWT_SIGNING_KEY = env("JWT_SIGNING_KEY")
+# Verify-only previous keys (§ 19.3): rotate by moving the old key here, waiting out
+# REFRESH_TOKEN_LIFETIME, then dropping it. New tokens are always signed with JWT_SIGNING_KEY.
+JWT_SIGNING_KEY_FALLBACKS = env("JWT_SIGNING_KEY_FALLBACKS")
+# Past the cap, a new sign-in revokes that user's oldest live session (§ 19.2).
+MAX_SESSIONS_PER_USER = env("MAX_SESSIONS_PER_USER")
 ACCESS_TOKEN_LIFETIME = env("ACCESS_TOKEN_LIFETIME")  # seconds
 REFRESH_TOKEN_LIFETIME = env("REFRESH_TOKEN_LIFETIME")  # seconds, absolute
 REFRESH_IDLE_LIFETIME = env("REFRESH_IDLE_LIFETIME")  # seconds since last refresh
@@ -199,6 +214,10 @@ LOCKOUT_THRESHOLD = env("LOCKOUT_THRESHOLD")
 LOCKOUT_WINDOW = env("LOCKOUT_WINDOW")
 LOCKOUT_DURATION = env("LOCKOUT_DURATION")
 PASSWORD_RESET_TOKEN_LIFETIME = env("PASSWORD_RESET_TOKEN_LIFETIME")  # seconds; a link works once
+# Retention for manage.py auth_cleanup (§ 19.2). The audit log is never pruned by it.
+LOGIN_ATTEMPT_RETENTION_DAYS = env("LOGIN_ATTEMPT_RETENTION_DAYS")
+SESSION_RETENTION_DAYS = env("SESSION_RETENTION_DAYS")  # after a session is revoked or expired
+PASSWORD_RESET_TOKEN_RETENTION_DAYS = env("PASSWORD_RESET_TOKEN_RETENTION_DAYS")
 # A new account created by an operator gets a set-your-password link (3 days), not a reset (30 min).
 PASSWORD_SETUP_TOKEN_LIFETIME = env("PASSWORD_SETUP_TOKEN_LIFETIME")
 INVITATION_LIFETIME = env("INVITATION_LIFETIME")  # seconds; 7 days (§ 3.5)

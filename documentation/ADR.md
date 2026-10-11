@@ -26,6 +26,7 @@ Template: [`adr/0000-template.md`](adr/0000-template.md).
 | [0007](adr/0007-claude-code-harness.md) | `.claude/` enforces and points at the contract; it never holds rules | Accepted | 2026-10-07 |
 | [0008](adr/0008-custom-user-model-email-identity.md) | A custom `users.User`, identified by email, with boolean states | Accepted | 2026-10-11 |
 | [0009](adr/0009-jwt-in-httponly-cookies.md) | Browser auth is JWT in `httpOnly` cookies, backed by a database session row | Accepted | 2026-10-11 |
+| [0010](adr/0010-platform-layer-is-logical.md) | The platform is a logical layer (`core`, `users`, `rbac`); product code lives in `project/` | Accepted | 2026-10-11 |
 
 ---
 

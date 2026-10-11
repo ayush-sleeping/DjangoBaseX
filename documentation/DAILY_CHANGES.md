@@ -26,6 +26,73 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 1.6 + 1.7: platform/product split (ADR-0010), key rotation, session cap, auth_cleanup — Phase 1 complete
+**What:**
+- **1.6 (lead, backend):**
+  - ADR-0010: the owner chose a *logical* layer, with `core`, `users` and `rbac` as the platform;
+  - `backend/project/` (`apps.py` and an empty `wiring.py`), appended to `INSTALLED_APPS` only
+    when the directory exists;
+  - `config/urls.py` mounts `registry.api_routes`;
+  - `tests/architecture/test_core_boundary.py`: an AST scan in which platform apps import no other
+    first-party package (test files excluded), with a scanner meta-test;
+  - `tests/architecture/test_platform_without_project.py`: copies the backend without `project/`
+    and boots it in a subprocess (`check`, and it routes), with a positive control that plants a
+    platform→project import and must fail;
+  - `known-first-party` gains `project`.
+- **1.6 (junior, frontend):**
+  - `src/lib/*` moved to `src/core/lib/*` (46 imports rewritten);
+  - every route moved into `src/app/(core)/`, with URLs unchanged;
+  - `src/project/README.md` and `src/app/(project)/` added;
+  - an ESLint `no-restricted-imports` boundary rule.
+- **1.7 (lead):**
+  - `kid` headers and `JWT_SIGNING_KEY_FALLBACKS` (verify-only) across JWTs, the CSRF token and
+    the successor jti;
+  - `MAX_SESSIONS_PER_USER` enforced in `issue_pair()`.
+- **1.7 (junior):** `manage.py auth_cleanup [--dry-run]`.
+- **Close-out:**
+  - DB-15 closed;
+  - 37 stale `src/lib` / `src/app/…` references updated across 16 docs plus `AGENTS.md` § 3;
+  - the frontend layer rule added to `NEXTJS_STANDARDS.md` § 2a and the platform-or-product rule
+    to `DJANGO_STANDARDS.md` § 2.
+
+**Why:** BUILD_ORDER 1.6 and 1.7, the last of Phase 1.
+**Files:**
+- New: `documentation/adr/0010-platform-layer-is-logical.md`,
+  `backend/project/{__init__,apps,wiring}.py`, `backend/project/migrations/__init__.py`,
+  `backend/tests/architecture/{test_core_boundary,test_platform_without_project}.py`,
+  `backend/users/tests/test_key_rotation_and_caps.py`,
+  `backend/users/management/commands/auth_cleanup.py` (with package inits),
+  `backend/users/tests/test_auth_cleanup.py`, `frontend/src/project/README.md`,
+  `frontend/src/app/(project)/.gitkeep`.
+- Moved: `frontend/src/lib/*` → `frontend/src/core/lib/*`, and `frontend/src/app/<routes>` →
+  `frontend/src/app/(core)/<routes>`.
+- Changed: `backend/config/{settings,settings_test,urls}.py`, `backend/pyproject.toml`,
+  `backend/users/tokens.py`, `backend/.env.example`, `frontend/eslint.config.mjs`, `AGENTS.md`,
+  `README.md`, `.claude/{rules/frontend.md,agents/code-reviewer.md}`, `documentation/ADR.md`, and
+  docs across `documentation/{core,planning,system-design}/`.
+
+**Verification:**
+- `uv run pytest`: 378 passed, including 7 rotation/cap tests, 5
+  boundary/deletion tests and 20 `auth_cleanup` tests.
+- **First runs:**
+  - the boundary scan flagged platform *test* files importing `tests.factories`; test files were
+    excluded (the rule governs shipped code);
+  - my first CSRF-fallback mutation silently didn't apply (Ruff had reflowed the line), so the
+    "7 passed" proved nothing. Re-applied by line number: exactly
+    `test_the_old_csrf_token_still_works…` failed. Restored and confirmed.
+- **Mutation checks (junior):** `--dry-run` deleting (1 failed), deleting reuse-detection rows
+  (1), and no clamp (4). The frontend move is byte-identical apart from the path rewrite.
+- **Frontend:**
+  - `npm run lint` clean;
+  - `npm run typecheck` first failed on a stale `.next/dev/types/validator.ts` from an old host
+    `next dev` (08:39). It was moved aside to the scratchpad, not deleted; typecheck is now exit 0;
+  - my own planted boundary violation was flagged and removed;
+  - all 12 URLs answer 200 and the control 404s.
+- Backend gate: Ruff clean (113 files), `manage.py check` clean, `makemigrations --check` no changes. The link check's one hit (`NNNN-….md` in `ENGINEERING_PRACTICES.md`) is a pre-existing ADR-template placeholder, not a link.
+
+**Notes / still open:** Phase 1 is complete. Phase 2's 2.3 still lacks the red-PR demonstration.
+Next is Phase 3 (plugins) or Phase 5's pull-forward tasks (5.1, 6.1).
+
 ### BUILD_ORDER 1.5 + 1.5b + invitations: the Users module, invitations, bootstrap_admin
 **What:**
 - **Backend (lead):**
