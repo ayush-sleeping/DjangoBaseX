@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+db.sqlite3
+staticfiles/
+media/

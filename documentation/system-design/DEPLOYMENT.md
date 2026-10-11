@@ -16,7 +16,7 @@
 |---|---------|-----------------|
 | 1 | **No authentication at all** | There is no login, no token, no `/me`. DRF's `IsAuthenticated` default fails closed, so the API is effectively closed rather than open — but there is also nothing to protect yet. A product deploying from this must land auth first. See [ROADMAP](../planning/ROADMAP.md) |
 | 2 | **No tests, no CI** | Nothing verifies that a deploy has not broken something. The verification gate in `AGENTS.md` § 2 is run by a person, by hand, when they remember. `TECH_DEBT` **DB-5** / **DB-6** |
-| 3 | **No production topology** | No Dockerfile, no Compose, no Nginx/TLS terminator, no WSGI/ASGI server config, no static-file strategy. `runserver` is a development server and must never face the internet |
+| 3 | **No production topology** | No release image or production Compose (the `Dockerfile.dev` files and `docker-compose.yml` are a development stack: `runserver`, `next dev`, source bind mounts), no Nginx/TLS terminator, no WSGI/ASGI server config, no static-file strategy. `runserver` is a development server and must never face the internet |
 | 4 | **No monitoring or structured logging** | `settings.py` has no `LOGGING` config, so a 500 in production goes to stdout and is lost. No error tracker, no aggregation, no retention |
 | 5 | **SQLite is the default** | `DATABASE_URL` must be set to PostgreSQL. A deploy that forgets it silently runs on a file that vanishes with the container ([ADR-0005](../adr/0005-sqlite-for-dev-postgres-by-url.md)) |
 | 6 | **No `APP_ENV`-style guard on unsafe defaults** | Nothing stops `DEBUG=True` or a placeholder `SECRET_KEY` reaching production. A default that is safe locally and unsafe in production is invisible until something asserts it. `TECH_DEBT` **DB-7** |

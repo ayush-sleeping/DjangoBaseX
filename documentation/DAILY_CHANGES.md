@@ -26,6 +26,46 @@ Newest first.
 
 ## 2026-10-11
 
+### Docker development stack — both apps, live reload
+**What:** `docker compose up --build` runs Django (`runserver`) and Next.js (`next dev`) in
+containers. Source is bind-mounted, both reload on save, logs stream to the terminal, and
+migrations run on start. The stack uses `backend/Dockerfile.dev`, `frontend/Dockerfile.dev`, their
+`.dockerignore` files and a root `docker-compose.yml`. `src/lib/api.ts` now sends server-side
+requests to `INTERNAL_API_URL` when it is set.
+**Why:** The owner wants to watch the app continuously while building. This is the development half
+of `BUILD_ORDER` 4.4. It uses SQLite per ADR-0005, so no Postgres driver, protected-file edit or
+superseding ADR is needed yet.
+**Files:**
+- New: `docker-compose.yml`, `backend/Dockerfile.dev`, `backend/.dockerignore`,
+  `frontend/Dockerfile.dev`, `frontend/.dockerignore`.
+- Changed: `frontend/src/lib/api.ts`, `frontend/.env.example`,
+  `documentation/system-design/{NEXTJS_STANDARDS,DEPLOYMENT}.md`, plus the README, ONBOARDING,
+  ARCHITECTURE, ROADMAP and BUILD_ORDER (4.4) lines shared with the entry above.
+
+**Verification:**
+- `docker compose config --quiet` passed, and both images built.
+- `docker compose up -d --build`: backend and frontend both `healthy`.
+- `curl localhost:8000/api/health/` returned `{"status":"ok",…,"database":true}`, and
+  `localhost:3000` rendered the health box as ok. That shows the server-side fetch reached
+  `http://backend:8000`.
+- Live reload:
+  - a temporary marker in `page.tsx` appeared on the next request, and the file was then restored
+    with `git checkout`;
+  - `touch core/views.py` logged `changed, reloading`.
+- `npm run lint`: clean. `npx tsc --noEmit`: clean.
+
+**Notes / still open:**
+- **Hardening applied:** ports bound to `127.0.0.1`, non-root uid 1000 in both images,
+  `no-new-privileges` and `cap_drop: [ALL]` (`OPERATIONS.md` § 15). The virtualenv (`/opt/venv`),
+  `node_modules` and `.next` live outside the bind mount, so the host's macOS binaries are never
+  used.
+- **Gotcha:** `node_modules` is an anonymous volume. After a dependency change, run `up --build -V`,
+  or the old modules persist.
+- `backend/db.sqlite3` is shared with a host `runserver`. Run one or the other on port 8000, not
+  both.
+- **Still for 4.4:** Postgres, Redis, the `OPERATIONS.md` § 1 project naming, and the remaining § 15
+  hygiene (log driver, resource limits). Base images are pinned to minor tags, not digests.
+
 ### Fix `attribution` in `.claude/settings.json`: string values, not booleans
 **What:** `attribution.commit` and `attribution.pr` changed from `false` to `""`.
 **Why:** Claude Code types both keys as strings, where the value is the text appended and an empty string

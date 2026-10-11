@@ -1,0 +1,69 @@
+# Development stack — Django API + Next.js frontend, both reloading on save.
+#
+#   docker compose up --build        start (logs stream to the terminal)
+#   docker compose up --build -V     after changing package.json / package-lock.json
+#   docker compose down              stop
+#
+# Development only — not a production topology (DEPLOYMENT.md § 0, OPERATIONS.md § 5).
+# Uses SQLite in backend/db.sqlite3 (ADR-0005), shared with a host `runserver`.
+# Postgres and Redis join with BUILD_ORDER 1.0 / 4.4.
+# Ports bind to 127.0.0.1 only (OPERATIONS.md § 15).
+
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
+services:
+  backend:
+    <<: *hardening
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    # Every value except ALLOWED_HOSTS comes from backend/.env (copy backend/.env.example first).
+    # `backend` is the hostname the frontend container calls it by.
+    environment:
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend
+    command: >
+      sh -c "uv run --frozen python manage.py migrate --noinput &&
+             exec uv run --frozen python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    <<: *hardening
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      # Browser → the published port. Server components → the container network
+      # (OPERATIONS.md § 17: INTERNAL_API_URL vs NEXT_PUBLIC_API_URL).
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      INTERNAL_API_URL: http://backend:8000
+    command: npm run dev -- --hostname 0.0.0.0
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s

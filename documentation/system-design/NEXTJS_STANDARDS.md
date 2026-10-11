@@ -65,6 +65,11 @@ const health = await api.get<HealthResponse>("/api/health/");
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health/`);
 ```
 
+**Two base URLs, chosen in one place.** The browser calls `NEXT_PUBLIC_API_URL`. Server components
+call `INTERNAL_API_URL` when it is set: under Docker, `localhost` inside the frontend container is
+the container itself, so they need the container-network address (`http://backend:8000`). `api.ts`
+picks between them. Never read either variable anywhere else (`OPERATIONS.md` § 17).
+
 **Type every response.** An untyped API response is an `any` that spreads through the component tree.
 
 🔜 Generating types from the backend's `/api/schema/` is planned (`TECH_DEBT` **DB-4**). Until then
