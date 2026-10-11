@@ -981,6 +981,52 @@ class RequiresRecentAuth(BasePermission):
   *not permitted* from **re-confirm and retry**
 - `POST /api/auth/password/confirm/` sets `password_confirmed_at`
 
+### 6.9a As built (1.1d, 2026-10-11) — MFA and re-auth
+
+Implemented in `users/mfa.py` (pure TOTP, crypto and recovery-code functions), `users/services/mfa.py`,
+`users/permissions.py`, `users/tokens.py` (the mfa_token) and `users/authentication.py` (the
+enrolment gate). Decisions taken while building:
+
+1. **The `mfa_token` is a JWT** (`typ="mfa"`, `sub`, a random `nonce`, `MFA_TOKEN_LIFETIME`),
+   signed with `JWT_SIGNING_KEY`. The `typ` check means it can never act as an access token
+   (tested). The nonce is burned **on success** (`cache.add`), not on the first attempt, so a typo
+   does not cost the whole sign-in. Wrong codes are bounded by `MfaVerifyThrottle` (5/min per
+   token) and the shared lockout instead.
+2. **One confirmed device per user.** `setup/` answers 409 `mfa_already_enabled` once one exists,
+   and replaces any unconfirmed device. Multiple devices are additive later.
+3. **The enrolment gate exempts `me/`** as well as setup, confirm and logout. Without `me/` the
+   frontend cannot tell why it is being refused.
+4. **`RequiresRecentAuth` lives in `users/permissions.py`, not `core`**, because it reads
+   `users_user_session` and `core` must not import `users` (Ch. 2). It moves when 1.2 / 9.1 give
+   `core` a session abstraction. The opt-in list is `REAUTH_ACTIONS` in settings until the
+   `core_setting` registry exists (5.3).
+5. **`MFA_ENCRYPTION_KEY` may be blank**, so the app boots without MFA. Setup and verify then answer
+   503 `mfa_unavailable` rather than storing a secret unencrypted. Key rotation arrives with the
+   encryption service (`BUILD_ORDER` 6.3).
+6. **Codes:** TOTP accepts ±1 step and refuses any step ≤ `last_used_timestep`, updated under a
+   row lock. Recovery codes are SHA-256 of the normalised code (uppercase, spaces and dashes
+   stripped) and single-use. Both go through the same `mfa_failed` record and lockout as passwords,
+   so 10 bad codes lock the **password** step too.
+7. **Recovery codes are `XXXXXX-XXXXXX`**: 12 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`
+   (no 0/O/1/I/L), about 59 bits. A 5+5 code from that alphabet would be 49.5 bits, under the 50
+   intended. **Disabling MFA deletes the codes** along with the device.
+8. **`verify_totp` returns the latest matching step** above `last_used_timestep` when two steps in
+   the ±1 window share a code. Returning the earliest would leave the code replayable at the
+   later step. All candidates are compared in constant time.
+9. **Rotating `MFA_ENCRYPTION_KEY` breaks every enrolled device** today: `decrypt_secret` raises
+   `InvalidToken` for a secret under another key. Rotation needs `MultiFernet`, which is the
+   encryption service of `BUILD_ORDER` 6.3. Until then, treat the key as permanent.
+10. **Frontend:**
+    - `api.ts` exposes `ApiError.code`, `isMfaEnrollmentRequired()` and `isReauthRequired()`, and
+      never redirects; pages route to `MFA_ENROLMENT_PATH` (`/account/security`);
+    - only a 401 triggers a refresh; 403 and 423 never do;
+    - `/account/security` shows the setup secret as text plus the `otpauth://` link. **QR
+      rendering is a follow-up** (no new dependency was added);
+    - recovery codes live only in component state, shown once.
+11. **Invitations (§ 3.5) are deferred until after 1.2.** `Invitation.role` is a required
+   `PROTECT` FK to `rbac.Role`, which does not exist yet. A nullable placeholder would only be
+   migrated away again. Until then the first account comes from `createsuperuser`.
+
 ---
 
 ## 7. Authorization — the engine

@@ -1,6 +1,9 @@
 """Login, refresh and logout (AUTH_BLUEPRINT § 6.2–6.5). Views call these and only these."""
 
+from dataclasses import dataclass
+
 from django.contrib.auth import authenticate, user_logged_in
+from django.utils import timezone
 
 from core.audit import log_activity
 from core.http import client_ip
@@ -9,17 +12,24 @@ from .. import tokens
 from ..models import LoginAttempt, User, UserSession
 from ..models.user import normalize_email
 from . import lockout
+from .mfa import has_confirmed_device
 
 
 class InvalidCredentials(Exception):
     """Wrong password, unknown address or inactive account: callers answer all three identically."""
 
 
-class LockedOut(Exception):
-    """Too many recent failures for this address or IP (A17). The password is not even checked."""
+LockedOut = lockout.LockedOut
 
 
-def login(request, email: str, password: str) -> tokens.IssuedTokens:
+@dataclass(frozen=True)
+class MfaChallenge:
+    """The password was right and a confirmed device exists: the caller must now ask for a code."""
+
+    mfa_token: str
+
+
+def login(request, email: str, password: str) -> tokens.IssuedTokens | MfaChallenge:
     identifier = normalize_email(email or "")
     ip = client_ip(request)
     user_agent = request.META.get("HTTP_USER_AGENT", "")[:255]
@@ -46,6 +56,10 @@ def login(request, email: str, password: str) -> tokens.IssuedTokens:
     if not user.is_active:
         _record(identifier, user, ip, user_agent, LoginAttempt.FailureReason.INACTIVE)
         raise InvalidCredentials
+
+    # Step 6. Nothing is recorded yet: the attempt succeeds or fails at the code (services.mfa).
+    if has_confirmed_device(user):
+        return MfaChallenge(mfa_token=tokens.issue_mfa_token(user))
 
     issued = tokens.issue_pair(user, request)
     _record(identifier, user, ip, user_agent, reason="")
@@ -77,6 +91,17 @@ def revoke_other_sessions(request) -> int:
     )
     log_activity("auth.sessions_revoked", actor=request.user, count=count)
     return count
+
+
+def confirm_password(request, password: str) -> None:
+    """§ 6.9: stamp THIS session as recently re-authenticated. Raises InvalidCredentials."""
+    if not request.user.check_password(password):
+        log_activity("auth.password_confirm_failed", actor=request.user, ip=client_ip(request))
+        raise InvalidCredentials
+    UserSession.objects.filter(public_id=request.auth["sid"]).update(
+        password_confirmed_at=timezone.now()
+    )
+    log_activity("auth.password_confirmed", actor=request.user, ip=client_ip(request))
 
 
 def _record(identifier, user, ip, user_agent, reason) -> None:

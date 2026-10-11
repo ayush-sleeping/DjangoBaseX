@@ -131,8 +131,18 @@ Both acceptance criteria below pass (`users/tests/test_auth_flow.py`), and so do
 - progressive lockout (`users/services/lockout.py`);
 - forgot/reset pages at `/forgot-password` and `/reset-password`.
 
-`AUTH_BLUEPRINT.md` § 6.7a records the decisions. **Still to do for 1.1:** invitations, MFA and
-re-auth (1.1d). There is no self-registration:
+`AUTH_BLUEPRINT.md` § 6.7a records the decisions.
+
+*Also done 2026-10-11, **1.1d** (most of it):*
+- `MfaDevice` and `MfaRecoveryCode` (`users/0004`);
+- TOTP setup, confirm, verify and disable, with an encrypted secret, the ±1-step replay guard and
+  10 single-use recovery codes;
+- the login code step (`mfa_token`), and the enrolment gate for `mfa_enforced` users;
+- `RequiresRecentAuth` (423, off until opted in) and `password/confirm/`;
+- frontend: the login code step and `/account/security`.
+
+§ 6.9a records the decisions. **Still to do for 1.1: invitations**, which need `rbac.Role`. Do
+them straight after 1.2 introduces roles. There is no self-registration:
 accounts arrive by invitation (A25).
 Implement what 0.2 decided: register, login, logout, `/me`, password reset, and the frontend half in
 `src/lib/api.ts`.

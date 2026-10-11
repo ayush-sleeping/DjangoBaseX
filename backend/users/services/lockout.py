@@ -24,6 +24,12 @@ from django.utils import timezone
 from ..models import LoginAttempt
 
 IP_THRESHOLD_FACTOR = 5
+
+
+class LockedOut(Exception):
+    """Too many recent failures for this address or IP (A17). The secret is not even checked."""
+
+
 HISTORY = timedelta(hours=24)
 MAX_DURATION = timedelta(hours=24)
 

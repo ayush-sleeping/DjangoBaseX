@@ -32,6 +32,11 @@ env = environ.Env(
     LOCKOUT_WINDOW=(int, 900),
     LOCKOUT_DURATION=(int, 900),
     PASSWORD_RESET_TOKEN_LIFETIME=(int, 1800),
+    MFA_ENCRYPTION_KEY=(str, ""),
+    MFA_ISSUER=(str, "DjangoBaseX"),
+    MFA_TOKEN_LIFETIME=(int, 300),
+    REAUTH_ACTIONS=(list, []),
+    REAUTH_WINDOW_MINUTES=(int, 15),
     AUTH_COOKIE_DOMAIN=(str, ""),
     AUTH_COOKIE_PREFIX=(str, "dbx"),
 )
@@ -189,6 +194,17 @@ LOCKOUT_WINDOW = env("LOCKOUT_WINDOW")
 LOCKOUT_DURATION = env("LOCKOUT_DURATION")
 PASSWORD_RESET_TOKEN_LIFETIME = env("PASSWORD_RESET_TOKEN_LIFETIME")  # seconds; a link works once
 
+# MFA (A16, § 6.8). The key is a Fernet key encrypting TOTP secrets at rest. Empty is allowed so the
+# app boots without MFA configured; enabling MFA then fails loudly (users.mfa).
+MFA_ENCRYPTION_KEY = env("MFA_ENCRYPTION_KEY")
+MFA_ISSUER = env("MFA_ISSUER")  # the name authenticator apps show; becomes PRODUCT_NAME in 5.2
+# Seconds the login's "now enter your code" step lasts.
+MFA_TOKEN_LIFETIME = env("MFA_TOKEN_LIFETIME")
+# Re-authentication (A18, § 6.9). OFF until an action is listed: REAUTH_ACTIONS=mfa_disable.
+# Moves to the core_setting registry with BUILD_ORDER 5.3.
+REAUTH_ACTIONS = env("REAUTH_ACTIONS")
+REAUTH_WINDOW_MINUTES = env("REAUTH_WINDOW_MINUTES")
+
 # Django REST Framework
 # -------------------------------------------------------------------------------------------- ::
 REST_FRAMEWORK = {
@@ -210,6 +226,8 @@ REST_FRAMEWORK = {
         "user": "600/min",
         "login": "5/min",  # per (identifier, ip) pair — users.throttles.LoginThrottle
         "password_reset": "3/hour",  # per identifier — users.throttles.PasswordResetThrottle
+        "mfa_verify": "5/min",  # per mfa_token — users.throttles.MfaVerifyThrottle
+        "mfa": "10/min",  # per user, across setup/confirm/disable
     },
 }
 

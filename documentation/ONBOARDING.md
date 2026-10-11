@@ -77,7 +77,7 @@ knowing before you plan anything:
 `IsAuthenticated` by default · Next 16 + React 19 + Tailwind 4 · a typed API wrapper · Ruff ·
 a custom `users.User` (email login) · a development `docker compose` stack
 
-❌ **Authentication is partial (no MFA or invitations). No RBAC. No domain models. No frontend tests. No production Docker. No deployment.**
+❌ **No invitations yet (they need RBAC). No RBAC. No domain models. No frontend tests. No production Docker. No deployment.**
 
 The ❌ list is not a criticism — it is a one-commit-old scaffold. But assuming otherwise is the
 fastest way to waste an afternoon. [`planning/ROADMAP.md`](planning/ROADMAP.md) has the plan.

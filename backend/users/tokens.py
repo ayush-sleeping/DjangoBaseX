@@ -31,6 +31,7 @@ from .models import UserSession
 ALGORITHM = "HS256"
 ACCESS = "access"
 REFRESH = "refresh"
+MFA = "mfa"
 
 
 class TokenError(Exception):
@@ -266,3 +267,41 @@ def revoke_all_for_user(user, reason: str, keep_sid: str | None = None) -> int:
     if keep_sid:
         sessions = sessions.exclude(public_id=keep_sid)
     return _revoke_rows(list(sessions), reason)
+
+
+# --- The login's MFA step (§ 6.8) --------------------------------------------------------------
+
+
+def _mfa_nonce_key(nonce: str) -> str:
+    return f"auth:mfa-nonce-used:{nonce}"
+
+
+def issue_mfa_token(user) -> str:
+    """
+    Proof that the password step passed, good for one POST /api/auth/mfa/verify/ within
+    MFA_TOKEN_LIFETIME. It is returned in the body, not a cookie: it authorises exactly that one
+    call and nothing else. Holding one is not being logged in.
+    """
+    now = timezone.now()
+    claims = {
+        "typ": MFA,
+        "sub": str(user.public_id),
+        "sid": "",  # no session exists yet; present so decode()'s required claims hold
+        "nonce": secrets.token_urlsafe(16),
+        "iat": now,
+        "exp": now + timedelta(seconds=settings.MFA_TOKEN_LIFETIME),
+    }
+    return jwt.encode(claims, settings.JWT_SIGNING_KEY, ALGORITHM)
+
+
+def read_mfa_token(token: str) -> dict:
+    """Verified claims of an unexpired, unused mfa_token. Raises TokenError otherwise."""
+    claims = decode(token, MFA)
+    if cache.get(_mfa_nonce_key(claims["nonce"])):
+        raise TokenError("mfa_token already used")
+    return claims
+
+
+def burn_mfa_token(claims: dict) -> bool:
+    """Mark the token used. False when another request burned it first (a race on one token)."""
+    return cache.add(_mfa_nonce_key(claims["nonce"]), True, settings.MFA_TOKEN_LIFETIME + 60)

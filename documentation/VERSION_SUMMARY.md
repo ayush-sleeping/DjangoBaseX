@@ -14,7 +14,8 @@ exist before does.
   tokens with reuse detection and a two-tab grace window, logout, sign-out-everywhere-else and
   `/api/auth/me/`, with a minimal `/login` page ([ADR-0009](adr/0009-jwt-in-httponly-cookies.md)).
   Password reset by email, throttling and progressive lockout followed the same day.
-  Not deployable yet: no MFA, invitations or RBAC. See
+  TOTP two-factor (setup, recovery codes, a login code step) and re-auth for sensitive actions
+  followed. Not deployable yet: no invitations or RBAC. See
   [`planning/ROADMAP.md`](planning/ROADMAP.md).
 
 ---

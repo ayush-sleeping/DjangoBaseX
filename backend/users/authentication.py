@@ -6,7 +6,16 @@ from rest_framework.permissions import SAFE_METHODS
 
 from . import tokens
 from .cookies import CSRF_HEADER, cookie_names
-from .models import User
+from .models import MfaDevice, User
+
+# Reachable while enrolment is still owed, or the user could never fix it (§ 6.8).
+MFA_ENROLLMENT_EXEMPT = {"users:mfa-setup", "users:mfa-confirm", "users:logout", "users:me"}
+MFA_ENROLLMENT_REQUIRED = {
+    "error": {
+        "code": "mfa_enrollment_required",
+        "message": "Set up two-factor authentication to continue.",
+    }
+}
 
 
 class CookieJWTAuthentication(BaseAuthentication):
@@ -38,7 +47,16 @@ class CookieJWTAuthentication(BaseAuthentication):
             claims["sid"], request.META.get(CSRF_HEADER)
         ):
             raise PermissionDenied("CSRF token missing or incorrect.")
+
+        if user.mfa_enforced and not self._enrollment_exempt(request):
+            if not MfaDevice.objects.confirmed().filter(user=user).exists():
+                raise PermissionDenied(MFA_ENROLLMENT_REQUIRED)
         return (user, claims)
+
+    @staticmethod
+    def _enrollment_exempt(request) -> bool:
+        match = getattr(request._request, "resolver_match", None)
+        return match is not None and match.view_name in MFA_ENROLLMENT_EXEMPT
 
     def authenticate_header(self, request):
         # Present so DRF answers an anonymous caller 401 rather than 403.

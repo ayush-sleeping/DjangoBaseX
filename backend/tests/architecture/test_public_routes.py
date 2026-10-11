@@ -13,6 +13,7 @@ EXPECTED_PUBLIC = {
     "users:refresh",
     "users:password-forgot",
     "users:password-reset",
+    "users:mfa-verify",
 }
 
 

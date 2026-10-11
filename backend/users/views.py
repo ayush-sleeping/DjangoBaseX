@@ -5,20 +5,25 @@ Tokens never appear in a response body — only in cookies (AUTH_BLUEPRINT § 6.
 
 from django.core.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import tokens
+from . import mfa, tokens
 from .cookies import clear_auth_cookies, cookie_names, set_auth_cookies
+from .permissions import requires_recent_auth
 from .serializers import (
     ForgotPasswordSerializer,
     LoginSerializer,
     MeSerializer,
+    MfaConfirmSerializer,
+    MfaVerifySerializer,
+    PasswordConfirmSerializer,
     ResetPasswordSerializer,
 )
 from .services import auth, passwords
-from .throttles import LoginThrottle, PasswordResetThrottle
+from .services import mfa as mfa_service
+from .throttles import LoginThrottle, MfaThrottle, MfaVerifyThrottle, PasswordResetThrottle
 
 # One body for wrong password, unknown address and inactive account, so login is not an oracle.
 INVALID_CREDENTIALS = {
@@ -29,6 +34,21 @@ SESSION_ENDED = {
 }
 TOO_MANY_ATTEMPTS = {
     "error": {"code": "too_many_attempts", "message": "Too many attempts. Try again later."}
+}
+INVALID_MFA_CODE = {
+    "error": {"code": "invalid_mfa_code", "message": "That code is not valid. Try again."}
+}
+MFA_TOKEN_INVALID = {
+    "error": {
+        "code": "mfa_token_invalid",
+        "message": "This sign-in step has expired. Enter your password again.",
+    }
+}
+MFA_ALREADY_ENABLED = {
+    "error": {"code": "mfa_already_enabled", "message": "Two-factor is already turned on."}
+}
+MFA_UNAVAILABLE = {
+    "error": {"code": "mfa_unavailable", "message": "Two-factor is not configured on this server."}
 }
 # One body for an unknown, used, expired or inactive-account token.
 INVALID_TOKEN = {
@@ -55,6 +75,9 @@ class LoginView(APIView):
             return Response(INVALID_CREDENTIALS, status=status.HTTP_401_UNAUTHORIZED)
         except auth.LockedOut:
             return Response(TOO_MANY_ATTEMPTS, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        if isinstance(issued, auth.MfaChallenge):
+            # No cookies: the mfa_token authorises exactly one call, POST mfa/verify/.
+            return Response({"mfa_required": True, "mfa_token": issued.mfa_token})
         response = Response(status=status.HTTP_204_NO_CONTENT)
         set_auth_cookies(response, issued)
         return response
@@ -136,3 +159,77 @@ class ResetPasswordView(APIView):
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_auth_cookies(response)  # every session just ended, this browser's included
         return response
+
+
+class PasswordConfirmView(APIView):
+    throttle_classes = [MfaThrottle]
+
+    def post(self, request):
+        serializer = PasswordConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            auth.confirm_password(request, serializer.validated_data["password"])
+        except auth.InvalidCredentials:
+            return Response(INVALID_CREDENTIALS, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MfaVerifyView(APIView):
+    # Public: authenticated by the password step's mfa_token, which grants nothing else.
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+    throttle_classes = [MfaVerifyThrottle]
+
+    def post(self, request):
+        serializer = MfaVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            issued = mfa_service.verify_login(request, data["mfa_token"], data["code"])
+        except mfa_service.InvalidMfaToken:
+            return Response(MFA_TOKEN_INVALID, status=status.HTTP_401_UNAUTHORIZED)
+        except mfa_service.InvalidCode:
+            return Response(INVALID_MFA_CODE, status=status.HTTP_400_BAD_REQUEST)
+        except auth.LockedOut:
+            return Response(TOO_MANY_ATTEMPTS, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        except mfa.MfaNotConfigured:
+            return Response(MFA_UNAVAILABLE, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        set_auth_cookies(response, issued)
+        return response
+
+
+class MfaSetupView(APIView):
+    throttle_classes = [MfaThrottle]
+
+    def post(self, request):
+        try:
+            return Response(mfa_service.begin_setup(request.user))
+        except mfa_service.AlreadyEnabled:
+            return Response(MFA_ALREADY_ENABLED, status=status.HTTP_409_CONFLICT)
+        except mfa.MfaNotConfigured:
+            return Response(MFA_UNAVAILABLE, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class MfaConfirmView(APIView):
+    throttle_classes = [MfaThrottle]
+
+    def post(self, request):
+        serializer = MfaConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            codes = mfa_service.confirm_setup(request.user, serializer.validated_data["code"])
+        except mfa_service.InvalidCode:
+            return Response(INVALID_MFA_CODE, status=status.HTTP_400_BAD_REQUEST)
+        except mfa.MfaNotConfigured:
+            return Response(MFA_UNAVAILABLE, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response({"recovery_codes": codes})
+
+
+class MfaDisableView(APIView):
+    permission_classes = [IsAuthenticated, requires_recent_auth("mfa_disable")]
+    throttle_classes = [MfaThrottle]
+
+    def post(self, request):
+        mfa_service.disable(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)

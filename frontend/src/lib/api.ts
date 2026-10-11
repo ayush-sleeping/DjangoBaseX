@@ -16,7 +16,8 @@ const BASE_URL =
 const COOKIE_PREFIX = process.env.NEXT_PUBLIC_AUTH_COOKIE_PREFIX ?? "dbx";
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // A 401 from these means "not signed in", not "access token expired": never refresh for them.
-const NO_REFRESH = new Set(["/api/auth/login/", "/api/auth/refresh/"]);
+// mfa/verify's 401 means the login's mfa_token is spent or expired, and no refresh can fix that.
+const NO_REFRESH = new Set(["/api/auth/login/", "/api/auth/refresh/", "/api/auth/mfa/verify/"]);
 
 export class ApiError extends Error {
   constructor(
@@ -27,6 +28,28 @@ export class ApiError extends Error {
     super(`API ${status} — ${path}`);
     this.name = "ApiError";
   }
+
+  /** The machine-readable `error.code` of the API's error envelope, when there is one. */
+  get code(): string | undefined {
+    const code = (this.body as { error?: { code?: unknown } } | null)?.error?.code;
+    return typeof code === "string" ? code : undefined;
+  }
+}
+
+/**
+ * The user's role requires two-factor and they have not set it up: every endpoint but enrolment,
+ * logout and /me answers this. Pages send the user to /account/security (MFA_ENROLMENT_PATH in
+ * src/lib/mfa.ts); this module never redirects.
+ */
+export function isMfaEnrollmentRequired(error: unknown): error is ApiError {
+  return (
+    error instanceof ApiError && error.status === 403 && error.code === "mfa_enrollment_required"
+  );
+}
+
+/** 423: a sensitive action wants the password confirmed again (re-auth), then one retry. */
+export function isReauthRequired(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.status === 423 && error.code === "reauth_required";
 }
 
 /** The session-bound CSRF value. `__Host-` prefixed when the API sets Secure cookies. */
@@ -67,6 +90,8 @@ function refreshSession(): Promise<boolean> {
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let res = await send(path, init);
+  // Only a 401 refreshes. A 403 (not permitted) or 423 (re-auth) is the API's answer for a live
+  // session; a refresh would change nothing and burn a rotation.
   if (
     res.status === 401 &&
     typeof window !== "undefined" &&

@@ -26,6 +26,87 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 1.1d: TOTP two-factor and re-authentication (invitations deferred to after 1.2)
+**What:**
+- **Models:** `MfaDevice` and `MfaRecoveryCode` (§ 3.6) in `users/0004`.
+- **Endpoints:**
+  - `mfa/setup/` returns the otpauth URI and secret; the device starts unconfirmed;
+  - `mfa/confirm/` enrols the device on its first code and returns 10 recovery codes, shown once;
+  - `mfa/verify/` is the login's code step: its `mfa_token` is single-use, it is throttled 5/min
+    per token, and it shares the lockout;
+  - `mfa/disable/` (re-auth gated);
+  - `password/confirm/`.
+- **Login:** a correct password plus a confirmed device returns `{mfa_required, mfa_token}` and no
+  cookies.
+- **Enrolment gate:** an `mfa_enforced` user without a device gets 403 `mfa_enrollment_required`
+  everywhere except setup, confirm, logout and me.
+- **Re-auth:** `RequiresRecentAuth` answers 423, is off until listed in `REAUTH_ACTIONS`, and is
+  checked per session.
+- **Settings:** `MFA_ENCRYPTION_KEY` (blank allowed; MFA then answers 503), `MFA_ISSUER`,
+  `MFA_TOKEN_LIFETIME`, `REAUTH_ACTIONS` and `REAUTH_WINDOW_MINUTES`, plus the `mfa_verify` and
+  `mfa` throttle rates.
+- **Frontend:** the login code step, `/account/security` (setup, recovery codes, disable with
+  re-auth), and `ApiError.code` with `isMfaEnrollmentRequired` / `isReauthRequired` in `api.ts`.
+- **Invitations are deferred:** `Invitation.role` is a required FK to `rbac.Role` (§ 3.5), which
+  arrives in 1.2.
+
+**Who did what — lead/junior, non-overlapping files, as the owner asked:**
+- **Junior (`djangobasex-bd`), working without check-ins and reporting once at the end:**
+  - `users/mfa.py`, the pure TOTP, Fernet and recovery-code functions, with 28 tests;
+  - all 1.1d frontend: `api.ts`, `auth.ts`, `login-panel.tsx` and `mfa.ts` (owned for this phase),
+    and `app/account/security/`.
+- **Lead:** models, the migration, services, views, URLs, the authenticator gate, permissions,
+  throttles, settings, the API contract, docs and all review.
+
+**Why:** BUILD_ORDER 1.1, blueprint 1.1d (A16, A18).
+**Files:**
+- New: `backend/users/{mfa,permissions}.py`, `backend/users/models/mfa.py`,
+  `backend/users/services/mfa.py`, `backend/users/migrations/0004_mfadevice_mfarecoverycode.py`,
+  `backend/users/tests/{test_mfa_primitives,test_mfa_flow}.py`, `frontend/src/lib/mfa.ts`,
+  `frontend/src/app/account/security/{page,security-panel}.tsx`.
+- Changed: `backend/config/{settings,settings_test}.py`,
+  `backend/users/{authentication,serializers,throttles,tokens,urls,views}.py`,
+  `backend/users/models/__init__.py`, `backend/users/services/{auth,lockout}.py`,
+  `backend/core/routes.py`, `backend/tests/architecture/test_public_routes.py`,
+  `backend/.env.example`, `frontend/src/lib/{api,auth}.ts`,
+  `frontend/src/app/login/login-panel.tsx`, `AGENTS.md`, `README.md`,
+  `documentation/{DAILY_CHANGES,ONBOARDING,VERSION_SUMMARY}.md`,
+  `documentation/core/ARCHITECTURE.md`, `documentation/planning/{BUILD_ORDER,TECH_DEBT}.md`,
+  `documentation/system-design/{AUTH_BLUEPRINT,DEPLOYMENT}.md`.
+
+**Verification:**
+- `uv run pytest`: 143 passed (16 lead MFA-flow tests, 28 junior primitive tests).
+- **First run:** 1 failure. `test_a_wrong_code_is_recorded_and_counts_toward_lockout` fetched its
+  `mfa_token` *after* inserting 10 failures, so the password step was already locked (429). That is
+  correct behaviour. The test now takes the token first and asserts that both steps refuse.
+- **Mutation checks (lead):** removing the replay-guard update failed exactly
+  `test_a_totp_code_cannot_be_replayed`, and disabling the enrolment gate failed exactly
+  `test_an_enforced_user_without_a_device_can_only_enrol`.
+- **Mutation checks (junior):** no replay guard failed 2 tests, ±2 drift failed 3, and earliest-step
+  failed 1.
+- **Ruff:** the lead's first run found 5 lines over 100 characters, all in lead files. Fixed by
+  `ruff format` plus shortened comments; now clean, 66 files.
+- `manage.py check` clean. `makemigrations --check` reports no changes. `npm run lint` and
+  `npm run typecheck` clean.
+- **Frontend review:** no `fetch()` outside `api.ts`, no browser storage, no redirect in `api.ts`.
+- **End to end over real HTTP:** `runserver` on `127.0.0.1:8001` with a temporary
+  `MFA_ENCRYPTION_KEY` in its environment only (not written to `.env`) and
+  `REAUTH_ACTIONS=mfa_disable`. All 13 steps matched the contract:
+  - setup 200; confirm 200 with 10 codes; `me.mfa_enabled` true;
+  - login 200 `mfa_required` with 0 cookies;
+  - a wrong code 400, the right code 204, `/me` 200;
+  - the reused token 401;
+  - disable 423, then password confirm 204, then disable 204, and `mfa_enabled` false.
+  - No server tracebacks. Probe data was deleted and the server stopped. `users/0004` was applied
+    to the dev DB.
+
+**Notes / still open:**
+- **Your dev `.env` has no `MFA_ENCRYPTION_KEY`**, so `/account/security` setup answers 503 on the
+  Docker stack until one is added (see `.env.example` for the one-line generator).
+- **New debt:** DB-33 (the MFA key cannot be rotated until 6.3) and DB-34 (no QR code on setup).
+- Invitations follow 1.2. The browser-only client states were checked by the junior with
+  lint, typecheck and renders, not by a browser test (no frontend runner exists, DB-5).
+
 ### BUILD_ORDER 1.1c: password reset, the change cascade, throttling, progressive lockout
 **What:**
 - **Reset model:** `PasswordResetToken` (§ 3.4) in `users/0003`, storing only a hash of each token.

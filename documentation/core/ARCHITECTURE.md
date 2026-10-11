@@ -120,7 +120,7 @@ truth; read them rather than recalling.
 
 Stated plainly, because assuming otherwise wastes time:
 
-- **Authentication is partial.** Cookie-JWT login, refresh, logout, `/me`, password reset, throttling and lockout exist (`users/`, ADR-0009); invitations and MFA do not.
+- **Authentication is partial.** Cookie-JWT login, refresh, logout, `/me`, password reset, throttling, lockout, TOTP two-factor and re-auth exist (`users/`, ADR-0009); invitations wait for RBAC.
 - **No authorization beyond DRF's `IsAuthenticated`.** No roles, no groups wired up, no object-level
   permissions.
 - **One model.** `users.User` ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)); no domain models yet.
