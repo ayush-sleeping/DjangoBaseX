@@ -15,7 +15,12 @@
 
 Each is cheap now and painful later. They are listed in order of how expensive the retrofit is.
 
-### 🚧 D1 — Custom `User` model, or Django's?
+### ✅ D1 — Custom `User` model, or Django's?
+
+> **Decided 2026-10-11 — [ADR-0008](../adr/0008-custom-user-model-email-identity.md).** Custom, as
+> `users.User` in its own app (not `core.User` — `AUTH_BLUEPRINT.md` Ch. 2 keeps identity out of
+> `core`), with email as the identifier and no username. The text below is the reasoning that led
+> there.
 
 **Must be settled before ANY migration references `AUTH_USER_MODEL`.** Django's own docs call
 changing it later "significantly more difficult"; in practice it means a manual data migration
@@ -202,7 +207,7 @@ without anyone noticing. Treat it as a review blocker.
 
 ## 6. Before the first migration — checklist
 
-- [ ] D1 decided and an ADR written; `AUTH_USER_MODEL` set if custom
+- [x] D1 decided and an ADR written; `AUTH_USER_MODEL` set if custom — ADR-0008, 2026-10-11
 - [ ] D2 decided and recorded (even if the answer is "keep the default")
 - [ ] D3 decided — and if "no", the `visible_to()` rule is documented as the reason
 - [ ] D4 decided; base models written if soft delete is in

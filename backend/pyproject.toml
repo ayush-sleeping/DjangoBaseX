@@ -32,4 +32,4 @@ exclude = ["migrations", ".venv"]
 select = ["E", "F", "I", "B", "UP", "DJ"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "core"]
+known-first-party = ["config", "core", "users"]

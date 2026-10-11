@@ -25,7 +25,7 @@ Built by accumulation, one module at a time, tracking the
 | Background jobs | Celery + Redis + Flower | ⬜ |
 | Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
 | Test suite | pytest + pytest-django + factory_boy | ⬜ |
-| Containerisation | docker-compose — Django + Next + Postgres + Redis | ⬜ |
+| Containerisation | docker-compose — Django + Next + Postgres + Redis | 🔄 dev stack (both apps, SQLite) done |
 | Configuration — nothing hard-coded | Boot refusal, typed settings registry, feature flags, lookups, locale/currency/timezone settings — [`CONFIGURATION.md`](../system-design/CONFIGURATION.md) | ⬜ |
 | Extensibility | Full registry catalogue, soft-disable, versioned plugin SDK — [`EXTENSIBILITY.md`](../system-design/EXTENSIBILITY.md) | ⬜ |
 | Observability | Request ids, JSON logs, one scrubber, three-rung health, metrics, error tracking — [`OBSERVABILITY.md`](../system-design/OBSERVABILITY.md) | ⬜ |
@@ -73,9 +73,8 @@ Dependency-ordered, not priority-ordered — each step is hard to do well before
 2. **Resolve DB-1** (auth model) and write the ADR
 3. **Auth** — SimpleJWT, `/me`, refresh rotation, and the frontend half in `src/lib/api.ts`
 4. **RBAC** — groups, permission classes, object-level checks. Fail closed, like the DRF default
-5. **A custom `User` model** — ⚠️ **if this is ever wanted, it must happen before the first migration
-   that references `AUTH_USER_MODEL`.** Swapping it later is one of the genuinely painful migrations
-   in Django. Decide now even if the answer is "the default is fine"
+5. ~~**A custom `User` model**~~ — ✅ done 2026-10-11: `users.User`, email login
+   ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)), the project's first migration
 6. **First CRUD module** (Users), backend and frontend, as the pattern every later module copies
 7. **Type generation** from `/api/schema/` into the frontend (`TECH_DEBT` **DB-4**)
 8. **Docker Compose** — Postgres + Redis, which unblocks realistic local development and CI

@@ -126,7 +126,7 @@ Stated plainly, because assuming otherwise wastes time:
 - **No authentication.** No login, no tokens, no `/me`.
 - **No authorization beyond DRF's `IsAuthenticated`.** No roles, no groups wired up, no object-level
   permissions.
-- **No models.** `backend/core/models.py` is empty; the only tables are Django's own.
+- **One model.** `users.User` ([ADR-0008](../adr/0008-custom-user-model-email-identity.md)); no domain models yet.
 - **No tests, on either side.** `backend/core/tests.py` is Django's stub.
 - **No CI.** Nothing runs the verification gate except a person.
-- **No Docker, no deployment.** See [`../system-design/DEPLOYMENT.md`](../system-design/DEPLOYMENT.md) § 0.
+- **Docker for development only, no deployment.** `docker-compose.yml` runs both apps with live reload ([`README.md`](../../README.md) § Getting Started). See [`../system-design/DEPLOYMENT.md`](../system-design/DEPLOYMENT.md) § 0.

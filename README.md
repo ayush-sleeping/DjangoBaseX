@@ -7,7 +7,7 @@ A secure, modular, production-ready base project using **Django 5 + Django REST 
 
 > **Status:** early scaffold with a settled architecture. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following the [Django-Nextjs-Journey](https://github.com/ayush-sleeping/Django-Nextjs-Journey) Level 2 plan.
 >
-> **Not deployable yet.** No auth, no RBAC, no tests, no CI, no Docker. That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
+> **Not deployable yet.** No auth, no RBAC, no tests, no CI, no production Docker (a development Compose stack exists). That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
 
 ## Overview
 
@@ -66,7 +66,19 @@ A starter kit for developers who want to skip repetitive setup work and start bu
 
 ## Getting Started
 
-**Prerequisites**
+**Quick start with Docker** — both apps in containers, reloading on save:
+```sh
+cp backend/.env.example backend/.env    # then set SECRET_KEY (step 3 below shows how)
+docker compose up --build               # logs from both apps stream here; Ctrl-C stops
+```
+Frontend on [localhost:3000](http://localhost:3000), API on [localhost:8000](http://localhost:8000).
+Migrations run on start. Create an admin with
+`docker compose exec backend uv run python manage.py createsuperuser`. After changing
+`package.json`, restart with `docker compose up --build -V` so the container's `node_modules` is
+rebuilt. This is a **development** stack only — SQLite, `runserver`, `next dev` — and it shares
+`backend/db.sqlite3` with a local `runserver`.
+
+**Without Docker — prerequisites**
 - [uv](https://docs.astral.sh/uv/) (manages Python 3.12 + the virtualenv for you) — `brew install uv`
 - Node.js 20+ and npm
 
@@ -267,20 +279,23 @@ Stated plainly, because assuming otherwise wastes time.
 - CORS/CSRF configured for a separate-origin frontend, DRF throttling, `IsAuthenticated` by default
 - Next.js 16 + React 19 + Tailwind 4, typed API wrapper, home page reading live backend health
 - `uv` + Ruff on the backend, ESLint + strict TypeScript on the frontend
-- Full documentation set, 6 ADRs, an agent contract, and a ranked tech-debt register
+- A custom `users.User` (email login, no username) as `AUTH_USER_MODEL` — [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)
+- `docker compose up` development stack with live reload on both halves
+- Full documentation set, 8 ADRs, an agent contract, and a ranked tech-debt register
 
 **❌ Not built yet**
 - **Authentication** — no login, no tokens, no `/me`
 - **RBAC** — nothing beyond DRF's `IsAuthenticated` default
-- **Models** — `backend/core/models.py` is empty; the only tables are Django's own
+- **Models** — only `users.User`; no domain models yet
 - **Tests** — zero, on both sides. **Nothing can fail a build**
 - **CI** — no workflows
-- **Docker / deployment** — no topology. See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
+- **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
-**⚠️ Two decisions to settle before the first feature** — both get decided by accident otherwise, and
-both are expensive to reverse:
+**⚠️ One decision to settle before the first feature** — it gets decided by accident otherwise, and
+it is expensive to reverse:
 1. **Session auth or JWT** — see [`documentation/planning/AUTH_RND.md`](documentation/planning/AUTH_RND.md)
-2. **Custom `User` model or Django's** — must land **before** any migration references `AUTH_USER_MODEL`
+
+The other, custom `User` model or Django's, is settled: [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md).
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
 
@@ -333,7 +348,7 @@ Built by accumulation, one module at a time (see the [Journey's North Star table
 | Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
 | Static analysis | mypy + Ruff | 🔄 Ruff done |
 | Test suite | pytest + pytest-django + factory_boy | ⬜ |
-| Containerisation | docker-compose (Django + Next + Postgres + Redis) | ⬜ |
+| Containerisation | docker-compose (Django + Next + Postgres + Redis) | 🔄 dev stack done |
 | Health check | `/api/health/` | ✅ |
 | API docs | drf-spectacular | ✅ |
 

@@ -49,7 +49,14 @@ re-checks them when a later change breaks them. Two legitimate ways to hold it:
 moment someone writes the first migration or the first authenticated endpoint — which is exactly
 what Phase 1 does. That is why they sit in front of it rather than inside it.*
 
-### 0.1 — 🚧 DECISION: custom `User` model or Django's ⬜
+### 0.1 — 🚧 DECISION: custom `User` model or Django's ✅
+**Decided 2026-10-11 — [ADR-0008](../adr/0008-custom-user-model-email-identity.md):** a custom
+`users.User` (`AbstractBaseUser + PermissionsMixin`) per `AUTH_BLUEPRINT.md` A1–A3, with email as
+the login, no username and boolean states. It is not `core.User(AbstractUser)` as recommended below,
+because the blueprint keeps identity out of `core`. `AUTH_USER_MODEL = "users.User"` is set, and
+`users/0001_initial` (`User` only, § 3.1 columns, admin read-mostly) is the project's first
+migration. That also delivers the model half of **1.1a**.
+
 **This is first for a reason.** `AUTH_USER_MODEL` must be settled **before any migration references
 it**. Swapping later is one of Django's genuinely painful migrations.
 
@@ -274,6 +281,11 @@ Fail a PR that edits `core/` without a `core-change` label. In the core repo its
 the manifest was regenerated.
 
 ### 4.4 — Docker Compose ⬜
+*Partly in place since 2026-10-11:* `docker-compose.yml` runs **both apps for development** (live
+reload, SQLite, ports on `127.0.0.1`) from `backend/Dockerfile.dev` and `frontend/Dockerfile.dev`.
+What this task still adds: Postgres, Redis, the compose project naming of `OPERATIONS.md` § 1 and
+the rest of the § 15 hygiene.
+
 Postgres + Redis + both apps. Closes **DB-12** properly by making Postgres the default local
 database.
 

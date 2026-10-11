@@ -44,10 +44,11 @@ yourself designing while implementing, this document failed and should be fixed 
 
 ## 1. The decisions this encodes
 
-> ⚠️ **Two of these are `BUILD_ORDER` 🚧 DECISION items (`0.1`, `0.2`) and are not yet ADRs.** They
-> are written here as **stated assumptions** so the rest of the book is concrete. If the owner
-> decides differently, the reversal cost is in the last column — and Chapter 13 says what has to
-> change.
+> ⚠️ **Two of these are `BUILD_ORDER` 🚧 DECISION items (`0.1`, `0.2`).** **A1–A3 (`0.1`) are
+> settled by [ADR-0008](../adr/0008-custom-user-model-email-identity.md)**, as written here
+> (2026-10-11). A4–A5 (`0.2`) are not yet an ADR. They are written here as **stated assumptions** so
+> the rest of the book is concrete. If the owner decides differently, the reversal cost is in the
+> last column — and Chapter 13 says what has to change.
 
 | # | Decision | Choice | Why | Reversal cost |
 |---|----------|--------|-----|---------------|
@@ -159,7 +160,7 @@ The single row that answers "who is this". **Nothing about permissions lives her
 | `is_staff` | `BooleanField` | no | `False` | — | Django admin access only. **Not** an authorization concept |
 | `is_superuser` | `BooleanField` | no | `False` | ✔ | The one bypass (A12) |
 | `mfa_enforced` | `BooleanField` | no | `False` | — | Set by role policy; a user may not turn it off |
-| `last_login_at` | `DateTimeField` | yes | `NULL` | — | |
+| `last_login` | `DateTimeField` | yes | `NULL` | — | Django's own field from `AbstractBaseUser`, kept under its own name. `login()` updates it and Django's password-reset token hashes it, so a renamed copy would drift from the real one |
 | `password_changed_at` | `DateTimeField` | yes | `NULL` | — | Invalidates sessions older than it (Ch. 6.7) |
 | `deactivated_at` | `DateTimeField` | yes | `NULL` | — | |
 | `deactivated_reason` | `CharField(255)` | no | `""` | — | |

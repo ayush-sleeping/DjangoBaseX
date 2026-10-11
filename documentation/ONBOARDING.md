@@ -73,9 +73,10 @@ npm run dev                               # :3000
 knowing before you plan anything:
 
 ✅ Django 5.2 + DRF · drf-spectacular OpenAPI · CORS/CSRF configured · DRF throttling ·
-`IsAuthenticated` by default · Next 16 + React 19 + Tailwind 4 · a typed API wrapper · Ruff
+`IsAuthenticated` by default · Next 16 + React 19 + Tailwind 4 · a typed API wrapper · Ruff ·
+a custom `users.User` (email login) · a development `docker compose` stack
 
-❌ **No authentication. No RBAC. No models. No tests. No CI. No Docker. No deployment.**
+❌ **No authentication. No RBAC. No domain models. No tests. No CI. No production Docker. No deployment.**
 
 The ❌ list is not a criticism — it is a one-commit-old scaffold. But assuming otherwise is the
 fastest way to waste an afternoon. [`planning/ROADMAP.md`](planning/ROADMAP.md) has the plan.

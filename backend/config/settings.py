@@ -40,7 +40,11 @@ INSTALLED_APPS = [
     "drf_spectacular",
     # Local
     "core",
+    "users",
 ]
+
+# Set before the first migration and never changed after (ADR-0008).
+AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # must sit above CommonMiddleware

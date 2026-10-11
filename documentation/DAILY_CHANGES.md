@@ -26,6 +26,52 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 0.1 decided: a custom `users.User`, email login (ADR-0008)
+**What:** The owner settled 0.1. A new `users` app holds `users.User(AbstractBaseUser,
+PermissionsMixin)` and its `UserManager`, with the `AUTH_BLUEPRINT.md` § 3.1 columns. Email is the
+login, there is no username, `is_active` defaults to `False`, and a check constraint keeps emails
+lowercase. `AUTH_USER_MODEL = "users.User"`, and `users/0001_initial` is the project's first
+migration. The admin is registered read-mostly: no raw password field, and `is_staff`,
+`is_superuser` and `mfa_enforced` are read-only.
+**Why:** `AUTH_USER_MODEL` cannot be changed cheaply once any migration refers to it. The owner
+picked the blueprint's form (`users.User`, A1–A3) over the older `core.User(AbstractUser)`
+recommendation in `DATA_MODEL.md` D1. That one kept a username and put identity in `core`, which
+the blueprint keeps free of app models.
+**Files:**
+- New: `backend/users/{__init__,admin,apps,tests,urls}.py`, `backend/users/models/{__init__,user}.py`,
+  `backend/users/migrations/{__init__,0001_initial}.py`,
+  `documentation/adr/0008-custom-user-model-email-identity.md`.
+- Changed: `backend/config/settings.py` (`INSTALLED_APPS`, `AUTH_USER_MODEL`),
+  `backend/config/urls.py`, `backend/pyproject.toml` (`known-first-party`),
+  `documentation/{ADR,NEW_PROJECT,ONBOARDING}.md`, `documentation/core/ARCHITECTURE.md`,
+  `documentation/planning/{BUILD_ORDER,ROADMAP,TECH_DEBT}.md`,
+  `documentation/system-design/{AUTH_BLUEPRINT,DATA_MODEL}.md`, `README.md`.
+
+**Verification:**
+- `ruff check`: all checks passed. The first run failed with one E501 on the new model's docstring,
+  which was then fixed. `ruff format --check`: 20 files already formatted.
+- `manage.py check`: no issues. `makemigrations --check --dry-run`: no changes detected.
+- `migrate` on a fresh `db.sqlite3` applied 19 migrations, `users.0001_initial` before `admin.0001`.
+- A shell run inside a rolled-back transaction confirmed:
+  - `create_user` lowercases and trims the email, and the new user is inactive;
+  - `authenticate` returns `None` while the user is inactive and the user once activated;
+  - `create_superuser` sets active, staff and superuser;
+  - a second account differing only in case raises `IntegrityError`, as does a raw mixed-case
+    `UPDATE` (the check constraint);
+  - the admin add form validates. 0 rows were left afterwards.
+
+**Notes / still open:**
+- The local `db.sqlite3` was deleted and remigrated, with the owner's approval. It held no rows, but
+  every existing local database has to be recreated the same way.
+- **Deviation from § 3.1, now written into it:** the last-login column stays Django's `last_login`,
+  not `last_login_at`. `login()` writes it and the password-reset token hashes it.
+- **Not in this change:** the `has_perm` override (`AUTH_BLUEPRINT.md` § 7.4) ships with
+  `RBACBackend` and its test in 1.2. `BaseViewSet` waits for the first viewset.
+- `DATA_MODEL.md` D2–D5 are still open. They govern later models; `users_user` follows the
+  blueprint's A15 (integer PK plus `public_id`).
+- `AGENTS.md` § 0 ("know what does not exist yet") was updated with the owner's approval. It now
+  says no *production* Docker and names `users.User` as the only model.
+
 ### Docker development stack — both apps, live reload
 **What:** `docker compose up --build` runs Django (`runserver`) and Next.js (`next dev`) in
 containers. Source is bind-mounted, both reload on save, logs stream to the terminal, and

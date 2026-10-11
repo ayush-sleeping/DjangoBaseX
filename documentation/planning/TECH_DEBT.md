@@ -19,7 +19,6 @@ problem was real.
 | **DB-7** | 🟠 | **Nothing guards unsafe production defaults** | No `APP_ENV`-style check refuses `DEBUG=True` or a placeholder `SECRET_KEY` outside development. A default that is safe locally and unsafe in production is invisible until something asserts it |
 | **DB-8** | 🟠 | **No production security settings** | `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, HSTS are all absent from `settings.py`. `manage.py check --deploy` lists them |
 | **DB-9** | 🟠 | **No `LOGGING` configuration** | No structured logging, no request correlation, no destination. A 500 in production goes to stdout and is lost |
-| **DB-10** | 🟠 | **Custom `User` model decision still open** | If a custom user model is ever wanted it must land **before** the first migration referencing `AUTH_USER_MODEL`. Swapping later is one of Django's genuinely painful migrations. Decide now, even if the answer is "the default is fine" |
 | **DB-4** | 🟡 | **Frontend types are hand-written** | The backend publishes OpenAPI at `/api/schema/`, and the frontend does not consume it. Hand-written response types in `src/lib/` drift from the API silently — they typecheck against yesterday's contract while being wrong |
 | **DB-2** | 🟡 | **No `typecheck` npm script** | The gate is `npx tsc --noEmit`, which is easy to skip because it is not a named script. Add `"typecheck": "tsc --noEmit"` to `frontend/package.json` |
 | **DB-3** | 🟡 | **No Python type checking** | Ruff does not type-check. `mypy` (with `django-stubs`) is on the [roadmap](ROADMAP.md) and is a separate decision from [ADR-0004](../adr/0004-ruff-is-the-only-python-tool.md) |
@@ -49,5 +48,9 @@ problem was real.
 
 ## Closed
 
-_Nothing yet. When a row closes, move it here struck through with the date and what fixed it —
-so the next person can see it was real, and how it was resolved._
+_When a row closes, move it here struck through with the date and what fixed it — so the next
+person can see it was real, and how it was resolved._
+
+| ID | Pri | Title | Closed |
+|----|-----|-------|--------|
+| ~~**DB-10**~~ | 🟠 | ~~**Custom `User` model decision still open**~~ | **2026-10-11** — [ADR-0008](../adr/0008-custom-user-model-email-identity.md): `users.User`, email login, set as `AUTH_USER_MODEL` before any other migration referenced it |

@@ -92,15 +92,16 @@ SQLite is a development convenience only
 before your first real feature — switching later means re-testing every query against a database
 whose constraint and JSON behaviour differs.
 
-### 5. Decide the two open questions before writing a feature
+### 5. Check the two foundational questions before writing a feature
 
 Both are in [`planning/TECH_DEBT.md`](planning/TECH_DEBT.md), both get settled by accident if nobody
-settles them on purpose, and both are **much** more expensive to change later:
+settles them on purpose, and both are **much** more expensive to change later. One is already
+settled in the core:
 
 | Decision | Why now |
 |----------|---------|
 | **DB-1 — session auth or JWT** | Whichever your first authenticated endpoint uses settles it. Different CSRF, CORS and refresh models |
-| **DB-10 — custom `User` model** | Must land **before** the first migration referencing `AUTH_USER_MODEL`. Swapping it afterwards is one of Django's genuinely painful migrations — even if the answer is "the default is fine", answer it |
+| **DB-10 — custom `User` model** | ✅ **Settled in the core** ([ADR-0008](adr/0008-custom-user-model-email-identity.md)): your product inherits `users.User` with email login. Add fields to it; never swap `AUTH_USER_MODEL` |
 
 ### 6. Run it
 
