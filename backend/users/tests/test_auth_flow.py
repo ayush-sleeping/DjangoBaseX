@@ -17,6 +17,7 @@ pytestmark = pytest.mark.django_db
 
 LOGIN, REFRESH, LOGOUT, ME = "/api/auth/login/", REFRESH_PATH, "/api/auth/logout/", "/api/auth/me/"
 REVOKE_ALL = "/api/auth/sessions/revoke-all/"
+FORGOT = "/api/auth/password/forgot/"
 NAMES = cookie_names()
 
 
@@ -229,3 +230,42 @@ def test_an_access_token_is_not_accepted_as_a_refresh_token(client):
 
 def test_refresh_without_a_cookie_is_refused(client):
     assert client.post(REFRESH).status_code == 401
+
+
+# --- Throttling and lockout, through the real endpoints (A17) ------------------------------------
+
+
+def test_the_sixth_attempt_in_a_minute_from_one_address_and_ip_is_throttled(client):
+    user = UserFactory()
+    for _ in range(5):
+        sign_in(client, user.email, "wrong-password")
+    assert sign_in(client, user.email).status_code == 429
+
+
+def test_a_distributed_attack_locks_the_address_even_for_the_right_password(client):
+    user = UserFactory()
+    # Ten failures from ten IPs: each (address, IP) pair stays under the throttle.
+    for n in range(10):
+        client.post(
+            LOGIN,
+            {"email": user.email, "password": "wrong-password"},
+            content_type="application/json",
+            REMOTE_ADDR=f"203.0.113.{n}",
+        )
+    locked = client.post(
+        LOGIN,
+        {"email": user.email, "password": DEFAULT_PASSWORD},
+        content_type="application/json",
+        REMOTE_ADDR="198.51.100.7",
+    )
+    assert locked.status_code == 429
+    assert locked.json()["error"]["code"] == "too_many_attempts"
+    assert LoginAttempt.objects.order_by("-id").first().failure_reason == "locked"
+    assert not UserSession.objects.exists()
+
+
+def test_forgot_password_is_throttled_per_address(client):
+    for _ in range(3):
+        client.post(FORGOT, {"email": "target@example.com"}, content_type="application/json")
+    fourth = client.post(FORGOT, {"email": "target@example.com"}, content_type="application/json")
+    assert fourth.status_code == 429

@@ -1,6 +1,7 @@
 "use client";
 
 // Client component: the session is an httpOnly cookie, so who-am-I is asked from the browser.
+import Link from "next/link";
 import { type FormEvent, useEffect, useState } from "react";
 
 import { fetchMe, type Me, signIn, signInErrorMessage, signOut } from "@/lib/auth";
@@ -118,6 +119,9 @@ export function LoginPanel() {
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>
+      <Link className="block text-center text-xs text-zinc-500 underline" href="/forgot-password">
+        Forgot password?
+      </Link>
     </form>
   );
 }

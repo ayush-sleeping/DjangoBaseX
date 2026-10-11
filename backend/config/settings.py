@@ -28,6 +28,10 @@ env = environ.Env(
     REFRESH_IDLE_LIFETIME=(int, 604_800),
     REFRESH_ROTATION_GRACE=(int, 15),
     SESSION_LIVENESS_CACHE_TTL=(int, 60),
+    LOCKOUT_THRESHOLD=(int, 10),
+    LOCKOUT_WINDOW=(int, 900),
+    LOCKOUT_DURATION=(int, 900),
+    PASSWORD_RESET_TOKEN_LIFETIME=(int, 1800),
     AUTH_COOKIE_DOMAIN=(str, ""),
     AUTH_COOKIE_PREFIX=(str, "dbx"),
 )
@@ -178,6 +182,13 @@ AUTH_COOKIE_PREFIX = env("AUTH_COOKIE_PREFIX")
 # Never hard-code False: it would ship to production.
 AUTH_COOKIE_SECURE = env.bool("AUTH_COOKIE_SECURE", default=not DEBUG)
 
+# Progressive lockout (A17): THRESHOLD failures within WINDOW seconds lock the identifier or IP
+# for DURATION seconds. Counted from users_login_attempt, so it survives a cache flush.
+LOCKOUT_THRESHOLD = env("LOCKOUT_THRESHOLD")
+LOCKOUT_WINDOW = env("LOCKOUT_WINDOW")
+LOCKOUT_DURATION = env("LOCKOUT_DURATION")
+PASSWORD_RESET_TOKEN_LIFETIME = env("PASSWORD_RESET_TOKEN_LIFETIME")  # seconds; a link works once
+
 # Django REST Framework
 # -------------------------------------------------------------------------------------------- ::
 REST_FRAMEWORK = {
@@ -194,7 +205,12 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
-    "DEFAULT_THROTTLE_RATES": {"anon": "60/min", "user": "600/min"},
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/min",
+        "user": "600/min",
+        "login": "5/min",  # per (identifier, ip) pair — users.throttles.LoginThrottle
+        "password_reset": "3/hour",  # per identifier — users.throttles.PasswordResetThrottle
+    },
 }
 
 SPECTACULAR_SETTINGS = {

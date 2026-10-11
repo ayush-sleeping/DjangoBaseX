@@ -9,6 +9,15 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=4096, trim_whitespace=False)
 
 
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.CharField(max_length=254, trim_whitespace=True)
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=128)
+    password = serializers.CharField(max_length=4096, trim_whitespace=False)
+
+
 class MeSerializer(serializers.ModelSerializer):
     # Effective permission codes arrive with RBAC (BUILD_ORDER 1.2); the shape is fixed now.
     permissions = serializers.SerializerMethodField()

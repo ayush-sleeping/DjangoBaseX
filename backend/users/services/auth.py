@@ -8,16 +8,27 @@ from core.http import client_ip
 from .. import tokens
 from ..models import LoginAttempt, User, UserSession
 from ..models.user import normalize_email
+from . import lockout
 
 
 class InvalidCredentials(Exception):
     """Wrong password, unknown address or inactive account: callers answer all three identically."""
 
 
+class LockedOut(Exception):
+    """Too many recent failures for this address or IP (A17). The password is not even checked."""
+
+
 def login(request, email: str, password: str) -> tokens.IssuedTokens:
     identifier = normalize_email(email or "")
     ip = client_ip(request)
     user_agent = request.META.get("HTTP_USER_AGENT", "")[:255]
+
+    # Step 2. Checked before the password, so a locked account cannot be probed. The answer is the
+    # same for addresses that exist and those that do not: locks are keyed on what was typed.
+    if lockout.is_locked(identifier, ip):
+        _record(identifier, None, ip, user_agent, LoginAttempt.FailureReason.LOCKED)
+        raise LockedOut
 
     # The backend runs the password hasher even for an unknown address (timing parity), and it is
     # AllowAllUsersModelBackend, so an inactive user comes back here and step 5 can record why.

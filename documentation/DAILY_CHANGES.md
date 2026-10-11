@@ -26,6 +26,86 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 1.1c: password reset, the change cascade, throttling, progressive lockout
+**What:**
+- **Reset model:** `PasswordResetToken` (§ 3.4) in `users/0003`, storing only a hash of each token.
+- **Reset services** (`users/services/passwords.py`):
+  - `forgot/` always answers 204 and emails only active accounts, after commit, with a mail
+    failure swallowed (Ch. 18);
+  - `reset/` is single-use, row-locked and validated by Django's validators, with errors as
+    `invalid_token` / `invalid_password` (with `details`).
+- **Email:** `users/emails.py`, with a `.txt` and `.html` template; the link is built from
+  `FRONTEND_BASE_URL` only.
+- **Cascade (§ 6.7):** `User.save()` sends `users.signals.password_changed` for any real change,
+  but never for a login-time hash upgrade. The receiver revokes every session, expires outstanding
+  links, and audits.
+- **Lockout and throttles:** `lockout.is_locked()` runs before the password is checked
+  (429 `too_many_attempts`, recorded as `locked`). `LoginThrottle` is 5/min per address+IP;
+  `PasswordResetThrottle` is 3/hour per address.
+- **Settings:** `LOCKOUT_*` and `PASSWORD_RESET_TOKEN_LIFETIME`, plus the two throttle rates.
+- **Frontend:** `/forgot-password` and `/reset-password`, and a "Forgot password?" link on `/login`.
+
+**Who did what — split per `AGENTS.md` § 5:**
+- **Second session (`djangobasex-bd`, as junior), on an explicit file list:**
+  - `users/throttles.py` and `users/services/lockout.py`, with 27 tests;
+  - `src/lib/password-reset.ts` and the two page folders.
+- **Lead:** everything else, including the only migration, the wiring, `settings.py`, the docs and
+  all review. Every junior file was read and its tests re-run before acceptance.
+
+**Why:** BUILD_ORDER 1.1, blueprint 1.1c. Without throttling and lockout the login endpoint was
+brute-forceable, and without the cascade a password change would not end the compromise it was
+meant to end.
+**Files:**
+- New: `backend/users/{throttles,emails,signals}.py`,
+  `backend/users/services/{lockout,passwords}.py`, `backend/users/models/password_reset.py`,
+  `backend/users/migrations/0003_passwordresettoken.py`,
+  `backend/users/templates/users/email/password_reset.{txt,html}`,
+  `backend/users/tests/{test_throttles,test_lockout,test_password_reset}.py`,
+  `frontend/src/lib/password-reset.ts`,
+  `frontend/src/app/{forgot-password,reset-password}/{page,*-form}.tsx`.
+- Changed: `backend/config/{settings,settings_test}.py`,
+  `backend/users/{apps,serializers,urls,views}.py`,
+  `backend/users/models/{__init__,user}.py`, `backend/users/services/auth.py`,
+  `backend/users/tests/test_auth_flow.py`, `backend/core/routes.py`,
+  `backend/tests/architecture/test_public_routes.py`, `backend/.env.example`,
+  `frontend/src/app/login/login-panel.tsx`, `README.md`,
+  `documentation/{DAILY_CHANGES,ONBOARDING,VERSION_SUMMARY}.md`,
+  `documentation/core/ARCHITECTURE.md`, `documentation/planning/{BUILD_ORDER,TECH_DEBT}.md`,
+  `documentation/system-design/{AUTH_BLUEPRINT,DEPLOYMENT,NEXTJS_STANDARDS}.md`.
+
+**Verification:**
+- `uv run pytest`: 99 passed, including 9 reset tests, 27 junior tests, and 3 endpoint-level
+  throttle and lockout tests.
+- **First-run failure:** 4 reset tests failed with a `TypeError`, because the view passed the
+  serializer's `token`/`password` as keyword arguments to `perform_reset(raw_token, new_password)`.
+  The call is now explicit.
+- **Mutation checks (lead):**
+  - with the cascade signal disabled, only 2 tests failed at first, because
+    `test_any_password_change_ends_sessions_not_only_a_reset` still passed through the independent
+    `password_changed_at` check. The test now also asserts `revoked_reason == "password_changed"`,
+    and the re-run failed all 3;
+  - unwiring the lockout failed exactly `test_a_distributed_attack_locks_the_address…`;
+  - unwiring `LoginThrottle` failed exactly `test_the_sixth_attempt…`.
+- **Mutation checks (junior), re-verified by reading its tests:** window-from-now failed 3 tests,
+  counting `locked` rows failed 1, and `REMOTE_ADDR` instead of `client_ip()` failed 1.
+- `ruff check` and `format`: the junior flagged 2 lines over 100 characters in lead files
+  (`emails.py`, `test_password_reset.py`); `ruff format` fixed them. The final gate then caught
+  a lead-introduced `I001` (import order) in `services/auth.py` from the lockout wiring, fixed with
+  `ruff check --fix`. Now clean, 60 files.
+  `npm run lint` and `npm run typecheck` clean.
+- **End to end on Docker:** the dev DB had not applied `users/0003` (the junior's probe got a 500
+  "no such table"), so `migrate` was run. Then:
+  - sign in → forgot 204 → link from the console email → `/reset-password` 200 → reset 204;
+  - the old session's `/me` is 401, reusing the link gives 400 `invalid_token`, and the new
+    password signs in;
+  - the probe user and its rows were deleted afterwards.
+
+**Notes / still open:**
+- **DB-32 (new):** `forgot/` is a timing oracle until mail is enqueued (7.1).
+- The forgot page's "30 minutes" is hard-coded (§ 6.7a item 8).
+- 1.1d (invitations, MFA, re-auth) is next in 1.1.
+- There is still no MFA and no RBAC, so this is not deployable.
+
 ### BUILD_ORDER 1.1b: cookie-JWT sign-in — sessions, rotation, CSRF, login/refresh/logout/me
 **What:**
 - **Models:** `UserSession` (§ 3.2) and `LoginAttempt` (§ 3.3), in migration `users/0002`.

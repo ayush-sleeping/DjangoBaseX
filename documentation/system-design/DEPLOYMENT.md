@@ -14,7 +14,7 @@
 
 | # | Blocker | Required change |
 |---|---------|-----------------|
-| 1 | **Authentication is incomplete** | Login, refresh (rotating, reuse-detecting), logout and `/me` exist (ADR-0009), but there is no password reset, no MFA, and **no login throttling or lockout** beyond DRF's generic anon rate — a deploy would expose a brute-forceable login. `BUILD_ORDER` 1.1c–1.1d. No RBAC either (1.2–1.4) |
+| 1 | **Authentication is incomplete** | Login, refresh (rotating, reuse-detecting), logout, `/me`, password reset, throttling and progressive lockout exist (ADR-0009). There is no MFA and no invitation flow, so the first account needs `createsuperuser`. `forgot/` is a timing oracle until mail is enqueued (`TECH_DEBT` DB-32). No RBAC either (1.2–1.4) |
 | 2 | **A young test suite** | CI (`.github/workflows/ci.yml`) runs the `AGENTS.md` § 2 gate on every push and PR, with backend tests on PostgreSQL 16 — but coverage is thin until Phase 1's features land with their tests, and there are no frontend tests. `TECH_DEBT` **DB-5** |
 | 3 | **No production topology** | No release image or production Compose (the `Dockerfile.dev` files and `docker-compose.yml` are a development stack: `runserver`, `next dev`, source bind mounts), no Nginx/TLS terminator, no WSGI/ASGI server config, no static-file strategy. `runserver` is a development server and must never face the internet |
 | 4 | **No monitoring or structured logging** | `settings.py` has no `LOGGING` config, so a 500 in production goes to stdout and is lost. No error tracker, no aggregation, no retention |

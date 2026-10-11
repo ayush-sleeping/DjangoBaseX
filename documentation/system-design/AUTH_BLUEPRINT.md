@@ -725,7 +725,7 @@ frontend/src/
                       → 200 {"mfa_required": true, "mfa_token": <short-lived, 5 min>}
                       → flow continues at POST /api/auth/mfa/verify/
 7.  Issue          tokens.issue_pair(user, request) → creates users_user_session row
-8.  Record         LoginAttempt(succeeded=True); lockout.reset(identifier)
+8.  Record         LoginAttempt(succeeded=True)   ← this row IS the lockout reset (§ 6.7a)
 9.  Audit          log_activity("auth.login", actor=user, ip=…, meta={user_agent})
 10. Respond        204, three Set-Cookie headers. NO token in the body.
 ```
@@ -885,6 +885,49 @@ log_activity("auth.password_changed", actor=user)
 > **A password change that leaves old sessions alive has not ended the compromise it was performed
 > to end.** This is the most commonly missed cascade in auth systems, which is why it is its own
 > section rather than a bullet.
+
+### 6.7a As built (1.1c, 2026-10-11) — lockout, throttles, reset
+
+Implemented in `users/services/lockout.py`, `users/throttles.py`, `users/services/passwords.py`,
+`users/emails.py` and `users/signals.py`. The decisions taken while building:
+
+1. **The lockout window is measured across the burst, not back from now.** A key is locked when
+   its `LOCKOUT_THRESHOLD` most recent counted failures span ≤ `LOCKOUT_WINDOW`, until the latest
+   of them + the duration. Measured back from now, the oldest failure ages out first and the lock
+   lifts early; doubled durations (1800s+) could then never outlast a 900s window, and A17's
+   progression would be inert.
+2. **Progressive:** duration = `LOCKOUT_DURATION` × 2^(k−1), with k = counted failures in the last
+   24h // threshold, capped at 24h. For an address, only failures since its last success count,
+   so signing in resets both the count and the doubling.
+3. **Lockout is a pure query over `users_login_attempt`** (no cache, so a flush or a second worker
+   resets nobody). There is no `lockout.reset()`: recording the successful `LoginAttempt` is the
+   reset, which is why § 6.2 step 8 no longer calls one.
+4. **IP:** threshold × 5 (shared NATs), never reset by one person's success. Skipped when there is
+   no IP. Attempts recorded as `locked` never extend a lock.
+5. **Throttle keys** are SHA-256 of `identifier\0ip` (login) or of the identifier alone (reset), so
+   no raw address sits in a cache dump. A plain hash of an email is dictionary-reversible; an HMAC
+   keyed with a server secret would close that and is a one-line change if wanted.
+6. **The cascade (6.7) hangs off `User.save()`**, which sends `users.signals.password_changed` for
+   any real change: reset, admin form or shell. Django clears `_password` before saving a
+   login-time hash upgrade, so an upgrade is not a change and signs nobody out (tested). The
+   receiver revokes every session, expires every outstanding reset link, and audits.
+7. **DRF reads `THROTTLE_RATES` once, at import**, so a test cannot change rates through
+   `settings`. The tests use the real 5/min and 3/hour.
+
+8. **Frontend pages** (`/forgot-password`, `/reset-password`):
+   - Forgot shows the same words for every 204.
+   - Reset reads the token server-side and passes it to a client form, with no-referrer and
+     noindex.
+   - `invalid_token` replaces the form with a "request a new link" path; `invalid_password` keeps
+     the form up and lists each validator message.
+   - There are no client-side password rules: Django's validators are the only source.
+   - **Stale-copy risk:** the forgot page's "expires in 30 minutes" is hard-coded against
+     `PASSWORD_RESET_TOKEN_LIFETIME=1800`. Expose the lifetime when the bootstrap endpoint
+     (`BUILD_ORDER` 8.2) exists.
+
+**Known gap:** `forgot/` sends its email inside the request (after commit, per Ch. 18), so the
+response for an existing address is slower by one mail round trip. This is a timing oracle until
+the send is enqueued (TECH_DEBT **DB-32**, fixed by `BUILD_ORDER` 7.1).
 
 ### 6.8 MFA (A16)
 

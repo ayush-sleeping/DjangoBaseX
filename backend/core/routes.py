@@ -16,5 +16,7 @@ PUBLIC_ROUTES: dict[str, str] = {
     ),
     "swagger-ui": "Docs UI over the schema. Same condition as the schema.",
     "users:login": "The front door. Same answer for every failure; attempts recorded (Ch. 6.2).",
+    "users:password-forgot": "Pre-authentication by definition. Always answers 204 (Ch. 6.6).",
+    "users:password-reset": "Authenticated by the single-use reset token itself (Ch. 6.6).",
     "users:refresh": "Authenticated by the refresh cookie itself, not an access token (Ch. 6.3).",
 }

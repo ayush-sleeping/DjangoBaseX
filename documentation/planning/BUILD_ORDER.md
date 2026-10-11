@@ -121,8 +121,18 @@ with a placeholder in the same change.
   client-side rule in `NEXTJS_STANDARDS.md` § 3.
 
 Both acceptance criteria below pass (`users/tests/test_auth_flow.py`), and so does
-`test_route_enforcement.py`. **Still to do for 1.1:** password reset, the change cascade,
-throttling and lockout (1.1c); invitations, MFA and re-auth (1.1d). There is no self-registration:
+`test_route_enforcement.py`.
+
+*Also done 2026-10-11, **1.1c**:*
+- `PasswordResetToken` (`users/0003`), with `forgot/` (always 204) and `reset/` (single-use, kills
+  every other link);
+- the password-change cascade on any change (`users/signals.py`);
+- `LoginThrottle` (5/min per address+IP) and `PasswordResetThrottle` (3/hour per address);
+- progressive lockout (`users/services/lockout.py`);
+- forgot/reset pages at `/forgot-password` and `/reset-password`.
+
+`AUTH_BLUEPRINT.md` § 6.7a records the decisions. **Still to do for 1.1:** invitations, MFA and
+re-auth (1.1d). There is no self-registration:
 accounts arrive by invitation (A25).
 Implement what 0.2 decided: register, login, logout, `/me`, password reset, and the frontend half in
 `src/lib/api.ts`.

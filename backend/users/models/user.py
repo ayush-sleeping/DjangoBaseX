@@ -6,6 +6,9 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
+
+from .. import signals
 
 
 def normalize_email(email: str) -> str:
@@ -79,4 +82,13 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def save(self, *args, **kwargs):
         self.email = normalize_email(self.email)
+        # set_password() leaves the raw password in _password until save; a hash upgrade on login
+        # clears it first. So this is a real change, by reset, admin or shell alike (§ 6.7).
+        password_changed = self._password is not None and not self._state.adding
+        if password_changed:
+            self.password_changed_at = timezone.now()
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = {*kwargs["update_fields"], "password_changed_at"}
         super().save(*args, **kwargs)
+        if password_changed:
+            signals.password_changed.send(sender=type(self), user=self)

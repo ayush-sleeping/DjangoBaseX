@@ -32,6 +32,10 @@ _PINNED_ENV = {
     "AUTH_COOKIE_PREFIX": "dbx",
     # Production-like: Secure cookies with the __Host- prefix, the path most deployments take.
     "AUTH_COOKIE_SECURE": "True",
+    "LOCKOUT_THRESHOLD": "10",
+    "LOCKOUT_WINDOW": "900",
+    "LOCKOUT_DURATION": "900",
+    "PASSWORD_RESET_TOKEN_LIFETIME": "1800",
 }
 os.environ.update(_PINNED_ENV)
 

@@ -91,6 +91,11 @@ exactly why the generation is worth doing.
   cookies with `cookies()` from `next/headers` and forward them explicitly; that is a reviewed
   exception, not a pattern. Client components use `src/lib/auth.ts` / `api()`, which send cookies,
   echo the CSRF cookie on unsafe methods, and refresh-and-retry once on a 401
+- **A page whose URL carries a secret** (a reset or invitation token) sets
+  `metadata.referrer = "no-referrer"` and `robots: { index: false, follow: false }`. Without
+  that, the token leaves in the `Referer` header of any outbound link or third-party asset. It reads
+  the token server-side from `searchParams` (async in Next.js 16) and passes it to the client form as
+  a prop. See `src/app/reset-password/page.tsx`
 - Never put business logic in a page or a component (`AGENTS.md` § 3). It goes in `src/lib/`
 
 ---

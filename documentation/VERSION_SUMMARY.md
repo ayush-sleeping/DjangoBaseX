@@ -13,7 +13,8 @@ exist before does.
 - **Sign in** (2026-10-11): email + password login into `httpOnly` cookie JWTs, rotating refresh
   tokens with reuse detection and a two-tab grace window, logout, sign-out-everywhere-else and
   `/api/auth/me/`, with a minimal `/login` page ([ADR-0009](adr/0009-jwt-in-httponly-cookies.md)).
-  Not deployable yet: no throttling, lockout, password reset or RBAC. See
+  Password reset by email, throttling and progressive lockout followed the same day.
+  Not deployable yet: no MFA, invitations or RBAC. See
   [`planning/ROADMAP.md`](planning/ROADMAP.md).
 
 ---
