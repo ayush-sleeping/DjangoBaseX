@@ -2,6 +2,10 @@
 #
 # Two jobs, so a Python failure still reports the TypeScript result. No step is
 # continue-on-error: a non-blocking check is a check nobody reads.
+#
+# Each job checks the boilerplate as shipped (no plugins), then installs the example plugin
+# (examples/plugins/notes, BUILD_ORDER 3.4) and checks again: the plugin seam is proved on every
+# push, and the bare platform is too.
 
 name: CI
 
@@ -85,6 +89,25 @@ jobs:
       - name: Tests (PostgreSQL 16)
         run: uv run pytest
 
+      # backend/'s Ruff run never sees these two; same config, so one style.
+      - name: Ruff (scripts/ and examples/)
+        run: |
+          uv run ruff check --config pyproject.toml ../scripts ../examples
+          uv run ruff format --check --config pyproject.toml ../scripts ../examples
+
+      - name: Install the example plugin
+        run: |
+          cp -R ../examples/plugins/notes plugins/notes
+          uv run python ../scripts/plugins.py link notes
+
+      - name: Checks and migrations, with the example plugin
+        run: |
+          uv run python manage.py check
+          uv run python manage.py makemigrations --check --dry-run
+
+      - name: Tests with the example plugin (PostgreSQL 16)
+        run: uv run pytest
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -113,4 +136,23 @@ jobs:
         run: npm run typecheck
 
       - name: Production build
+        run: npm run build
+
+      # scripts/plugins.py is standard library plus backend/core's stdlib-only modules.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the example plugin
+        run: |
+          cp -R ../examples/plugins/notes ../backend/plugins/notes
+          python ../scripts/plugins.py link notes
+
+      - name: ESLint, with the example plugin
+        run: npm run lint
+
+      - name: Typecheck, with the example plugin
+        run: npm run typecheck
+
+      - name: Production build, with the example plugin
         run: npm run build

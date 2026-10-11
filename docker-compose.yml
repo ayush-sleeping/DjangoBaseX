@@ -72,10 +72,13 @@ services:
     command: npm run dev -- --hostname 0.0.0.0
     ports:
       - "127.0.0.1:3000:3000"
+    # Mirrors the checkout under /repo (see frontend/Dockerfile.dev): plugin frontends are
+    # symlinked from backend/plugins, which Turbopack can then resolve inside its root.
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
+      - ./frontend:/repo/frontend
+      - /repo/frontend/node_modules
+      - /repo/frontend/.next
+      - ./backend/plugins:/repo/backend/plugins:ro
     depends_on:
       backend:
         condition: service_healthy

@@ -223,7 +223,7 @@ The initial guard catalogue (each a file under `tests/architecture/`, each with 
 | Guard | Asserts | Method |
 |-------|---------|--------|
 | `test_core_boundary.py` | `core/` imports neither `project` nor any plugin; core tests import no project code | AST `Import`/`ImportFrom` |
-| `test_plugin_boundary.py` | no plugin imports another plugin or `project` | AST |
+| `test_plugin_conventions.py` (built 2026-10-11; holds the boundary rule) | no plugin imports another plugin or `project` | AST |
 | `test_plugin_conventions.py` | `plugin.toml`, explicit `label`, the four prefixes | registry + AST |
 | `test_no_bare_mocks.py` | no `Mock()`/`MagicMock()`/`AsyncMock()` without `spec`/`spec_set` bound to a typed dependency ([§ 6](#6-mocks-autospec-only-fakes-preferred--process)) | AST, ratchet |
 | `test_secret_env_reads.py` | no `os.environ`/`env()` read of a credential-shaped key outside settings | AST, ratchet |

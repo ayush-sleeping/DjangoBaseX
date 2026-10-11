@@ -16,6 +16,30 @@ LOCAL_CACHES = (
 
 
 @register()
+def check_registry_seals(app_configs, **kwargs):
+    """
+    dbx.E009: every catalog seals cleanly at boot. Navigation refuses to seal while an item names an
+    undeclared permission, and nothing else reads it before the first request, so without this a
+    typo'd nav permission passed every check and then answered 500 on every menu call.
+    """
+    from .registry import RegistryError, registry
+
+    errors = []
+    for name, read in (
+        ("permissions", registry.permissions.groups),
+        ("navigation", registry.navigation.sections),
+        ("health", registry.health.checks),
+        ("api_routes", registry.api_routes.routes),
+        ("public_routes", registry.public_routes.routes),
+    ):
+        try:
+            read()
+        except RegistryError as exc:
+            errors.append(Error(f"registry.{name}: {exc}", id="dbx.E009"))
+    return errors
+
+
+@register()
 def check_shared_cache(app_configs, **kwargs):
     """dbx.E005: throttles, lockout and session liveness are per worker on a per-process cache."""
     backend = settings.CACHES.get("default", {}).get("BACKEND", "")

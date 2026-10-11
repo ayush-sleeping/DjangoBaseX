@@ -1,0 +1,41 @@
+# {{title}}
+
+A DjangoBaseX plugin: one Django app (`{{package}}`) and, later, its Next.js half (`frontend/`).
+It lives in its own repository and is mounted into a product as a git submodule under
+`backend/plugins/{{name}}/`.
+
+## What it owns
+
+Every name it creates is under its label, `{{label}}`, so it cannot collide with the platform or
+another plugin (`CORE_ARCHITECTURE_PLAN.md` § 3). `plugin.toml` declares them, and discovery
+refuses a manifest whose prefixes disagree with the label:
+
+| Thing | Prefix | Example |
+|-------|--------|---------|
+| Database tables | `{{label}}_` | `{{label}}_items` (set `Meta.db_table` explicitly) |
+| Permissions | `{{label}}.` | `{{label}}.home.view` |
+| API routes | `/api/{{route}}/` | `/api/{{route}}/` (URL names `{{label}}:`) |
+| Frontend routes | `/{{route}}` | `/{{route}}` |
+
+## The rules
+
+- **Import only Django, third-party packages and `core.*`.** Never another plugin, never `project`.
+  The platform knows this plugin only through what `wiring.py` registers.
+- **The app label is explicit** in `apps.py`. Never remove it: `app_label` is written into every
+  migration.
+- **Layers** (`AGENTS.md` § 3): thin views, logic in `services.py`, no queries in serializers.
+- **Every view declares `required_permissions`**, and every code it uses is declared in
+  `wiring.py`.
+
+## Mounting it
+
+From the product's `backend/` directory:
+
+```bash
+uv run python ../scripts/plugins.py link {{name}}      # the frontend half, once it exists
+uv run python manage.py makemigrations {{label}}
+uv run python manage.py migrate
+uv run python ../scripts/plugins.py list               # confirm it is discovered and linked
+```
+
+Discovery is automatic: `config/settings.py` installs every plugin under `backend/plugins/`.

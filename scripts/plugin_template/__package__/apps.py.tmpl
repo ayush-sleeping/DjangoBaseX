@@ -1,0 +1,15 @@
+from django.apps import AppConfig
+
+
+class {{class_name}}(AppConfig):
+    name = "{{package}}"
+    # Explicit, never derived from the package path: app_label is written into every migration,
+    # so renaming the package must not change it (the app-label trap, CORE_ARCHITECTURE_PLAN § 3).
+    label = "{{label}}"
+    default_auto_field = "django.db.models.BigAutoField"
+    verbose_name = "{{title}}"
+
+    def ready(self) -> None:
+        from . import wiring
+
+        wiring.register()

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { api, API_URL } from "@/core/lib/api";
+import { NavMenu } from "@/core/shell/nav-menu";
 
 type Health = {
   status: "ok" | "degraded";
@@ -52,6 +53,8 @@ export default async function Home() {
           </p>
         )}
       </section>
+
+      <NavMenu />
 
       <p className="text-xs text-zinc-500">
         API docs: <a className="underline" href={`${API_URL}/api/docs/`}>{API_URL}/api/docs/</a>

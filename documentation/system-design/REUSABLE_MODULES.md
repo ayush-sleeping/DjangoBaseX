@@ -132,7 +132,7 @@ that cannot boot when billing is not installed.
   together when the module is disabled.
 
 **Enforced by.**
-- `tests/architecture/test_plugin_boundary.py` (already planned) — no plugin imports another.
+- `tests/architecture/test_plugin_conventions.py` (built, BUILD_ORDER 3.2) — no plugin imports another.
 - `tests/architecture/test_extension_points.py` — every contribution names a point some installed
   module declares, or is reported inert; every declared point's contributions pass shape validation.
   Positive control: a fixture plugin registering a malformed spec makes it fail.

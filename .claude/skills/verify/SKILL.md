@@ -19,6 +19,9 @@ ever disagree, `AGENTS.md` wins. Fix this file.
    - Anything under `backend/`: `ruff check .`, `ruff format --check .`, `manage.py check` and `pytest`, each
      run from `backend/` with `uv run`.
    - Also any `models.py` or `migrations/` path: `makemigrations --check --dry-run`. This one is never optional.
+   - Anything under `scripts/` or `examples/`: from `backend/`, `uv run ruff check --config pyproject.toml
+     ../scripts ../examples` and the same with `ruff format --check`. A change to an example plugin also
+     needs it installed and the suite rerun: CI does both (`examples/plugins/notes/README.md`).
    - Anything under `frontend/`: `npm run lint` and `npm run typecheck`, from `frontend/`.
    - Anything under `.claude/hooks/`: `python3 .claude/hooks/test_agent_guard.py`.
    - Documentation only: no code gate. Check that every link you added resolves and every path you cite exists.

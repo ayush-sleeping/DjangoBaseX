@@ -1,0 +1,11 @@
+// The {{title}} plugin's frontend half (CORE_ARCHITECTURE_PLAN § 5). `scripts/plugins.py link
+// {{name}}` mounts it at /{{route}}; each key below is a sub-path ("" is /{{route}} itself).
+// Pages load on first visit. Data goes through @/core/lib/api, never an inline fetch().
+const plugin = {
+  name: "{{name}}",
+  pages: {
+    "": () => import("./home-page"),
+  },
+};
+
+export default plugin;

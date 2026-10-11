@@ -167,23 +167,27 @@ DjangoBaseX/
 │   ├── config/                  # Project package (settings, urls, asgi, wsgi)
 │   │   ├── settings.py          # All settings; env values via django-environ
 │   │   └── urls.py              # /admin, /api/health, /api/schema, /api/docs
-│   ├── core/                    # Base app: health probe, shared utilities
-│   │   ├── views.py             # HealthView
-│   │   └── urls.py
+│   ├── core/  users/  rbac/     # The platform layer (ADR-0010): registry, gate, auth, RBAC
+│   ├── project/                 # This product's code; registers through core.registry
+│   ├── plugins/                 # Plugins (git submodules), discovered from plugin.toml
+│   ├── tests/                   # pytest: architecture tests, harness, platform tests
 │   ├── manage.py
 │   ├── pyproject.toml           # deps + Ruff config (uv-managed)
 │   ├── uv.lock
 │   └── .env.example
 ├── frontend/                    # Next.js 16 App Router
 │   ├── src/
-│   │   ├── app/                 # Routes (page.tsx = home w/ backend health)
-│   │   └── lib/
-│   │       └── api.ts           # Typed fetch wrapper for the Django API
+│   │   ├── app/                 # Routes: (core)/, (project)/, (plugins)/[plugin]/[[...slug]]
+│   │   ├── core/lib/api.ts      # Typed fetch wrapper; every API call goes through it
+│   │   ├── project/             # This product's UI
+│   │   └── plugins/             # Plugin frontends (symlinks) + registry.generated.ts
 │   ├── public/
 │   ├── package.json
 │   ├── next.config.ts
 │   ├── tsconfig.json
 │   └── .env.example
+├── scripts/plugins.py           # new / link / list / registry for plugins
+├── examples/plugins/notes/      # The example plugin; never loaded, installed by CI
 ├── documentation/               # All project docs — start at INDEX.md
 │   ├── INDEX.md                 # The doc map
 │   ├── ONBOARDING.md            # First day, end to end
@@ -202,9 +206,8 @@ DjangoBaseX/
 └── README.md
 ```
 
-> `backend/project/` and `backend/plugins/` are part of the
-> [architecture plan](documentation/planning/CORE_ARCHITECTURE_PLAN.md) and do not exist yet —
-> Phase 0 creates them.
+> The layout follows the [architecture plan](documentation/planning/CORE_ARCHITECTURE_PLAN.md):
+> the platform never imports `project/` or a plugin, and both plug in through `core.registry`.
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
 
@@ -280,7 +283,7 @@ Stated plainly, because assuming otherwise wastes time.
 
 **✅ Works today**
 - Django 5.2 + DRF, `/api/health/`, OpenAPI schema and Swagger UI, Django admin
-- CORS/CSRF configured for a separate-origin frontend, DRF throttling, `IsAuthenticated` by default
+- CORS/CSRF configured for a separate-origin frontend, DRF throttling, every endpoint denied unless it declares its permissions
 - Next.js 16 + React 19 + Tailwind 4, typed API wrapper, home page reading live backend health
 - `uv` + Ruff on the backend, ESLint + strict TypeScript on the frontend
 - **Sign in** — cookie-JWT auth per [ADR-0009](documentation/adr/0009-jwt-in-httponly-cookies.md): login, refresh with rotation and reuse detection, logout, sign-out-everywhere-else, `/api/auth/me/`, password reset by email (single-use links; any password change signs out every session), per-address+IP throttling and progressive lockout, TOTP two-factor with recovery codes and re-auth for sensitive actions, and minimal pages at `/login`, `/forgot-password`, `/reset-password` and `/account/security`
@@ -290,13 +293,14 @@ Stated plainly, because assuming otherwise wastes time.
 - A custom `users.User` (email login, no username) as `AUTH_USER_MODEL` — [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)
 - `docker compose up` development stack with live reload on both halves, plus Redis as the shared cache
 - Argon2 password hashing; a proxy-aware `client_ip()` with tests (`manage.py test core`); `/admin/` only when `ADMIN_ENABLED`
-- Full documentation set, 9 ADRs, an agent contract, and a ranked tech-debt register
+- **Plugins** — drop a directory with a `plugin.toml` into `backend/plugins/` and it is installed: its models, permissions, API routes, navigation and frontend pages mount through the registries, and architecture tests keep it inside its prefixes. `scripts/plugins.py` scaffolds and links them; [`examples/plugins/notes`](examples/plugins/notes/README.md) is a worked example that CI installs on every push
+- Full documentation set, 11 ADRs, an agent contract, and a ranked tech-debt register
 
 **❌ Not built yet**
-- **Invitations** — they need `rbac.Role`, so they follow RBAC (`BUILD_ORDER` 1.2)
-- **The `core/` vs `project/` split** and the plugin system (`BUILD_ORDER` 1.6, Phase 3)
-- **Models** — only `users.User`; no domain models yet
-- **Tests** — a backend pytest suite (harness, `users.User`, `client_ip()`, health); no frontend runner yet. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
+- **Domain models** — the platform holds identity and RBAC only; no organisation model ([ADR-0011](documentation/adr/0011-no-organisation-in-core.md))
+- **Frontend tests** — the backend has a pytest suite; the frontend has lint and typecheck only. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
+- **The app shell** — a server-built menu exists (`/api/me/navigation/`), but no sidebar, route gate or design system yet (`BUILD_ORDER` Phase 8)
+- **Background jobs** — no Celery yet (`BUILD_ORDER` 7.1)
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
 **✅ Both foundational decisions are settled:** custom `User` model ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md))

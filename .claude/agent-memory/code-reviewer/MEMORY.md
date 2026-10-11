@@ -5,8 +5,22 @@ other codebase, product or client (AGENTS.md § 1 rules 5, 5a, 6).
 
 ## Patterns seen
 
-_None recorded yet._
+- `core/registry.py` catalogs seal on first read. Only `api_routes` (config/urls.py) and `public_routes`
+  (dbx.E007) are read at boot. Any catalog with a cross-catalog check in `seal()` (navigation checks
+  permissions) needs a system check, or its error first shows up at request time as a 500.
+- Plugin packages (`djx_<name>`) sit at `backend/plugins/<name>/djx_<name>/`, not at the top level of
+  `backend/`. Scans that list first-party packages from `backend/*/__init__.py` (for example
+  `test_core_boundary.py`) never see them.
+- Registration attribution (`owner()`) uses `sys._getframe(2)`. It is correct only while the plugin
+  calls `register()` itself. A core helper that registers on a plugin's behalf would attribute the
+  registration to core and switch the lane rules off for it without any error.
+- Frontend routing: static `(core)` and `(project)` routes win over the `(plugins)/[plugin]` catch-all.
+  Plugin frontend prefixes are not checked against core page segments.
+- Review is read-only (git, grep). Verification output comes from the DAILY_CHANGES entry, and the
+  report says when a claim was not re-run.
 
 ## Recurring issues
 
-_None recorded yet._
+- Docstrings and plan tables that claim enforcement ("system checks seal every catalog", "the test
+  fails when core imports a plugin") the code does not have. Check each claim against the code.
+- `.catch(() => setX([]))` in frontend fetches turns 500s into an empty UI (BC-42).

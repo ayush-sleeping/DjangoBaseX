@@ -1,0 +1,11 @@
+# {{title}}: frontend half
+
+Mounted at `/{{route}}` by `cd backend && uv run python ../scripts/plugins.py link {{name}}`, which
+symlinks this directory to `frontend/src/plugins/{{route}}` and regenerates
+`frontend/src/plugins/registry.generated.ts` (BUILD_ORDER 3.5).
+
+- `index.ts` default-exports `{ name, pages }`; each key of `pages` is a sub-path under
+  `/{{route}}/`, and every page is a client component loaded on first visit.
+- Import platform code by alias (`@/core/lib/api`, `@/core/lib/permissions`), never another
+  plugin and never `@/project`.
+- A page the API refuses still renders: gate each control on the exact code its endpoint enforces.

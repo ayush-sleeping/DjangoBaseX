@@ -26,6 +26,134 @@ Newest first.
 
 ## 2026-10-11
 
+### BUILD_ORDER 3.2–3.5: plugin conventions, scripts/plugins.py, the example plugin, frontend mounting — Phase 3 complete
+**What:**
+- **3.3, junior (`djangobasex-bd`):**
+  - `scripts/plugins.py` `new` / `link` / `list`, and `scripts/plugin_template/` (all `*.tmpl`);
+  - `tests/test_plugins_script.py`.
+- **3.2, lead:** `tests/architecture/plugin_rules.py` and `test_plugin_conventions.py`.
+  - **The rules:**
+    - no import of another plugin or `project` (AST, `import_module` included);
+    - an explicit label equal to the manifest's;
+    - explicit, prefixed tables (M2M included);
+    - registrations inside the plugin's lane.
+  - **Ownership:** every registry catalog now records the registering module (`owner()`), so
+    attribution can't be faked by a spec's `module`.
+- **3.4, lead:** `examples/plugins/notes`.
+  - **What it is:** scaffolded by `plugins.py new`, then grown into a model scoped by
+    `visible_to()`, a service, a viewset (list/create/retrieve/delete), three permissions, a nav
+    section, a frontend page, and its own tests.
+  - **New endpoint:** `GET /api/me/navigation/` (`core/navigation.py`), the server-built menu,
+    with a minimal `NavMenu` on the home page.
+- **3.5, lead:**
+  - `src/core/lib/plugin-pages.ts` (`resolvePluginPage`), the `(plugins)/[plugin]/[[...slug]]`
+    route, and `src/plugins/registry.generated.ts`, written by a new `plugins.py registry` (also
+    run by `link`);
+  - ESLint boundaries for core → plugins and for plugins → outward;
+  - `turbopack.root` set to the repository (DB-28);
+  - the Docker frontend now mounts the checkout under `/repo`;
+  - `npm run lint` is `eslint . src/plugins/*`.
+- **CI:** both jobs check the bare boilerplate, then install the example plugin and run every check
+  again (including `next build`). Ruff now also covers `scripts/` and `examples/`.
+- **AGENTS.md:** the "does not exist yet" line is current, and § 2 has the scripts/examples Ruff
+  line. The file is 199 lines, under its 200 budget.
+**Why:** Phase 3 is the plugin system. 3.4 was its acceptance test, and building the example
+exposed two missing seams:
+- nothing served navigation to the frontend;
+- ESLint silently skipped symlinked plugin files.
+**Code review** (`code-reviewer` subagent, read-only): six findings, all verified and fixed here.
+1. **A typo'd nav permission passed every check, then made `/api/me/navigation/` answer 500 on
+   every request.** Nothing read navigation at boot. Fix: `dbx.E009` (`core/checks.py`) seals every
+   catalog at boot; reproduced with a typo in `project/wiring.py` → `manage.py check` fails. Also,
+   `NavMenu` treated every failure as "no menu" (BC-42); now only a 401 does.
+2. **A plugin named `login`, `settings`, … was silently shadowed** by core's static pages. Fix:
+   `plugins.py` `page_segments()`; `new` / `link` / `registry` refuse such a prefix, and a
+   conventions rule catches a core update that starts shadowing an installed plugin.
+3. **Registry keys were unchecked**, so a plugin could take nav key `users`. Fix: group codes,
+   nav section keys and health keys must derive from the plugin's prefix.
+4. **The core boundary test never forbade plugin packages** (they live under `backend/plugins/`).
+   Fix: any `djx_*` import from the platform fails, static or `import_module`; mutation-tested
+   with a lazy import in `core/navigation.py`.
+5. **Two ESLint patterns blocked legitimate imports:** core's own `src/core/plugins/` matched the
+   core → plugins pattern, and a plugin could not import its parent-level files. Fix: the module
+   moved to `src/core/lib/plugin-pages.ts`, and the plugin rule now has one block per depth
+   (probed: allowed and refused cases both behave).
+6. **CI dropped the bare `next build`.** It is back, before the plugin is installed.
+
+**Owner decision:** the example plugin lives in-repo under `examples/`, never auto-loaded, and CI
+installs it. It is not a submodule, because a submodule of the boilerplate would ship a demo plugin
+into every product.
+**Files:**
+- **Agent tooling and CI:** `AGENTS.md`; `.claude/skills/verify/SKILL.md`;
+  `.claude/agent-memory/code-reviewer/MEMORY.md` (the reviewer's notes; generic, no names);
+  `.github/workflows/ci.yml`.
+- **Top level:** `README.md`; `docker-compose.yml`; `scripts/plugins.py`;
+  `scripts/plugin_template/**`; `examples/plugins/README.md`; `examples/plugins/notes/**`.
+- **Backend:**
+  - `backend/core/{checks,navigation,registry,urls,views}.py`; `backend/plugins/README.md`;
+  - `backend/tests/{test_navigation,test_plugins_script,test_registry}.py`;
+  - `backend/tests/architecture/{plugin_rules,test_core_boundary,test_plugin_conventions}.py`.
+- **Frontend:**
+  - `frontend/{Dockerfile.dev,eslint.config.mjs,next.config.ts,package.json}`;
+  - `frontend/src/app/(core)/page.tsx`; `frontend/src/app/(plugins)/[plugin]/[[...slug]]/page.tsx`;
+  - `frontend/src/core/lib/navigation.ts`; `frontend/src/core/lib/plugin-pages.ts`;
+  - `frontend/src/core/shell/nav-menu.tsx`; `frontend/src/plugins/registry.generated.ts`.
+- **Documentation:**
+  - `documentation/planning/{BUILD_ORDER,CORE_ARCHITECTURE_PLAN,ROADMAP,TECH_DEBT}.md`;
+  - `documentation/system-design/{AUTH_BLUEPRINT,ENGINEERING_PRACTICES,NEXTJS_STANDARDS,REUSABLE_MODULES}.md`;
+  - `documentation/DAILY_CHANGES.md`.
+**Verification:**
+- **Gate, bare tree:**
+  - `ruff check .` ✅; `ruff format --check .` ✅ (137 files);
+  - `manage.py check` ✅; `makemigrations --check --dry-run` ✅;
+  - `pytest` on SQLite ✅ and on a local PostgreSQL 16 ✅ (812 passed, 2 skipped: "no plugin
+    installed"). With the plugin installed, 819 passed on both;
+  - Ruff over `scripts/` and `examples/` ✅ (14 files);
+  - `npm run lint` ✅; `npm run typecheck` ✅;
+  - `test_agent_guard.py` OK; actionlint 1.7.7 ✅.
+- **CI rehearsal in a scratch copy of the commit candidate** (Postgres 16 + Redis, CI env):
+  - **Second rehearsal, after the review fixes:**
+    - backend: every step bare (812 passed, 2 skipped), then with the plugin installed (check and
+      migrations clean, 819 passed);
+    - frontend: `npm ci`, then lint, typecheck and `next build` bare, then the same three with the
+      plugin. The build lists `ƒ /[plugin]/[[...slug]]`, with no warnings.
+  - **One failed run, and why:** my first try of the second rehearsal symlinked `node_modules`
+    from the earlier copy. Turbopack refused it ("Symlink … points out of the filesystem root"),
+    the same root rule. A real `npm ci` passed, and the corollary is recorded in DB-36.
+- **Mutation checks:**
+  - with the navigation filter forced to superuser, 3 nav tests fail;
+  - `@/project` imported in a plugin file → `npm run lint` exits 1 (before the glob it passed
+    silently: that was the bug);
+  - core importing `@/plugins` → lint error;
+  - a type error in a plugin file → `tsc` fails (tsc already followed the symlinks);
+  - the junior's three mutations of `plugins.py` each failed a test.
+- **Docker stack:**
+  - **API path**, a role with the `notes.*` codes: sign-in 204 → `/api/me/navigation/` lists Notes
+    → create 201 → list 1 → delete 204 → retrieve 404.
+  - **Browser path**, headless Chrome over CDP: login form → home menu shows Notes → `/notes` →
+    create through the form → delete → an unclaimed path 404s.
+  - **After the review fixes:** the browser run passed again. Signed out, the home page shows no
+    menu and no error.
+  - The smoke user and role were deleted afterwards. After the plugin was moved to `examples/`,
+    `/api/notes/` and `/notes` both 404 and the stack is healthy.
+**Notes:**
+- **The dev database still has the `notes_note` table and its migration row** from trying the
+  plugin under Docker. It is harmless; drop it if wanted.
+- **Settled by testing, not assumed:**
+  - Turbopack refused the symlinked plugin until `turbopack.root` was set: "Module not found:
+    Can't resolve './notes'", even though `tsc` was green;
+  - `isolate_apps("core")` re-runs `CoreConfig.ready()`, which the one-way registry refuses, so
+    the table-rule fixtures use `contenttypes`.
+- **New debt:**
+  - DB-36: Turbopack's watcher scope is the whole repository;
+  - DB-37: core's own screens are not in the navigation registry yet (8.2).
+- **Junior decisions, accepted:**
+  - name ≤ 30 characters;
+  - a format-stable template;
+  - a transactional `new`;
+  - link status by resolution;
+  - usage errors exit 1.
+
 ### fix: invitation accept answered 500 on PostgreSQL (CI red since the 1.5 commit)
 **What:** `users/services/invitations.py::accept()` now locks with `select_for_update(of=("self",))`.
 **Why:**

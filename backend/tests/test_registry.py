@@ -629,3 +629,50 @@ def test_todays_public_routes_ledger_migrates_cleanly():
 
 def test_the_reserved_list_includes_the_extensibility_mounts():
     assert {"me", "meta", "extensions"} <= RESERVED_PREFIXES
+
+
+# --- owner(): who registered what (BUILD_ORDER 3.2 attributes plugin registrations by it) -------
+
+
+def test_every_catalog_records_the_registering_module():
+    reg = Registry()
+    reg.permissions.register(
+        PermissionGroupSpec(
+            "demo", "Demo", "demo", permissions=(PermissionSpec("demo.a.view", "A"),)
+        )
+    )
+    reg.navigation.register(NavSection("demo", "Demo", "demo", items=(NavItem("a", "A", "/a"),)))
+    reg.health.register(HealthCheck("demo", "Demo", check=lambda: True))
+    reg.api_routes.register(prefix="demo", urlconf="demo.urls")
+    reg.public_routes.register("demo:a", "A demo route, for the attribution test only.")
+
+    assert reg.permissions.owner("demo") == __name__
+    assert reg.navigation.owner("demo") == __name__
+    assert reg.health.owner("demo") == __name__
+    assert reg.api_routes.owner("demo") == __name__
+    assert reg.public_routes.owner("demo:a") == __name__
+    assert reg.permissions.owner("never-registered") == ""
+
+
+# --- dbx.E009: every catalog seals at boot, not at the first request ---------------------------
+
+
+def test_e009_reports_a_nav_item_gated_on_an_undeclared_code(monkeypatch):
+    from core import checks
+
+    reg = Registry()
+    reg.navigation.register(
+        NavSection("x", "X", "x", items=(NavItem("a", "A", "/x", permission="x.typo.view"),))
+    )
+    monkeypatch.setattr(core.registry, "registry", reg)
+
+    errors = checks.check_registry_seals(None)
+    assert [e.id for e in errors] == ["dbx.E009"]
+    assert "registry.navigation" in errors[0].msg and "x.typo.view" in errors[0].msg
+
+
+def test_e009_is_silent_when_every_catalog_seals(monkeypatch):
+    from core import checks
+
+    monkeypatch.setattr(core.registry, "registry", Registry())
+    assert checks.check_registry_seals(None) == []

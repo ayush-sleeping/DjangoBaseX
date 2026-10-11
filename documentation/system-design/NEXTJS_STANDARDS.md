@@ -86,11 +86,27 @@ exactly why the generation is worth doing.
 | Platform routes | `src/app/(core)/` (route group: URLs carry no `(core)`) | `src/core/**` |
 | Product library | `src/project/` | anything, including `@/core/...` |
 | Product routes | `src/app/(project)/` | anything |
+| Plugin pages | `backend/plugins/<name>/frontend/`, symlinked to `src/plugins/<prefix>` | `@/core/...` and the plugin's own files only |
+| Plugin mounting | `src/app/(plugins)/[plugin]/[[...slug]]/`, `src/plugins/registry.generated.ts` | the generated registry |
 
 **The platform never imports the product.** An ESLint `no-restricted-imports` rule in
 `eslint.config.mjs` fails `npm run lint` on any `@/project/...`, `@/app/(project)/...` or relative
 reach into them from platform files. Two route groups must never serve the same path; Next.js
 refuses to build if they do.
+
+**Plugins (BUILD_ORDER 3.5).**
+- A plugin's frontend half is mounted by `scripts/plugins.py link <name>`, never by hand. That
+  writes the symlink and regenerates `registry.generated.ts`; never edit either.
+- Every plugin page is a client component, loaded lazily through the one catch-all route. A static
+  route always wins over it, so a plugin cannot shadow a platform page.
+- ESLint refuses a plugin import of `@/project`, `@/app`, another plugin, or a `../` that climbs
+  out of the plugin's own root, and a platform import of `@/plugins`.
+- A plugin may not use a first URL segment the frontend already serves (`/login`, `/settings`):
+  the static page would win. `plugins.py` refuses it.
+- `npm run lint` is `eslint . src/plugins/*`, because ESLint does not follow symlinked directories
+  on its own.
+- `next.config.ts` sets `turbopack.root` to the repository so the symlinks resolve (TECH_DEBT
+  DB-28, DB-36).
 
 ## 3. Server and client components
 

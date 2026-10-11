@@ -1,0 +1,23 @@
+"use client";
+
+// Client component: plugin data is authenticated, and the session is an httpOnly cookie.
+import { useEffect, useState } from "react";
+
+import { api } from "@/core/lib/api";
+
+export default function HomePage() {
+  const [status, setStatus] = useState("Loading…");
+
+  useEffect(() => {
+    api<{ plugin: string }>("/api/{{route}}/", { cache: "no-store" })
+      .then((body) => setStatus(`Connected to the ${body.plugin} API.`))
+      .catch(() => setStatus("Could not load. Are you signed in, with {{label}}.home.view?"));
+  }, []);
+
+  return (
+    <main className="flex min-h-screen flex-col items-center gap-4 p-8 font-sans">
+      <h1 className="text-2xl font-bold tracking-tight">{{title}}</h1>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">{status}</p>
+    </main>
+  );
+}

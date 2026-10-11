@@ -17,17 +17,17 @@ Built by accumulation, one module at a time, tracking the
 | Lint + format | Ruff | ✅ |
 | AI agent guard rails | `AGENTS.md` contract + `.claude/` hooks, skills, subagents — [`AGENT_TOOLING.md`](../core/AGENT_TOOLING.md) | ✅ |
 | Python types | mypy | ⬜ |
-| Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ⬜ |
-| Roles & permissions | Code-declared catalog + DRF permission classes + object-level scoping | ⬜ |
+| Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ✅ [ADR-0009](../adr/0009-jwt-in-httponly-cookies.md), BUILD_ORDER 1.1 |
+| Roles & permissions | Code-declared catalog + DRF permission classes + object-level scoping | ✅ `rbac/`, the `core/api/` gate, `visible_to()` (1.2–1.4) |
 | Admin UI | Next.js dashboard — data tables, forms, ShadCN | ⬜ |
-| Core CRUD modules | DRF viewsets + Next.js pages | ⬜ |
+| Core CRUD modules | DRF viewsets + Next.js pages | 🔄 the Users module (1.5); `examples/plugins/notes` |
 | Activity log | Append-only audit trail | ⬜ |
 | Background jobs | Celery + Redis + Flower | ⬜ |
-| Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
-| Test suite | pytest + pytest-django + factory_boy | ⬜ |
+| Social login / 2FA | django-allauth + `pyotp` TOTP | 🔄 TOTP 2FA done (1.1d); social login not |
+| Test suite | pytest + pytest-django + factory_boy | ✅ backend (2.1–2.3, CI on PostgreSQL); no frontend tests |
 | Containerisation | docker-compose — Django + Next + Postgres + Redis | 🔄 dev stack (both apps, SQLite) done |
-| Configuration — nothing hard-coded | Boot refusal, typed settings registry, feature flags, lookups, locale/currency/timezone settings — [`CONFIGURATION.md`](../system-design/CONFIGURATION.md) | ⬜ |
-| Extensibility | Full registry catalogue, soft-disable, versioned plugin SDK — [`EXTENSIBILITY.md`](../system-design/EXTENSIBILITY.md) | ⬜ |
+| Configuration — nothing hard-coded | Boot refusal, typed settings registry, feature flags, lookups, locale/currency/timezone settings — [`CONFIGURATION.md`](../system-design/CONFIGURATION.md) | 🔄 boot refusal done (5.1); the rest not |
+| Extensibility | Full registry catalogue, soft-disable, versioned plugin SDK — [`EXTENSIBILITY.md`](../system-design/EXTENSIBILITY.md) | 🔄 registries, plugin discovery, scaffold, frontend mounting and an example (Phase 3); soft-disable and the SDK not |
 | Observability | Request ids, JSON logs, one scrubber, three-rung health, metrics, error tracking — [`OBSERVABILITY.md`](../system-design/OBSERVABILITY.md) | ⬜ |
 | Jobs & integrations | Job monitor, outbox, reconcilers, webhooks, safe HTTP, encrypted credentials — [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md) | ⬜ |
 | Notifications & alerting | Purposes, channels, in-app store, ops alerting — [`NOTIFICATIONS_AND_ALERTING.md`](../system-design/NOTIFICATIONS_AND_ALERTING.md) | ⬜ |

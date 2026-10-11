@@ -1,5 +1,8 @@
 # Development image for the Next.js frontend — used by docker-compose.yml only.
-# Source is bind-mounted at /app and `next dev` hot-reloads on save. Not a release image
+# Source is bind-mounted at /repo/frontend and `next dev` hot-reloads on save. The /repo prefix
+# mirrors the checkout, so next.config.ts's Turbopack root (the repository) is /repo here and the
+# relative plugin symlinks resolve against backend/plugins, mounted beside it (BUILD_ORDER 3.5).
+# Not a release image
 # (OPERATIONS.md § 5, § 17): never run `next build` in this container.
 FROM node:22-slim
 
@@ -8,9 +11,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # node_modules and .next are anonymous volumes in docker-compose.yml, so the host's macOS
 # node_modules (native binaries) and the host dev server's .next are never used here. Both
 # directories exist in the image so the volumes are created owned by `node`, not root.
-RUN mkdir -p /app/node_modules /app/.next && chown -R node:node /app
+RUN mkdir -p /repo/frontend/node_modules /repo/frontend/.next /repo/backend/plugins \
+    && chown -R node:node /repo
 USER node
-WORKDIR /app
+WORKDIR /repo/frontend
 
 COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci

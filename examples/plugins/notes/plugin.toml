@@ -1,0 +1,16 @@
+# Notes: a DjangoBaseX plugin. The manifest is read without importing any code
+# (EXTENSIBILITY § 12, § 17). Every prefix derives from the label (CORE_ARCHITECTURE_PLAN § 3).
+
+[plugin]
+name = "notes"
+label = "notes"
+package = "djx_notes"
+version = "0.1.0"
+app = "djx_notes.apps.NotesConfig"
+description = "Notes."
+
+[plugin.prefixes]
+table = "notes_"
+permission = "notes"
+route = "notes"
+frontend = "notes"

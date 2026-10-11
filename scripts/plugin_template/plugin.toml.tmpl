@@ -1,0 +1,16 @@
+# {{title}}: a DjangoBaseX plugin. The manifest is read without importing any code
+# (EXTENSIBILITY § 12, § 17). Every prefix derives from the label (CORE_ARCHITECTURE_PLAN § 3).
+
+[plugin]
+name = "{{name}}"
+label = "{{label}}"
+package = "{{package}}"
+version = "0.1.0"
+app = "{{package}}.apps.{{class_name}}"
+description = "{{title}}."
+
+[plugin.prefixes]
+table = "{{label}}_"
+permission = "{{label}}"
+route = "{{route}}"
+frontend = "{{route}}"

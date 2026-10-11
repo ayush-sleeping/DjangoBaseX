@@ -1,0 +1,17 @@
+"""
+The plugin's API, mounted at /api/{{route}}/.
+
+Thin: parse, authorize, delegate to services, respond (AGENTS.md § 3). Every view declares the
+exact permission it enforces; the route test refuses one that does not.
+"""
+
+from rest_framework.response import Response
+
+from core.api.views import BaseAPIView
+
+
+class HomeView(BaseAPIView):
+    required_permissions = ["{{label}}.home.view"]
+
+    def get(self, request):
+        return Response({"plugin": "{{label}}"})

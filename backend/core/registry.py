@@ -7,10 +7,11 @@ navigation, its health checks and its API routes by importing this module, never
 no module depends on another's models just to plug in (A6, A7).
 
 Boot-time and one-way. Apps register() from AppConfig.ready(); the first read of a catalog seals
-it, and every later register() raises. Nothing has to know when boot finished: the system checks
-and config/urls.py read the catalogs after django.setup(), which is what seals them on every
-manage.py invocation (§ 7.2). There is no unregister: a catalog that changes under a running app
-answers differently depending on when you ask.
+it, and every later register() raises. Nothing has to know when boot finished: dbx.E009 reads every
+catalog after django.setup() (and config/urls.py reads api_routes), which seals them all on every
+manage.py invocation, so a catalog that cannot seal fails the check rather than a request (§ 7.2).
+There is no unregister: a catalog that changes under a running app answers differently depending on
+when you ask.
 
 A registry holds a key, a label and at most a callable, never an app's model or schema.
 """
@@ -120,6 +121,12 @@ class _Catalog:
     def __init__(self) -> None:
         self._sealed = False
         self._lock = threading.Lock()
+        self._owner_of: dict[str, str] = {}
+
+    def owner(self, key: str) -> str:
+        """The module that registered `key` (best effort), or "" when nothing registered it.
+        The plugin conventions test attributes registrations by it (BUILD_ORDER 3.2)."""
+        return self._owner_of.get(key, "")
 
     def seal(self) -> None:
         with self._lock:
@@ -154,10 +161,12 @@ class PermissionRegistry(_Catalog):
 
     def register(self, group: PermissionGroupSpec) -> None:
         """All or nothing: a refused group leaves the catalog exactly as it was."""
+        owner = _caller_module()
         with self._lock:
             self._refuse_if_sealed(f"permission group {getattr(group, 'code', group)!r}")
             self._validate(group)
             self._groups[group.code] = group
+            self._owner_of[group.code] = owner
             for spec in group.permissions:
                 self._group_by_code[spec.code] = group
 
@@ -234,10 +243,12 @@ class NavigationRegistry(_Catalog):
         self._sections: dict[str, NavSection] = {}
 
     def register(self, section: NavSection) -> None:
+        owner = _caller_module()
         with self._lock:
             self._refuse_if_sealed(f"nav section {getattr(section, 'key', section)!r}")
             self._validate(section)
             self._sections[section.key] = section
+            self._owner_of[section.key] = owner
 
     def sections(self) -> tuple[NavSection, ...]:
         self.seal()
@@ -330,6 +341,7 @@ class HealthRegistry(_Catalog):
         self._checks: dict[str, HealthCheck] = {}
 
     def register(self, check: HealthCheck) -> None:
+        owner = _caller_module()
         with self._lock:
             self._refuse_if_sealed(f"health check {getattr(check, 'key', check)!r}")
             if not isinstance(check, HealthCheck):
@@ -345,6 +357,7 @@ class HealthRegistry(_Catalog):
             if check.key in self._checks:
                 raise RegistryError(f"{name} is already registered")
             self._checks[check.key] = check
+            self._owner_of[check.key] = owner
 
     def checks(self) -> tuple[HealthCheck, ...]:
         """In registration order, which follows INSTALLED_APPS."""
@@ -364,6 +377,7 @@ class ApiRouteRegistry(_Catalog):
         self._routes: dict[str, ApiRoute] = {}
 
     def register(self, prefix: str, urlconf: str) -> None:
+        owner = _caller_module()
         with self._lock:
             name = f"api route {prefix!r}"
             self._refuse_if_sealed(name)
@@ -390,6 +404,7 @@ class ApiRouteRegistry(_Catalog):
                         f"/api/{route.prefix}/. Mounting it twice duplicates every URL name."
                     )
             self._routes[prefix] = ApiRoute(prefix=prefix, urlconf=urlconf)
+            self._owner_of[prefix] = owner
 
     def routes(self) -> tuple[ApiRoute, ...]:
         """Sorted by prefix, so the URL table does not depend on INSTALLED_APPS order."""
@@ -412,7 +427,6 @@ class PublicRouteRegistry(_Catalog):
     def __init__(self) -> None:
         super().__init__()
         self._routes: dict[str, str] = {}
-        self._owners: dict[str, str] = {}
 
     def register(self, url_name: str, reason: str) -> None:
         owner = _caller_module()
@@ -431,11 +445,11 @@ class PublicRouteRegistry(_Catalog):
                 )
             if url_name in self._routes:
                 raise RegistryError(
-                    f"{name} is already registered by {self._owners[url_name]}; registered again "
+                    f"{name} is already registered by {self._owner_of[url_name]}; registered again "
                     f"by {owner}. One route, one reason."
                 )
             self._routes[url_name] = reason.strip()
-            self._owners[url_name] = owner
+            self._owner_of[url_name] = owner
 
     def routes(self) -> Mapping[str, str]:
         """url_name → reason, sorted by name, read-only."""

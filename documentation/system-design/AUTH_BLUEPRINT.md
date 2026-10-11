@@ -1596,6 +1596,7 @@ before any test executes, on every developer's machine, on every run.
 | `dbx.E006` | **Error** | A backend other than `RBACBackend` can contribute permissions — § 7.4a |
 | `dbx.E007` | **Error** | A `PUBLIC_ROUTES` entry names a route that no longer exists, or carries no reason |
 | `dbx.E008` | **Error** | `DEBUG=False` with `AUTH_COOKIE_SECURE=False`, or no `SameSite` on the auth cookies |
+| `dbx.E009` | **Error** | A registry catalog cannot seal: for example a nav item gated on a permission no app declares. Built 2026-10-11, because nothing else reads navigation before the first request |
 | `dbx.W001` | Warning | A permission in the catalog is granted to no role |
 | `dbx.W002` | Warning | A `PermissionGroup` has no permissions |
 | `dbx.W003` | Warning | `SECURE_PROXY_SSL_HEADER` is set while `TRUSTED_PROXY_COUNT` is `0` — A20 says these disagree |

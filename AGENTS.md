@@ -29,15 +29,14 @@ Then state: "Ready to work. What would you like me to work on?"
 [`frontend/package.json`](frontend/package.json). A version quoted from prose goes stale silently.
 (In Claude Code a SessionStart hook prints the locked versions, branch and next task — still verify.)
 
-**Know what does not exist yet:** **no `core/`/`project/` split, no plugins, no frontend tests, no
-production Docker**. Built: auth (ADR-0009), RBAC (`rbac/`, the `core/api/` gate), and the Users
-module, the reference to copy. No domain models yet. If a task assumes something exists,
+**Know what does not exist yet:** **no frontend tests, no production Docker, no Celery**. Built: auth
+(ADR-0009), RBAC, the Users module (the reference to copy), the `project/` split (ADR-0010) and
+plugins (`scripts/plugins.py`; example: `examples/plugins/notes`). No platform domain models. If a task assumes something exists,
 check the [Roadmap](documentation/planning/ROADMAP.md) first.
 
-**With no specific task**, start at the lowest-numbered unfinished item in
-[`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) — the executable backlog, with acceptance
-criteria. Tasks marked **🚧 DECISION** are questions for the repository owner: ask; never answer one by
-starting to code.
+**With no specific task**, start at the lowest-numbered unfinished item in [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md)
+— the executable backlog, with acceptance criteria. Tasks marked **🚧 DECISION** are questions for the
+repository owner: ask; never answer one by starting to code.
 
 ## 1. Non-negotiable
 
@@ -83,13 +82,13 @@ cd backend && uv run ruff format --check .               # format
 cd backend && uv run python manage.py check              # Django system checks
 cd backend && uv run python manage.py makemigrations --check --dry-run   # after ANY model change
 cd backend && uv run pytest                              # tests (in-memory DB/cache/email — safe anytime)
+cd backend && uv run ruff check --config pyproject.toml ../scripts ../examples   # + format --check
 
 # Frontend
 cd frontend && npm run lint                              # eslint
 cd frontend && npm run typecheck                         # next typegen && tsc --noEmit
 
-# Agent tooling — when .claude/hooks/ changed
-python3 .claude/hooks/test_agent_guard.py
+python3 .claude/hooks/test_agent_guard.py                # agent tooling — when .claude/hooks/ changed
 ```
 
 - **`makemigrations --check --dry-run` is not optional after a model change.** A model edited without a

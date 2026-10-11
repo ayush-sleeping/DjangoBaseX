@@ -1,0 +1,43 @@
+"""
+Everything this plugin contributes to the platform, registered at boot from AppConfig.ready()
+(CORE_ARCHITECTURE_PLAN § 2). Core never names this plugin: it only reads the registries.
+
+Imports core.registry and nothing else. A plugin never imports another plugin, or project.
+"""
+
+from core.registry import NavItem, NavSection, PermissionGroupSpec, PermissionSpec, registry
+
+HOME_VIEW = PermissionSpec(
+    code="{{label}}.home.view",
+    label="View {{title}}",
+)
+
+GROUP = PermissionGroupSpec(
+    code="{{label}}",
+    label="{{title}}",
+    module="{{label}}",
+    permissions=(HOME_VIEW,),
+)
+
+SECTION = NavSection(
+    key="{{route}}",
+    label="{{title}}",
+    module="{{label}}",
+    items=(
+        NavItem(
+            key="home",
+            label="{{title}}",
+            path="/{{route}}",
+            permission=HOME_VIEW.code,
+        ),
+    ),
+)
+
+
+def register() -> None:
+    registry.permissions.register(GROUP)
+    registry.api_routes.register(
+        prefix="{{route}}",
+        urlconf="{{package}}.urls",
+    )
+    registry.navigation.register(SECTION)

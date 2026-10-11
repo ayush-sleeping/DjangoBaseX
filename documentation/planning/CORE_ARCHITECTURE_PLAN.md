@@ -185,6 +185,18 @@ segment — the standard shape for mounting modules a build cannot know about ah
 > **Decision: start with the catch-all.** Revisit if per-route caching or metadata becomes a real
 > requirement, and record it as an ADR then.
 
+> **As built (2026-10-11, BUILD_ORDER 3.5).**
+> - **The contract:** a plugin's `frontend/index.ts` default-exports `{ name, pages }`, where each
+>   key is a sub-path (`""` is `/<prefix>`). `src/core/lib/plugin-pages.ts::resolvePluginPage()` is
+>   the one lookup, and `link` regenerates `registry.generated.ts`.
+> - **What it costs:**
+>   - `turbopack.root` must be the repository (TECH_DEBT DB-28, closed; DB-36 records the watcher
+>     scope);
+>   - the Docker frontend mounts the checkout under `/repo`;
+>   - `npm run lint` names `src/plugins/*` explicitly, because ESLint does not descend into
+>     symlinked directories.
+> - **Example:** `examples/plugins/notes/` is the worked one, installed by CI.
+
 ---
 
 ## 6. What enforces all of this
@@ -193,10 +205,10 @@ Convention is not enforcement. Every rule above has something that fails when it
 
 | Check | Fails when |
 |-------|-----------|
-| `tests/architecture/test_core_boundary.py` | `core/` imports `project` or any plugin |
-| `tests/architecture/test_plugin_boundary.py` | a plugin imports another plugin, or `project` |
-| `tests/architecture/test_plugin_conventions.py` | a plugin is missing `plugin.toml`, an explicit label, or a required prefix |
-| `frontend/tests/boundaries.test.ts` | `src/core/` imports `src/project/` or `src/plugins/` |
+| `tests/architecture/test_core_boundary.py` | `core/` imports `project` or any plugin (as built: any `djx_*` package, static or `import_module`) |
+| `tests/architecture/test_plugin_conventions.py` (as built, one file with the boundary test) | a plugin imports another plugin or `project`; lacks an explicit label; names a table, permission module, route, nav path or public route outside its prefixes |
+| `frontend/eslint.config.mjs` (as built, instead of a `boundaries.test.ts`) | `src/core/` imports `src/project/` or `src/plugins/`; a plugin imports `@/project`, another plugin, `@/app`, or climbs out of its root with `../` |
+| CI, with `examples/plugins/notes` installed | any of the above, or the suite, lint, typecheck or build, breaks with a real plugin present |
 | `scripts/core_doctor.py` + `core.manifest.json` | a product copy has edited core — a SHA per core file |
 | `.github/workflows/core-guard.yml` | a PR edits `core/` without the `core-change` label |
 | `.github/workflows/ci.yml` | lint, format, Django checks, migrations, tests, typecheck, build |
