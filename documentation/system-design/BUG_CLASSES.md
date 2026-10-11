@@ -830,7 +830,10 @@ payments both debited, and inconsistent lock order elsewhere deadlocked.
 **Django / Next form.** `if not Model.objects.filter(…).exists(): Model.objects.create(…)`; quota
 check-then-create; `obj.balance = obj.balance - x; obj.save()` instead of an `F()` update;
 `select_for_update()` expected to lock a row that does not exist yet; locks taken in different orders in different
-services.
+services. Also `select_for_update()` with `select_related()` across a **nullable** FK: PostgreSQL refuses
+`FOR UPDATE` on the nullable side of an outer join, and SQLite ignores the lock, so only a Postgres run shows it.
+Lock only the row you mean, with `select_for_update(of=("self",))`. This shipped here: invitation accept answered
+500 on Postgres, 2026-10-11.
 
 **Guard.** The database constraint is the authority (`UniqueConstraint`, `CheckConstraint`, partial uniques);
 claim-by-insert for idempotency (API_PLATFORM § 11); advisory or sequence-row locks for numbering

@@ -26,6 +26,27 @@ Newest first.
 
 ## 2026-10-11
 
+### fix: invitation accept answered 500 on PostgreSQL (CI red since the 1.5 commit)
+**What:** `users/services/invitations.py::accept()` now locks with `select_for_update(of=("self",))`.
+**Why:**
+- **The bug:** the query joined `invited_by` (a nullable FK, so a LEFT OUTER JOIN) under
+  `FOR UPDATE`, and PostgreSQL refuses that with `NotSupportedError: FOR UPDATE cannot be applied
+  to the nullable side of an outer join`. Every invitation accept on a real database was a 500.
+- **Why nobody saw it:** SQLite ignores `select_for_update()`, so the local gate stayed green.
+  CI's backend job (PostgreSQL 16) failed on `ac61afe`, `d874050`, `49c1f82` and `c537c4b`, and
+  the CI result was not read after those pushes.
+- **Reproduced locally** against `postgres:16`: 4 failed, all in `users/tests/test_users_api.py`
+  (the invitation accept tests).
+**Files:** `backend/users/services/invitations.py`; `documentation/system-design/BUG_CLASSES.md`
+(BC-30's Django form); `documentation/DAILY_CHANGES.md`.
+**Verification:** `pytest` against a local PostgreSQL 16 → 737 passed (it was 4 failed, 733
+passed); against SQLite → 737 passed.
+**Notes:**
+- The other `select_for_update()` sites (`users/tokens.py`, `services/passwords.py`,
+  `services/mfa.py`, `services/invitations.py::send`) join only non-null FKs or nothing, and pass
+  on Postgres.
+- From now on, run the suite on Postgres before a push and read the CI run after it.
+
 ### PLATFORM_BLUEPRINT § 5 cleanup + BUILD_ORDER 3.1 plugin discovery; ADR-0011 (no organisation in core)
 **What:**
 - **Junior (`djangobasex-bd`):**

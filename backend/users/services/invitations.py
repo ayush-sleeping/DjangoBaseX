@@ -108,7 +108,9 @@ def accept(request, raw_token: str, password: str, full_name: str = "") -> token
     """
     with transaction.atomic():
         invitation = (
-            Invitation.objects.select_for_update()
+            # of=("self",): invited_by is nullable, so it is an outer join, and PostgreSQL refuses
+            # FOR UPDATE on the nullable side of one (SQLite ignores the lock, so only CI saw it).
+            Invitation.objects.select_for_update(of=("self",))
             .select_related("invited_by")
             .filter(token_hash=_hash(raw_token or ""))
             .first()
