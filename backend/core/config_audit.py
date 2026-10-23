@@ -31,50 +31,21 @@ from django.conf import global_settings
 from django.core.exceptions import ImproperlyConfigured
 
 from core.env import is_production_like
+from core.identity import SHIPPED_DOMAIN, SHIPPED_PRODUCT_NAME
 
 logger = logging.getLogger("core.config_audit")
 
 # --- Secret strength (§ 5) ----------------------------------------------------------------------
-
-# Substring match: distinctive enough that an honest random key never contains them.
-DISTINCTIVE = (
-    "changeme",
-    "change-me",
-    "change_me",
-    "replace",
-    "placeholder",
-    "your-",
-    "example",
-    "insecure",
-    "dummy",
-    "notsecret",
-    "xxxxxxxx",
-    "secret-key",
-    "django-insecure",
+# The rules live in core.secret_policy (standard library only), so scripts/setup.sh can judge and
+# generate secrets with the very same code before Django is installed (BUILD_ORDER 4.1).
+from core.secret_policy import (  # noqa: E402, F401 — re-exported: the audit's vocabulary
+    DISTINCT_CHARACTERS,
+    DISTINCTIVE,
+    GENERIC,
+    JWT_KEY_MIN_LENGTH,
+    SECRET_KEY_MIN_LENGTH,
+    weak_reason,
 )
-# Exact match only: a substring match on "test" would reject honest random keys.
-GENERIC = frozenset({"secret", "password", "test", "dev", "key", "admin", "default", "none"})
-
-SECRET_KEY_MIN_LENGTH = 50  # DEPLOYMENT.md § 1
-JWT_KEY_MIN_LENGTH = 32  # HS256: at least the hash's 256 bits of key material, as text
-DISTINCT_CHARACTERS = 12
-
-
-def weak_reason(value: str | None, *, min_length: int) -> str | None:
-    """Why this secret is unacceptable, or None. Never returns or logs the value."""
-    v = (value or "").strip()
-    if not v:
-        return "is empty"
-    if v.lower() in GENERIC:
-        return "is a generic placeholder word"
-    if any(p in v.lower() for p in DISTINCTIVE):
-        return "contains a known placeholder"
-    if len(v) < min_length:
-        return f"is shorter than {min_length} characters"
-    if len(set(v)) < DISTINCT_CHARACTERS:
-        return f"has fewer than {DISTINCT_CHARACTERS} distinct characters"
-    return None
-
 
 # --- Findings -----------------------------------------------------------------------------------
 
@@ -377,6 +348,22 @@ def _proxy(ns):
         )
 
 
+def _identity(ns):
+    # A missing value is the shipped default too: settings fall back to it (core.identity).
+    shipped = (
+        ("PRODUCT_NAME", SHIPPED_PRODUCT_NAME, 'the sign-in page says "Unnamed product"'),
+        ("PRIMARY_DOMAIN", SHIPPED_DOMAIN, "mail is sent from no-reply@localhost and bounces"),
+    )
+    for key, default, effect in shipped:
+        if (_get(ns, key, None) or default) == default:
+            yield Finding(
+                "cfg.W003",
+                key,
+                f"{key} is still the shipped default: {effect} (CONFIGURATION § 7).",
+                f"Set {key} for this deployment.",
+            )
+
+
 def _admin(ns):
     if _get(ns, "ADMIN_ENABLED", False):
         yield Finding(
@@ -400,10 +387,9 @@ def _fallbacks(ns):
 
 
 # cfg.E001 (dev.py/test.py loaded in production) is omitted: this repository has one settings
-# module, and APP_ENV classifies it. cfg.W003 (identity defaults) waits for the identity settings
-# of CONFIGURATION.md § 7, cfg.W006 (.env read in production) for settings to record whether a
-# file was read, and cfg.W007 (public schema) for a schema-visibility setting. Each lands with
-# the setting it inspects.
+# module, and APP_ENV classifies it. cfg.W006 (.env read in production) waits for settings to
+# record whether a file was read, and cfg.W007 (public schema) for a schema-visibility setting.
+# Each lands with the setting it inspects.
 RULES = (
     _app_env,
     _debug,
@@ -421,6 +407,7 @@ RULES = (
     _log_format,
     _hsts,
     _proxy,
+    _identity,
     _admin,
     _fallbacks,
 )

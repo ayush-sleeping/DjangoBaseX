@@ -29,6 +29,8 @@ from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
+from core.identity import SHIPPED_COOKIE_PREFIX
+
 REDACTED = "[Filtered]"
 NOT_REDACTED = r"(?!" + REDACTED.replace("[", r"\[").replace("]", r"\]") + ")"
 TRUNCATED = "[truncated]"
@@ -136,9 +138,16 @@ HIGH_ENTROPY = {"min_length": 32, "min_digits": 2, "min_upper": 2, "min_lower": 
 class ScrubRules:
     """The compiled rule set. `extra_keys` is how a module adds its own sensitive key names."""
 
-    def __init__(self, *, cookie_prefix: str = "dbx", extra_keys: frozenset[str] = frozenset()):
-        base = cookie_prefix.strip() or "dbx"
-        self.cookie_names = tuple(f"{base}_{part}" for part in ("access", "refresh", "csrf"))
+    def __init__(
+        self,
+        *,
+        cookie_prefix: str = SHIPPED_COOKIE_PREFIX,
+        extra_keys: frozenset[str] = frozenset(),
+    ):
+        base = cookie_prefix.strip() or SHIPPED_COOKIE_PREFIX
+        # The auth cookies (users.cookies), then the admin's session and CSRF (settings).
+        parts = ("access", "refresh", "csrf", "sessionid", "csrftoken")
+        self.cookie_names = tuple(f"{base}_{part}" for part in parts)
         cookie_keys = {normalise_key(n) for n in self.cookie_names}
         cookie_keys |= {normalise_key(f"__Host-{n}") for n in self.cookie_names}
         self.keys = frozenset(SENSITIVE_KEYS | cookie_keys | {normalise_key(k) for k in extra_keys})
@@ -276,7 +285,7 @@ def _high_entropy_replacement(match: re.Match) -> str:
 def default_rules() -> ScrubRules:
     """The product's rules: the core set plus its auth cookie names, read from settings when they
     are configured. Built once; scrub() must work before settings exist, so this never raises."""
-    prefix = "dbx"
+    prefix = SHIPPED_COOKIE_PREFIX
     try:
         from django.conf import settings
 

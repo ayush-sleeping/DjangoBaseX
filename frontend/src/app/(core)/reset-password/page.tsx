@@ -6,7 +6,7 @@ import { tokenFromSearchParams } from "@/core/lib/password-reset";
 import { ResetPasswordForm } from "./reset-password-form";
 
 export const metadata: Metadata = {
-  title: "Reset password — DjangoBaseX",
+  title: "Reset password",
   // The token is in this page's URL: never send it to another site in a Referer header.
   referrer: "no-referrer",
   robots: { index: false, follow: false },

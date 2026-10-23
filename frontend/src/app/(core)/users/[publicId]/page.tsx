@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserDetail } from "./user-detail";
 
 export const metadata: Metadata = {
-  title: "User — DjangoBaseX",
+  title: "User",
   robots: { index: false, follow: false },
 };
 

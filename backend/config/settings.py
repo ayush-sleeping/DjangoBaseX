@@ -1,5 +1,5 @@
 """
-Django settings for DjangoBaseX.
+Django settings.
 
 All environment-specific values come from `.env` (see `.env.example`).
 Never read os.environ directly elsewhere — add a setting here and import it.
@@ -12,6 +12,13 @@ from corsheaders.defaults import default_headers
 
 from core.config_audit import enforce
 from core.env import is_production_like
+from core.identity import (
+    SHIPPED_DOMAIN,
+    SHIPPED_PRODUCT_NAME,
+    cookie_prefix,
+    product_slug,
+    tagline,
+)
 from core.observability.logging import build_logging
 from core.plugins import installed_apps
 
@@ -20,6 +27,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Environment
 # -------------------------------------------------------------------------------------------- ::
 env = environ.Env(
+    PRODUCT_NAME=(str, SHIPPED_PRODUCT_NAME),
+    PRODUCT_SLUG=(str, ""),
+    PRIMARY_DOMAIN=(str, SHIPPED_DOMAIN),
+    PRODUCT_TAGLINE=(str, ""),
     APP_ENV=(str, ""),  # required, no real default: unset is production-like (CONFIGURATION § 4)
     LOG_FORMAT=(str, ""),
     LOG_LEVEL=(str, "INFO"),
@@ -34,7 +45,7 @@ env = environ.Env(
     CSRF_TRUSTED_ORIGINS=(list, ["http://localhost:3000"]),
     TRUSTED_PROXY_COUNT=(int, 0),
     EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
-    DEFAULT_FROM_EMAIL=(str, "no-reply@example.com"),
+    DEFAULT_FROM_EMAIL=(str, ""),
     FRONTEND_BASE_URL=(str, "http://localhost:3000"),
     ACCESS_TOKEN_LIFETIME=(int, 600),
     REFRESH_TOKEN_LIFETIME=(int, 1_209_600),
@@ -53,12 +64,10 @@ env = environ.Env(
     SESSION_RETENTION_DAYS=(int, 30),
     PASSWORD_RESET_TOKEN_RETENTION_DAYS=(int, 7),
     MFA_ENCRYPTION_KEY=(str, ""),
-    MFA_ISSUER=(str, "DjangoBaseX"),
+    MFA_ISSUER=(str, ""),
     MFA_TOKEN_LIFETIME=(int, 300),
-    REAUTH_ACTIONS=(list, []),
-    REAUTH_WINDOW_MINUTES=(int, 15),
     AUTH_COOKIE_DOMAIN=(str, ""),
-    AUTH_COOKIE_PREFIX=(str, "dbx"),
+    AUTH_COOKIE_PREFIX=(str, ""),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -66,6 +75,13 @@ environ.Env.read_env(BASE_DIR / ".env")
 # a typo or "staging" included, gets production's refusals (core.env.is_production_like).
 APP_ENV = env("APP_ENV")
 PRODUCTION_LIKE = is_production_like(APP_ENV)
+
+# Project identity (CONFIGURATION § 7): three inputs; everything that spells the product's name
+# derives from them below. The shipped defaults (core.identity) announce themselves on screen.
+PRODUCT_NAME = env("PRODUCT_NAME").strip() or SHIPPED_PRODUCT_NAME
+PRODUCT_SLUG = product_slug(env("PRODUCT_SLUG").strip() or PRODUCT_NAME)  # sanitised either way
+PRIMARY_DOMAIN = env("PRIMARY_DOMAIN").strip() or SHIPPED_DOMAIN  # unset: mail bounces loudly
+PRODUCT_TAGLINE = tagline(PRODUCT_NAME, env("PRODUCT_TAGLINE").strip())
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
@@ -121,6 +137,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.NoStoreForAuthenticatedMiddleware",
+    # One settings snapshot per request (CONFIGURATION § 9.7).
+    "core.middleware.SettingsSnapshotMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -157,6 +175,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # process, so with more than one worker each of them silently becomes per worker: a shared cache
 # (redis://) is required anywhere more than one process serves requests.
 CACHES = {"default": env.cache("CACHE_URL", default="locmemcache://")}
+# Two products sharing one Redis must not read each other's throttles and permission versions.
+CACHES["default"].setdefault("KEY_PREFIX", PRODUCT_SLUG)
 
 # Passwords
 # -------------------------------------------------------------------------------------------- ::
@@ -212,7 +232,7 @@ EMAIL_PORT = env("EMAIL_PORT")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = env("EMAIL_USE_TLS")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL") or f"{PRODUCT_NAME} <no-reply@{PRIMARY_DOMAIN}>"
 # Where emailed links point. Never derived from the request's Host header.
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL")
 
@@ -233,7 +253,12 @@ REFRESH_ROTATION_GRACE = env("REFRESH_ROTATION_GRACE")
 # The revocation-latency trade (§ 6.4): how long "is this session live" is cached. 0 = always ask.
 SESSION_LIVENESS_CACHE_TTL = env("SESSION_LIVENESS_CACHE_TTL")
 AUTH_COOKIE_DOMAIN = env("AUTH_COOKIE_DOMAIN")
-AUTH_COOKIE_PREFIX = env("AUTH_COOKIE_PREFIX")
+# Per product, and per checkout in development (setup.sh writes it from the directory name), so
+# two stacks on localhost never share cookies: cookies ignore the port.
+AUTH_COOKIE_PREFIX = env("AUTH_COOKIE_PREFIX") or cookie_prefix(PRODUCT_SLUG)
+# The Django admin's own session and CSRF cookies, when /admin/ is mounted.
+SESSION_COOKIE_NAME = f"{AUTH_COOKIE_PREFIX}_sessionid"
+CSRF_COOKIE_NAME = f"{AUTH_COOKIE_PREFIX}_csrftoken"
 # Never hard-code False: it would ship to production.
 # Secure whenever production-like — not "when not DEBUG" (CONFIGURATION § 4, Conflicts #4).
 AUTH_COOKIE_SECURE = env.bool("AUTH_COOKIE_SECURE", default=PRODUCTION_LIKE)
@@ -255,13 +280,12 @@ INVITATION_LIFETIME = env("INVITATION_LIFETIME")  # seconds; 7 days (§ 3.5)
 # MFA (A16, § 6.8). The key is a Fernet key encrypting TOTP secrets at rest. Empty is allowed so the
 # app boots without MFA configured; enabling MFA then fails loudly (users.mfa).
 MFA_ENCRYPTION_KEY = env("MFA_ENCRYPTION_KEY")
-MFA_ISSUER = env("MFA_ISSUER")  # the name authenticator apps show; becomes PRODUCT_NAME in 5.2
+# The name authenticator apps show. Written into every enrolled device: set PRODUCT_NAME before
+# the first user enrols, because correcting it later means re-enrolling them.
+MFA_ISSUER = env("MFA_ISSUER") or PRODUCT_NAME
 # Seconds the login's "now enter your code" step lasts.
 MFA_TOKEN_LIFETIME = env("MFA_TOKEN_LIFETIME")
-# Re-authentication (A18, § 6.9). OFF until an action is listed: REAUTH_ACTIONS=mfa_disable.
-# Moves to the core_setting registry with BUILD_ORDER 5.3.
-REAUTH_ACTIONS = env("REAUTH_ACTIONS")
-REAUTH_WINDOW_MINUTES = env("REAUTH_WINDOW_MINUTES")
+# Re-authentication (A18, § 6.9) is a registry setting: security.reauth.* (BUILD_ORDER 5.3).
 
 # Django REST Framework
 # -------------------------------------------------------------------------------------------- ::
@@ -307,8 +331,8 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "DjangoBaseX API",
-    "DESCRIPTION": "REST API for DjangoBaseX — a Django 5 + Next.js starter boilerplate.",
+    "TITLE": f"{PRODUCT_NAME} API",
+    "DESCRIPTION": f"REST API for {PRODUCT_NAME}.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }

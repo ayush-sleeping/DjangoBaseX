@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
 export const metadata: Metadata = {
-  title: "Forgot password — DjangoBaseX",
+  title: "Forgot password",
 };
 
 export default function ForgotPasswordPage() {

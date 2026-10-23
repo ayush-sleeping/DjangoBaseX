@@ -4,7 +4,7 @@ import Link from "next/link";
 import { RolesPanel } from "./roles-panel";
 
 export const metadata: Metadata = {
-  title: "Roles — DjangoBaseX",
+  title: "Roles",
   robots: { index: false, follow: false },
 };
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { SecurityPanel } from "./security-panel";
 
 export const metadata: Metadata = {
-  title: "Account security — DjangoBaseX",
+  title: "Account security",
   robots: { index: false, follow: false },
 };
 

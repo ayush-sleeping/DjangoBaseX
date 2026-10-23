@@ -1,8 +1,9 @@
 """
-URL configuration for DjangoBaseX.
+URL configuration: the composition root for every app's routes.
 
   /admin/            Django admin — only when ADMIN_ENABLED (AUTH_BLUEPRINT Ch. 20)
   /api/health/       Public health probe
+  /api/public/config/  Public display identity: product name and tagline (CONFIGURATION § 7)
   /api/schema/       OpenAPI schema (JSON)
   /api/docs/         Swagger UI
   /api/rbac/         Roles and the permission catalog (AUTH_BLUEPRINT § 10.3)

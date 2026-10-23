@@ -6,7 +6,7 @@ import { tokenFromSearchParams } from "@/core/lib/password-reset";
 import { AcceptInvitationForm } from "./accept-invitation-form";
 
 export const metadata: Metadata = {
-  title: "Accept invitation — DjangoBaseX",
+  title: "Accept invitation",
   // The token is in this page's URL: never send it to another site in a Referer header
   // (NEXTJS_STANDARDS § 3, the token-page rule).
   referrer: "no-referrer",

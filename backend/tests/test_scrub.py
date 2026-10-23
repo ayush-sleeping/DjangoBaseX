@@ -5,6 +5,7 @@ import json
 import secrets
 
 import pytest
+from django.conf import settings
 
 from core.observability.scrub import (
     CIRCULAR,
@@ -21,6 +22,7 @@ from core.observability.scrub import (
 )
 
 F = REDACTED
+P = settings.AUTH_COOKIE_PREFIX  # the configured product's cookies (CONFIGURATION § 7)
 JWT = (
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
     "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4ifQ."
@@ -77,10 +79,12 @@ RANDOM = "Zq8mT2vK9pL3xW7nR4bY6cH1dF5gJ0sA"  # 32 chars, mixed: shaped like a ge
         "db_password",
         "signing_key",
         # the auth cookies, plain and __Host- prefixed
-        "dbx_access",
-        "__Host-dbx_access",
-        "dbx_refresh",
-        "__Host-dbx_csrf",
+        f"{P}_access",
+        f"__Host-{P}_access",
+        f"{P}_refresh",
+        f"__Host-{P}_csrf",
+        f"{P}_sessionid",
+        f"{P}_csrftoken",
     ],
 )
 def test_sensitive_keys_are_redacted(key):
@@ -172,8 +176,12 @@ TEXT_CASES = [
     ),
     ("https://x.test/?Access_Token=abc&page=2", f"https://x.test/?Access_Token={F}&page=2"),
     (
-        "Cookie: dbx_access=abc.def; __Host-dbx_csrf=zzz; theme=dark",
-        f"Cookie: dbx_access={F}; __Host-dbx_csrf={F}; theme=dark",
+        f"Cookie: {P}_access=abc.def; __Host-{P}_csrf=zzz; theme=dark",
+        f"Cookie: {P}_access={F}; __Host-{P}_csrf={F}; theme=dark",
+    ),
+    (
+        f"Cookie: {P}_sessionid=abc123; {P}_csrftoken=def456",
+        f"Cookie: {P}_sessionid={F}; {P}_csrftoken={F}",
     ),
     ("sessionid=abc123; csrftoken=def456", f"sessionid={F}; csrftoken={F}"),
     ("login failed: password=hunter2 for x", f"login failed: password={F} for x"),
@@ -361,7 +369,7 @@ def test_rules_export_is_json_and_complete():
     data = rules_as_json()
     assert json.loads(json.dumps(data)) == data
     assert data["replacement"] == F
-    assert "password" in data["keys"] and "dbx_access" in data["keys"]
+    assert "password" in data["keys"] and f"{P}_access" in data["keys"]
     assert {p["name"] for p in data["text_patterns"]} >= {"jwt", "bearer", "query_param"}
     assert data["high_entropy"]["min_length"] == 32
 

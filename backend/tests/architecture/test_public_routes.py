@@ -7,6 +7,7 @@ from core.routes import public_routes
 # Pinned. Opening a route to the internet means editing this set in the same reviewed change.
 EXPECTED_PUBLIC = {
     "core:health",
+    "core:public-config",
     "schema",
     "swagger-ui",
     "users:login",

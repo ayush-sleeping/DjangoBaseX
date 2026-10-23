@@ -6,7 +6,7 @@ import { pageFromSearchParams } from "@/core/lib/users";
 import { UsersPanel } from "./users-panel";
 
 export const metadata: Metadata = {
-  title: "Users — DjangoBaseX",
+  title: "Users",
   robots: { index: false, follow: false },
 };
 

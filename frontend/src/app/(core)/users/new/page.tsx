@@ -4,7 +4,7 @@ import Link from "next/link";
 import { NewUserForm } from "./new-user-form";
 
 export const metadata: Metadata = {
-  title: "New user — DjangoBaseX",
+  title: "New user",
   robots: { index: false, follow: false },
 };
 

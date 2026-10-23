@@ -11,6 +11,10 @@ from collections.abc import Mapping
 
 CORE_PUBLIC_ROUTES: dict[str, str] = {
     "core:health": "Liveness probe for load balancers and the frontend. Reports status only.",
+    "core:public-config": (
+        "The product's display name and tagline, which the sign-in page shows before anyone signs "
+        "in. Public by nature; no user data, no boot identity (CONFIGURATION.md § 7)."
+    ),
     "schema": (
         "OpenAPI document: describes the API surface, holds no data. "
         "To be served only when DEBUG or SCHEMA_PUBLIC (AUTH_BLUEPRINT.md § 9.2)."

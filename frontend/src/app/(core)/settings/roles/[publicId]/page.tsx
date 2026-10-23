@@ -4,7 +4,7 @@ import Link from "next/link";
 import { RoleEditor } from "./role-editor";
 
 export const metadata: Metadata = {
-  title: "Role — DjangoBaseX",
+  title: "Role",
   robots: { index: false, follow: false },
 };
 

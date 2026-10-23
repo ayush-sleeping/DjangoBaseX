@@ -42,6 +42,8 @@ def valid_production() -> dict:
         "SECURE_PROXY_SSL_HEADER": None,
         "TRUSTED_PROXY_COUNT": 0,
         "ADMIN_ENABLED": False,
+        "PRODUCT_NAME": "Acme Portal",
+        "PRIMARY_DOMAIN": "acme.test",
     }
 
 
@@ -167,6 +169,9 @@ CASES = [
         "cfg.W002",
         "TRUSTED_PROXY_COUNT",
     ),
+    ("identity-name", {"PRODUCT_NAME": "Unnamed product"}, "cfg.W003", "PRODUCT_NAME"),
+    ("identity-name-unset", {"PRODUCT_NAME": ""}, "cfg.W003", "PRODUCT_NAME"),
+    ("identity-domain", {"PRIMARY_DOMAIN": "localhost"}, "cfg.W003", "PRIMARY_DOMAIN"),
     ("admin-on", {"ADMIN_ENABLED": True}, "cfg.W004", "ADMIN_ENABLED"),
     (
         "rotation",

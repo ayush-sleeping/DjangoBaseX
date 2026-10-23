@@ -1,11 +1,11 @@
 import Link from "next/link";
 
 import { api, API_URL } from "@/core/lib/api";
+import { getIdentity } from "@/core/lib/identity";
 import { NavMenu } from "@/core/shell/nav-menu";
 
 type Health = {
   status: "ok" | "degraded";
-  app: string;
   checks: Record<string, boolean>;
 };
 
@@ -18,15 +18,15 @@ async function getHealth(): Promise<Health | null> {
 }
 
 export default async function Home() {
-  const health = await getHealth();
+  const [health, identity] = await Promise.all([getHealth(), getIdentity()]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8 font-sans">
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight">DjangoBaseX</h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Django 5 + Django REST Framework &nbsp;↔&nbsp; Next.js 16
-        </p>
+        <h1 className="text-4xl font-bold tracking-tight">{identity.product_name}</h1>
+        {identity.tagline && (
+          <p className="mt-2 text-zinc-600 dark:text-zinc-400">{identity.tagline}</p>
+        )}
       </div>
 
       <section className="w-full max-w-md rounded-xl border border-zinc-200 p-6 dark:border-zinc-800">

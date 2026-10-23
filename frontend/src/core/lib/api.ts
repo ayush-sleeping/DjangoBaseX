@@ -6,6 +6,8 @@
  * (`credentials: "include"`), echoes the readable CSRF cookie on unsafe methods, and on a 401
  * asks the backend once to rotate the session, then retries once.
  */
+import { SHIPPED_COOKIE_PREFIX } from "./identity-defaults";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // Server components reach Django by its container-network address when one is set (Docker:
@@ -13,7 +15,8 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
 const BASE_URL =
   typeof window === "undefined" ? (process.env.INTERNAL_API_URL ?? API_URL) : API_URL;
 
-const COOKIE_PREFIX = process.env.NEXT_PUBLIC_AUTH_COOKIE_PREFIX ?? "dbx";
+// Must equal the backend's AUTH_COOKIE_PREFIX; setup.sh writes both from the same slug.
+const COOKIE_PREFIX = process.env.NEXT_PUBLIC_AUTH_COOKIE_PREFIX || SHIPPED_COOKIE_PREFIX;
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // A 401 from these means "not signed in", not "access token expired": never refresh for them.
 // mfa/verify's 401 means the login's mfa_token is spent or expired, and no refresh can fix that.

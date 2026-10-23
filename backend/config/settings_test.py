@@ -10,6 +10,11 @@ import os
 
 _PINNED_ENV = {
     "APP_ENV": "test",
+    # Identity: a name, nothing else, so every derived value is exercised (CONFIGURATION § 7).
+    "PRODUCT_NAME": "Test product",
+    "PRODUCT_SLUG": "",
+    "PRIMARY_DOMAIN": "",
+    "PRODUCT_TAGLINE": "",
     "LOG_FORMAT": "console",
     "SECRET_KEY": "test-only-insecure-key-never-used-outside-pytest",
     "DEBUG": "False",
@@ -22,7 +27,7 @@ _PINNED_ENV = {
     "TRUSTED_PROXY_COUNT": "0",
     "ADMIN_ENABLED": "True",
     "EMAIL_BACKEND": "django.core.mail.backends.locmem.EmailBackend",
-    "DEFAULT_FROM_EMAIL": "no-reply@example.com",
+    "DEFAULT_FROM_EMAIL": "",
     "FRONTEND_BASE_URL": "http://localhost:3000",
     "JWT_SIGNING_KEY": "test-only-jwt-key-never-used-outside-pytest",
     "ACCESS_TOKEN_LIFETIME": "600",
@@ -31,7 +36,7 @@ _PINNED_ENV = {
     "REFRESH_ROTATION_GRACE": "15",
     "SESSION_LIVENESS_CACHE_TTL": "60",
     "AUTH_COOKIE_DOMAIN": "",
-    "AUTH_COOKIE_PREFIX": "dbx",
+    "AUTH_COOKIE_PREFIX": "",
     # Production-like: Secure cookies with the __Host- prefix, the path most deployments take.
     "AUTH_COOKIE_SECURE": "True",
     "LOCKOUT_THRESHOLD": "10",
@@ -47,10 +52,8 @@ _PINNED_ENV = {
     "PASSWORD_RESET_TOKEN_RETENTION_DAYS": "7",
     # A valid, test-only Fernet key (32 zero bytes, urlsafe-base64). Never used outside pytest.
     "MFA_ENCRYPTION_KEY": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-    "MFA_ISSUER": "DjangoBaseX",
+    "MFA_ISSUER": "",
     "MFA_TOKEN_LIFETIME": "300",
-    "REAUTH_ACTIONS": "",
-    "REAUTH_WINDOW_MINUTES": "15",
 }
 os.environ.update(_PINNED_ENV)
 

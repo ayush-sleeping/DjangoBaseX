@@ -4,7 +4,7 @@ import Link from "next/link";
 import { InvitationsPanel } from "./invitations-panel";
 
 export const metadata: Metadata = {
-  title: "Invitations — DjangoBaseX",
+  title: "Invitations",
   robots: { index: false, follow: false },
 };
 
