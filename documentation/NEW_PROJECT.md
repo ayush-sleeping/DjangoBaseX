@@ -3,9 +3,8 @@
 **From an empty repo to a renamed, running product you can build on.** This is the document that
 makes the boilerplate worth having — if copying it is fiddly or risky, nobody copies it.
 
-> **Status:** the *procedure* is settled; some steps are manual until Phase 0 of
-> [`planning/CORE_ARCHITECTURE_PLAN.md`](planning/CORE_ARCHITECTURE_PLAN.md) lands `scripts/setup.sh`.
-> Steps that a script will do later are marked 🔜.
+> **Status:** built. `scripts/setup.sh` (BUILD_ORDER 4.1) does steps 1 and 6, and project identity
+> (BUILD_ORDER 5.2) turns most of step 2 into setting one env key.
 
 ---
 
@@ -55,13 +54,16 @@ git init && git branch -m main
 
 Nothing below is optional. Work top to bottom.
 
-### 1. Generate a fresh `SECRET_KEY` 🔜
+### 1. Generate a fresh `SECRET_KEY`
 
 ```bash
-cd backend && cp .env.example .env
-uv run python -c "import secrets; print(secrets.token_urlsafe(50))"
-# paste into SECRET_KEY in backend/.env
+./scripts/setup.sh                 # Docker: Postgres + Redis + both apps
+./scripts/setup.sh --no-docker     # or on the host, with SQLite
 ```
+
+It writes `backend/.env` from `.env.example` and generates `SECRET_KEY`, `JWT_SIGNING_KEY`,
+`MFA_ENCRYPTION_KEY` and the database and cache passwords. A re-run keeps every value it already
+wrote. To make one key by hand: `cd backend && uv run python manage.py generate_secret`.
 
 > **This one is security, not tidiness.** Django signs session cookies, password-reset tokens and
 > anything using `signing` with `SECRET_KEY`. **Two products sharing a key means a session cookie
@@ -70,12 +72,21 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(50))"
 
 ### 2. Rename the application
 
+**Set `PRODUCT_NAME` (and `PRIMARY_DOMAIN`) in `backend/.env`.** Everything that spells the
+product's name derives from them ([`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md)
+§ 7): page titles, the sign-in page, the API title, the authenticator issuer, the from-address,
+and the cookie and cache prefixes. Until you set it, the sign-in page says "Unnamed product" and
+production boots warn `cfg.W003`.
+
+> Set it **before anyone enrols in two-factor.** The issuer is written into every authenticator
+> app that enrols, and correcting it means re-enrolling those users.
+
+What is still renamed by hand:
+
 | What | Where |
 |------|-------|
-| API title and description | `SPECTACULAR_SETTINGS` in `backend/config/settings.py` |
 | Backend package name | `[project] name` in `backend/pyproject.toml` |
 | Frontend package name | `name` in `frontend/package.json` |
-| Page title / metadata | `frontend/src/app/layout.tsx` |
 | README, LICENSE holder | `README.md`, `LICENSE` |
 | Agent banner | `AGENTS.md` § 0 — **do this one first**, every session reads it |
 
@@ -88,9 +99,10 @@ product inherits and should know about, and deleting them loses the reasoning yo
 ### 4. Point at a real database
 
 SQLite is a development convenience only
-([ADR-0005](adr/0005-sqlite-for-dev-postgres-by-url.md)). Set `DATABASE_URL` in `backend/.env`
-before your first real feature — switching later means re-testing every query against a database
-whose constraint and JSON behaviour differs.
+([ADR-0005](adr/0005-sqlite-for-dev-postgres-by-url.md)). The Docker path of `setup.sh` already
+develops against PostgreSQL 16. On `--no-docker`, set `DATABASE_URL` in `backend/.env` before your
+first real feature: switching later means re-testing every query against a database whose
+constraint and JSON behaviour differs.
 
 ### 5. Check the two foundational questions before writing a feature
 
@@ -105,10 +117,9 @@ settled in the core:
 
 ### 6. Run it
 
-```bash
-cd backend  && uv sync && uv run python manage.py migrate && uv run python manage.py createsuperuser
-cd frontend && npm install && cp .env.example .env.local
-```
+`setup.sh` has already migrated, created the first account and printed the URLs and the
+development sign-in. Day to day: `docker compose up -d --wait` and `docker compose down`. The
+[README](../README.md) § Getting Started covers both paths and the by-hand steps.
 
 Verify per [`ONBOARDING.md`](ONBOARDING.md) § 2, then run the full gate from `AGENTS.md` § 2 once
 before you write anything — so you know a later failure is yours.
@@ -119,8 +130,8 @@ before you write anything — so you know a later failure is yours.
 
 | Code | Goes in |
 |------|---------|
-| Product-specific | `backend/project/`, `frontend/src/project/` 🔜 |
-| A self-contained feature another team owns | its own plugin repo 🔜 — see [`planning/PLUGIN_DEVELOPMENT.md`](planning/PLUGIN_DEVELOPMENT.md) |
+| Product-specific | `backend/project/`, `frontend/src/project/` |
+| A self-contained feature another team owns | a plugin under `backend/plugins/` (`python3 scripts/plugins.py new <name>`; the worked example is `examples/plugins/notes`) — see [`planning/PLUGIN_DEVELOPMENT.md`](planning/PLUGIN_DEVELOPMENT.md) |
 | Something **every** product would want | upstream in DjangoBaseX, as a PR — not in your copy |
 
 **That last row is the discipline that keeps updates working.** A fix made only in your copy is a

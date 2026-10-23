@@ -9,6 +9,8 @@ refusals. `is_production_like()` is the ONLY environment test in the codebase: n
 Imports nothing that needs the app registry: settings import calls into this module.
 """
 
+from __future__ import annotations
+
 from typing import TypedDict
 
 # A new NON-production label is a reviewed code change, never an env value: an env value could

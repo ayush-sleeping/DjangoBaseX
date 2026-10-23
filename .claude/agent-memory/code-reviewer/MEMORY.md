@@ -24,3 +24,7 @@ other codebase, product or client (AGENTS.md § 1 rules 5, 5a, 6).
 - Docstrings and plan tables that claim enforcement ("system checks seal every catalog", "the test
   fails when core imports a plugin") the code does not have. Check each claim against the code.
 - `.catch(() => setX([]))` in frontend fetches turns 500s into an empty UI (BC-42).
+- Hand-rolled env-file readers (`scripts/lib/envfile.py`) drift from the real readers: check quotes,
+  `export KEY=`, and that an absent `APP_ENV` is production-like (fail closed, as `core.env` is).
+- Compose dev stack: anonymous volumes (`node_modules`) survive an image rebuild unless `up -V`, and
+  `up --wait` failing under `set -e` skips any later timeout/log-dump code in setup scripts.

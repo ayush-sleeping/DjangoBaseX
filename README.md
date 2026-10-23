@@ -66,19 +66,28 @@ A starter kit for developers who want to skip repetitive setup work and start bu
 
 ## Getting Started
 
-**Quick start with Docker** — both apps in containers, reloading on save:
+**Quick start — one command** (`scripts/setup.sh`, BUILD_ORDER 4.1):
 ```sh
-cp backend/.env.example backend/.env    # then set SECRET_KEY (step 3 below shows how)
-docker compose up --build               # logs from both apps stream here; Ctrl-C stops
+git clone https://github.com/ayush-sleeping/DjangoBaseX.git my-product && cd my-product
+./scripts/setup.sh
 ```
-Frontend on [localhost:3000](http://localhost:3000), API on [localhost:8000](http://localhost:8000).
-Redis runs alongside as the shared cache (not exposed to the host). Migrations run on start. Create an admin with
-`docker compose exec backend uv run python manage.py createsuperuser`. After changing
-`package.json`, restart with `docker compose up --build -V` so the container's `node_modules` is
-rebuilt. This is a **development** stack only — SQLite, `runserver`, `next dev` — and it shares
-`backend/db.sqlite3` with a local `runserver`.
+It needs Docker with Compose v2, and `python3` 3.9 or newer on the host (the one stock macOS ships
+is enough): setup writes the env files with it before anything else is installed.
 
-**Without Docker — prerequisites**
+It checks Docker, names the stack after the directory (`my-product-dev`), writes `.env`,
+`backend/.env` and `frontend/.env.local`, generates every secret, picks free ports, starts PostgreSQL
+16 and Redis, migrates, creates the first account (`admin@example.com`), starts both apps, and waits
+until they answer. Then it prints the URLs and the development sign-in. Re-running it is safe: it
+keeps every secret and port it already chose. No Docker? Use `./scripts/setup.sh --no-docker`, which
+does the same on the host with SQLite and prints how to start the two dev servers.
+
+Day to day: `docker compose up -d --wait` and `docker compose down`. After pulling new migrations,
+`docker compose run --rm backend uv run --frozen python manage.py migrate` (the stack never migrates
+on start). After changing `package.json`, use `docker compose up --build -V`. This is a
+**development** stack only: `runserver`, `next dev`, ports on `127.0.0.1`. A plain `runserver` on the
+host still uses SQLite (ADR-0005).
+
+**By hand, without Docker — prerequisites**
 - [uv](https://docs.astral.sh/uv/) (manages Python 3.12 + the virtualenv for you) — `brew install uv`
 - Node.js 20+ and npm
 

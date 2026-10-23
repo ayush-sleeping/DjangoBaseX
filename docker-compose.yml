@@ -1,51 +1,127 @@
-# Development stack — Django API + Next.js frontend, both reloading on save.
+# Development stack: PostgreSQL, Redis, the Django API and the Next.js frontend, both apps
+# reloading on save (BUILD_ORDER 4.4; OPERATIONS.md § 1, § 12, § 15).
 #
-#   docker compose up --build        start (logs stream to the terminal)
-#   docker compose up --build -V     after changing package.json / package-lock.json
-#   docker compose down              stop
+#   ./scripts/setup.sh               first run, and any time after: writes .env, migrates, starts,
+#                                    proves the app answers (OPERATIONS.md § 2)
+#   docker compose up -d --wait      start, once .env exists (after a lockfile change:
+#                                    `up -d --wait --build -V`, so node_modules is not the old one)
+#   docker compose run --rm backend uv run --frozen python manage.py migrate
+#                                    after pulling new migrations (never run on container start)
+#   docker compose down              stop (data stays in the named volumes)
 #
-# Development only — not a production topology (DEPLOYMENT.md § 0, OPERATIONS.md § 5).
-# Uses SQLite in backend/db.sqlite3 (ADR-0005), shared with a host `runserver`, and Redis as the
-# shared cache (AUTH_BLUEPRINT § 17.4). Postgres joins with BUILD_ORDER 4.4.
-# Ports bind to 127.0.0.1 only (OPERATIONS.md § 15).
+# Development only, not a production topology (DEPLOYMENT.md § 0, OPERATIONS.md § 5).
+#
+# Every value interpolated below comes from the repository-root .env, which scripts/setup.sh writes
+# and never commits. Secrets use ${VAR:?}: compose refuses to start without them, rather than
+# booting on a default (§ 15). Ports have defaults and bind to 127.0.0.1 only. COMPOSE_PROJECT_NAME
+# (<slug>-dev) namespaces containers, volumes and networks per checkout (§ 1).
+#
+# A plain `runserver` on the host still uses SQLite (ADR-0005). This stack uses PostgreSQL 16, the
+# version CI runs and products deploy, so Postgres-only behaviour shows up locally (TECH_DEBT DB-12).
 
 x-hardening: &hardening
   security_opt: ["no-new-privileges:true"]
   cap_drop: [ALL]
 
+# Development keeps json-file (logs go with the container) but caps it, so a chatty runserver
+# cannot fill the disk. Production's log driver is OPERATIONS.md § 15's concern.
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
-  # The shared cache: throttles, lockout, session liveness. Not published to the host. No auth or
-  # persistence yet — development only; OPERATIONS.md § 15's authenticated Redis lands with 4.4.
-  redis:
-    <<: *hardening
-    image: redis:7.4-alpine
-    user: redis
-    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+  db:
+    <<: [*hardening, *logging]
+    image: postgres:16.15-alpine  # the CI major (postgres:16), pinned to the minor
+    # The image's own non-root user: no capabilities are needed back, because the named volume is
+    # created from the image's data directory, which postgres already owns.
+    user: postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_DB: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./scripts/setup.sh to generate .env}
+    # The production server settings, in development too (OPERATIONS.md § 12): a database that
+    # behaves differently here proves things in the wrong place.
+    command:
+      - postgres
+      - -c
+      - idle_in_transaction_session_timeout=60s
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - log_min_duration_statement=500ms
+      - -c
+      - log_lock_waits=on
+      - -c
+      - deadlock_timeout=1s
+      - -c
+      - password_encryption=scram-sha-256
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"  # loopback only: psql and a local TEST_DATABASE_URL
+    # A named volume, never a bind mount (§ 2). Postgres reads POSTGRES_PASSWORD only when this
+    # volume is first created: a new password against an old volume is refused (setup.sh checks).
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      # Over TCP, never the unix socket: on first start the image runs a temporary server that
+      # listens on the socket only, and a socket probe passes against it before the real one is up.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U app -d app"]
+      interval: 5s
       timeout: 3s
-      retries: 3
+      retries: 20
+    stop_grace_period: 30s
+
+  # The shared cache: throttles, lockout, session liveness (AUTH_BLUEPRINT § 17.4). Authenticated
+  # even here (§ 15), with no persistence. Not published to the host.
+  redis:
+    <<: [*hardening, *logging]
+    image: redis:7.4.11-alpine
+    user: redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?run ./scripts/setup.sh to generate .env}
+    command:
+      - sh
+      - -c
+      - >-
+        exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no
+        --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      # REDISCLI_AUTH, not -a: the password stays out of the probe's argument list.
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
-    <<: *hardening
+    <<: [*hardening, *logging]
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    # Every value except these comes from backend/.env (copy backend/.env.example first).
-    # `backend` is the hostname the frontend container calls it by.
+    # Every value except these comes from backend/.env, which scripts/setup.sh writes. These win
+    # over it (django-environ never overrides a variable that is already set).
     environment:
-      ALLOWED_HOSTS: localhost,127.0.0.1,backend
-      CACHE_URL: redis://redis:6379/0
       APP_ENV: development  # CONFIGURATION.md § 4: anything else would refuse dev settings
-    command: >
-      sh -c "uv run --frozen python manage.py migrate --noinput &&
-             exec uv run --frozen python manage.py runserver 0.0.0.0:8000"
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:?run ./scripts/setup.sh to generate .env}@db:5432/app
+      CACHE_URL: redis://:${REDIS_PASSWORD:?run ./scripts/setup.sh to generate .env}@redis:6379/0
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-3000}
+      CSRF_TRUSTED_ORIGINS: http://localhost:${WEB_PORT:-3000}
+      FRONTEND_BASE_URL: http://localhost:${WEB_PORT:-3000}
+      # Per checkout: cookies ignore the port, so two stacks on localhost sharing cookie names
+      # would sign each other out (OPERATIONS.md § 1).
+      AUTH_COOKIE_PREFIX: ${AUTH_COOKIE_PREFIX:?run ./scripts/setup.sh to generate .env}
+    # No migrate here: scripts/setup.sh migrates with `run --rm` (OPERATIONS.md § 2 step 8).
+    command: uv run --frozen python manage.py runserver 0.0.0.0:8000
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     volumes:
       - ./backend:/app
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -57,21 +133,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      # Failures inside it are forgiven, a success counts at once: a slow laptop's cold start
+      # must not fail `up --wait`, and a fast one is not held back.
+      start_period: 60s
 
   frontend:
-    <<: *hardening
+    <<: [*hardening, *logging]
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
     environment:
       # Browser → the published port. Server components → the container network
       # (OPERATIONS.md § 17: INTERNAL_API_URL vs NEXT_PUBLIC_API_URL).
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}
       INTERNAL_API_URL: http://backend:8000
+      # Must equal the backend's, or the client cannot find the CSRF cookie and every write fails.
+      NEXT_PUBLIC_AUTH_COOKIE_PREFIX: ${AUTH_COOKIE_PREFIX:?run ./scripts/setup.sh to generate .env}
     command: npm run dev -- --hostname 0.0.0.0
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
     # Mirrors the checkout under /repo (see frontend/Dockerfile.dev): plugin frontends are
     # symlinked from backend/plugins, which Turbopack can then resolve inside its root.
     volumes:
@@ -88,3 +168,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+
+volumes:
+  pgdata:

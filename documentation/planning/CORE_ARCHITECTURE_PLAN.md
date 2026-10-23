@@ -210,7 +210,7 @@ Convention is not enforcement. Every rule above has something that fails when it
 | `frontend/eslint.config.mjs` (as built, instead of a `boundaries.test.ts`) | `src/core/` imports `src/project/` or `src/plugins/`; a plugin imports `@/project`, another plugin, `@/app`, or climbs out of its root with `../` |
 | CI, with `examples/plugins/notes` installed | any of the above, or the suite, lint, typecheck or build, breaks with a real plugin present |
 | `scripts/core_doctor.py` + `core.manifest.json` | a product copy has edited core — a SHA per core file |
-| `.github/workflows/core-guard.yml` | a PR edits `core/` without the `core-change` label |
+| `.github/workflows/core-guard.yml` | a PR edits `core/` without the `core-change` label (in a product); a PR edits core without regenerating the manifest (in this repo) |
 | `.github/workflows/ci.yml` | lint, format, Django checks, migrations, tests, typecheck, build |
 
 The manifest is regenerated **only in this repo**. Regenerating it in a product copy records that

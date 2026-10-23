@@ -1866,6 +1866,9 @@ products).
 
 ## 52. core_doctor and core-guard, to the detail — Tier 1 · Core
 
+*Built 2026-10-22* (BUILD_ORDER 4.2, 4.3). How to use it is in [`../UPGRADING.md`](../UPGRADING.md)
+§ "If you edited core". The rules below are the specification it was built and tested against.
+
 **What.** The implementation details of `BUILD_ORDER` 4.2 (`core.manifest.json` + `scripts/core_doctor.py`) and 4.3
 (`core-guard.yml`) that decide whether they actually catch drift.
 

@@ -1,0 +1,136 @@
+# core-guard (BUILD_ORDER 4.3; ENGINEERING_PRACTICES § 52; UPGRADING.md "If you edited core").
+#
+# One workflow, two behaviours, chosen by explicit repository name: never by a template flag, which
+# a product's owner can tick and silently switch the guard off. Any other repository is a product.
+#
+#   Core repository: a PR touching core files must regenerate core.manifest.json, and the manifest
+#                    must match the tree (--verify). A push to main must verify too.
+#   Product:         a PR touching core files fails unless it carries the `core-change` label, and
+#                    the doctor runs on the whole tree, so drift that arrived by a direct push or a
+#                    merge fails as well. Adding or removing the label re-runs this (labeled /
+#                    unlabeled), so no empty commit is needed.
+#
+# Injection safety: no ${{ github.event.* }} text is ever interpolated into a `run:` script. Event
+# values arrive through `env:` and are read as shell variables.
+
+name: core-guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The one repository allowed to regenerate the manifest. A product leaves this as it is.
+  CORE_REPOSITORY: ayush-sleeping/DjangoBaseX
+
+jobs:
+  core-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      REPOSITORY: ${{ github.repository }}
+      BASE_REF: ${{ github.base_ref }}
+      LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+
+    steps:
+      # The full history, so the merge base with the PR's base branch exists.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # core_doctor is standard library only.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Core or product
+        run: |
+          # GitHub repository names are case-insensitive.
+          if [ "${REPOSITORY,,}" = "${CORE_REPOSITORY,,}" ]; then
+            echo "ROLE=core" >> "$GITHUB_ENV"
+            echo "$REPOSITORY is the core repository."
+          else
+            echo "ROLE=product" >> "$GITHUB_ENV"
+            echo "$REPOSITORY is a product of $CORE_REPOSITORY."
+          fi
+
+      - name: Changed files
+        if: github.event_name == 'pull_request'
+        run: |
+          base="$(git merge-base "origin/$BASE_REF" HEAD)"
+          # --no-renames: a file moved out of core must still count as a core deletion.
+          git diff --name-only --no-renames -z "$base" HEAD > "$RUNNER_TEMP/changed"
+          tr '\0' '\n' < "$RUNNER_TEMP/changed" > "$RUNNER_TEMP/changed.txt"
+          xargs -0 -r python3 scripts/core_doctor.py --list-core \
+            < "$RUNNER_TEMP/changed" > "$RUNNER_TEMP/core-changed.txt"
+          echo "Changed since the merge base ($base):"
+          cat "$RUNNER_TEMP/changed.txt"
+          echo
+          echo "Core files among them:"
+          cat "$RUNNER_TEMP/core-changed.txt"
+
+      - name: Core repository
+        if: env.ROLE == 'core'
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            touches_core=false
+            touches_manifest=false
+            if [ -s "$RUNNER_TEMP/core-changed.txt" ]; then touches_core=true; fi
+            if grep -qxF core.manifest.json "$RUNNER_TEMP/changed.txt"; then
+              touches_manifest=true
+            fi
+            if [ "$touches_core" = false ] && [ "$touches_manifest" = false ]; then
+              echo "No core files changed."
+              exit 0
+            fi
+            if [ "$touches_core" = true ] && [ "$touches_manifest" = false ]; then
+              echo "::error::This PR changes core files but not core.manifest.json. Regenerate it: python3 scripts/core_doctor.py --write"
+              exit 1
+            fi
+          fi
+          python3 scripts/core_doctor.py --verify
+
+      - name: Product
+        if: env.ROLE == 'product'
+        run: |
+          labelled=false
+          if jq -e 'any(.[]?; . == "core-change")' > /dev/null <<< "$LABELS"; then
+            labelled=true
+          fi
+          status=0
+
+          if [ "$EVENT_NAME" = "pull_request" ] && [ -s "$RUNNER_TEMP/core-changed.txt" ]; then
+            if [ "$labelled" = true ]; then
+              echo "::notice::This PR changes core files; it is labelled core-change."
+            else
+              echo "::error::This PR changes core files (listed under 'Changed files'). Move the change into project/ or a plugin, request a seam upstream in $CORE_REPOSITORY, or label the PR core-change if it is deliberate."
+              status=1
+            fi
+          fi
+
+          set +e
+          python3 scripts/core_doctor.py
+          doctor=$?
+          set -e
+          if [ "$doctor" -eq 1 ]; then
+            if [ "$labelled" = true ]; then
+              echo "::notice::The checkout has drifted from core.manifest.json; the PR is labelled core-change."
+            else
+              echo "::error::The checkout has drifted from core.manifest.json (see the doctor's output above)."
+              status=1
+            fi
+          elif [ "$doctor" -ne 0 ]; then
+            # A setup error (no manifest, no VERSION) is never excused by a label.
+            status="$doctor"
+          fi
+          exit "$status"

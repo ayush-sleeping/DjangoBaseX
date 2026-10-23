@@ -13,7 +13,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # directories exist in the image so the volumes are created owned by `node`, not root.
 RUN mkdir -p /repo/frontend/node_modules /repo/frontend/.next /repo/backend/plugins \
     && chown -R node:node /repo
-USER node
+# Numeric (the image's `node` user): a runtime can prove non-root without reading /etc/passwd.
+USER 1000:1000
 WORKDIR /repo/frontend
 
 COPY --chown=node:node package.json package-lock.json ./
