@@ -209,6 +209,20 @@ def db_probe_violations(cfg: dict) -> list[str]:
     return []
 
 
+def app_probe_violations(cfg: dict) -> list[str]:
+    """
+    The backend's healthcheck targets readiness, never liveness (OBSERVABILITY § 6): live answers
+    from memory, so a container whose database is unreachable would stay "healthy" behind it.
+    """
+    test = argv(((services(cfg).get("backend") or {}).get("healthcheck") or {}).get("test"))
+    joined = " ".join(test)
+    if "/health/" not in joined:
+        return ["backend healthcheck does not call /api/health/ready/"]
+    if "/health/ready/" not in joined:
+        return ["backend healthcheck targets live (or the alias), not /api/health/ready/"]
+    return []
+
+
 def hardening_violations(cfg: dict) -> list[str]:
     out = []
     for name, svc in services(cfg).items():
@@ -380,6 +394,10 @@ def test_e2_the_db_probe_uses_tcp_not_the_socket(config):
     assert db_probe_violations(config) == []
 
 
+def test_e3_the_backend_probe_targets_ready_not_live(config):
+    assert app_probe_violations(config) == []
+
+
 def test_f_every_service_drops_privileges(config):
     assert hardening_violations(config) == []
 
@@ -463,7 +481,9 @@ def compliant() -> dict:
             },
             "backend": {
                 **hardening,
-                **health("CMD", "python", "-c", "probe"),
+                **health(
+                    "CMD", "python", "-c", "urlopen('http://127.0.0.1:8000/api/health/ready/')"
+                ),
                 "command": ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"],
                 "ports": [{"host_ip": LOOPBACK, "target": 8000, "published": "8765"}],
                 "environment": {
@@ -493,6 +513,7 @@ RULES = [
     port_violations,
     healthcheck_violations,
     db_probe_violations,
+    app_probe_violations,
     hardening_violations,
     logging_violations,
     image_violations,
@@ -557,6 +578,16 @@ VIOLATIONS = {
     "e2: not pg_isready": (
         db_probe_violations,
         lambda s, c: s["db"]["healthcheck"].update(test=["CMD-SHELL", "true"]),
+    ),
+    "e3: live instead of ready": (
+        app_probe_violations,
+        lambda s, c: s["backend"]["healthcheck"].update(
+            test=["CMD-SHELL", "curl -fs http://127.0.0.1:8000/api/health/live/"]
+        ),
+    ),
+    "e3: not the health endpoint": (
+        app_probe_violations,
+        lambda s, c: s["backend"]["healthcheck"].update(test=["CMD-SHELL", "true"]),
     ),
     "f: no security_opt": (hardening_violations, lambda s, c: _drop(s["frontend"], "security_opt")),
     "f: no cap_drop": (hardening_violations, lambda s, c: _drop(s["db"], "cap_drop")),

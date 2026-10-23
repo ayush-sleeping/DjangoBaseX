@@ -68,6 +68,9 @@ env = environ.Env(
     MFA_TOKEN_LIFETIME=(int, 300),
     AUTH_COOKIE_DOMAIN=(str, ""),
     AUTH_COOKIE_PREFIX=(str, ""),
+    HEALTH_PROBE_TIMEOUT_SECONDS=(float, 2.0),
+    DB_CONNECT_TIMEOUT_SECONDS=(int, 5),
+    CACHE_SOCKET_TIMEOUT_SECONDS=(float, 2.0),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -128,6 +131,9 @@ AUTHENTICATION_BACKENDS = [
 MIDDLEWARE = [
     # First, before CORS: every response, preflights included, carries an id (OBSERVABILITY § 1).
     "core.observability.request_id.RequestIdMiddleware",
+    # Answers /api/health/, /live/ and /ready/ before sessions, auth, CSRF, throttling and the
+    # ALLOWED_HOSTS check: the orchestrator's probe shares a bucket with no one (OBSERVABILITY § 6).
+    "core.observability.health.HealthShortCircuitMiddleware",
     "corsheaders.middleware.CorsMiddleware",  # must sit above CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -166,6 +172,11 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
+# A client-side connect timeout, so a readiness probe (and every request) fails fast instead of
+# hanging on an unreachable server. SQLite has no network to time out on.
+if "postgresql" in DATABASES["default"]["ENGINE"]:
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"].setdefault("connect_timeout", env("DB_CONNECT_TIMEOUT_SECONDS"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -177,6 +188,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CACHES = {"default": env.cache("CACHE_URL", default="locmemcache://")}
 # Two products sharing one Redis must not read each other's throttles and permission versions.
 CACHES["default"].setdefault("KEY_PREFIX", PRODUCT_SLUG)
+# Bounded socket timeouts on Redis for the same reason; LocMem has no socket.
+if "redis" in CACHES["default"]["BACKEND"].lower():
+    CACHES["default"].setdefault("OPTIONS", {})
+    for option in ("socket_timeout", "socket_connect_timeout"):
+        CACHES["default"]["OPTIONS"].setdefault(option, env("CACHE_SOCKET_TIMEOUT_SECONDS"))
+
+# Health (OBSERVABILITY § 6): the budget each components probe gets before it is reported down.
+HEALTH_PROBE_TIMEOUT_SECONDS = env("HEALTH_PROBE_TIMEOUT_SECONDS")
 
 # Passwords
 # -------------------------------------------------------------------------------------------- ::

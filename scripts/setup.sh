@@ -301,7 +301,7 @@ start_and_prove() {
   api=$(envfile get "$ROOT_ENV" API_PORT)
   web=$(envfile get "$ROOT_ENV" WEB_PORT)
   step "Prove it"
-  wait_for "the API" "http://127.0.0.1:$api/api/health/" backend
+  wait_for "the API" "http://127.0.0.1:$api/api/health/ready/" backend
   wait_for "the frontend" "http://127.0.0.1:$web/login" frontend
   step "Ready"
   info "App:       http://localhost:$web"

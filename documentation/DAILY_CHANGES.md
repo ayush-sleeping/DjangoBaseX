@@ -26,6 +26,41 @@ Newest first.
 
 ## 2026-10-24
 
+### BUILD_ORDER 6.2: health in three rungs (data-plane checks pending)
+**What** (lead):
+- **`core/observability/health.py`:** `live()` answers from memory; `ready()` runs `SELECT 1`
+  under a statement timeout and a cache set/get round-trip, and on failure names the dependency
+  from a closed set, never exception text; `components()` runs database, cache, a non-critical
+  `migrations` probe and every `registry.health` check, each under `HEALTH_PROBE_TIMEOUT_SECONDS`
+  in a worker thread, reporting `{status, detail, ms, critical}`. A probe that raises or hangs is
+  reported, never propagated; only a critical one makes the install `down` (503).
+- **`HealthShortCircuitMiddleware`** (`MIDDLEWARE[1]`) answers `/api/health/`, `/live/` and
+  `/ready/` before sessions, auth, CSRF, throttling and `ALLOWED_HOSTS`. The views remain, so
+  `reverse()` works and the public-route ledger lists all three.
+- **`/api/health/components/`** behind a new `core.health.view` permission, grantable alone to a
+  monitoring principal.
+- **Settings:** `HEALTH_PROBE_TIMEOUT_SECONDS`, `DB_CONNECT_TIMEOUT_SECONDS` (PostgreSQL
+  `connect_timeout`), `CACHE_SOCKET_TIMEOUT_SECONDS` (Redis socket timeouts).
+- **Callers:** the compose backend healthcheck, `setup.sh`'s wait and the home page now use
+  `ready`; `/api/health/` no longer returns per-check booleans. A compose policy rule (`e3`)
+  refuses a backend healthcheck that targets live.
+**Why:** the old `/api/health/` was documented as liveness and queried the database with no
+timeout: a slow database could get healthy processes restarted, and a readiness probe that
+checks a third party turns their outage into ours. Closes **DB-11** and **DB-27**.
+**Files:** `backend/core/observability/health.py`, `backend/core/{views,urls,routes,apps}.py`,
+`backend/config/settings.py`, `backend/.env.example`, `backend/tests/test_health.py`,
+`backend/tests/architecture/test_public_routes.py`, `backend/tests/infra/test_compose_policy.py`,
+`docker-compose.yml`, `scripts/setup.sh`, `frontend/src/app/(core)/page.tsx`, `OBSERVABILITY.md`
+§ 6, `BUILD_ORDER.md`, `TECH_DEBT.md`.
+**Verification:** `tests/test_health.py` 22 passed (live does no I/O with DB and cache patched to
+raise; ready 503 with the fixed token and no exception text; unknown Host header 200; hammered
+past the anon throttle; probe that raises → degraded; probe that hangs → timed out; monitoring
+principal reads components and nothing else; degraded 200 / down 503; never 500). Full suite on
+the shared tree: 1169 passed, 1 failed (`test_setting_defaults_snapshot`, the junior's in-flight
+5.5 registrations, not this change). Frontend lint and typecheck clean.
+**Notes:** the "database stopped" done-when is proven by patching the probe, not by stopping a
+container. The data-plane check registry (§ 7) waits for 5.5 to release `core/registry.py`.
+
 ### BUILD_ORDER 5.4: feature flags and guard modes
 **What** (junior `djangobasex-f6`, backend only):
 - **Flags (CONFIGURATION § 11):** declared in `registry.flags` with a required owner and expiry;

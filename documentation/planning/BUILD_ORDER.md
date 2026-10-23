@@ -712,7 +712,23 @@ production (enforced by 5.1); one scrubber used by logging and Sentry. Closes **
 **Done when:** a 500 body and its log line carry the same request id; a canary password sent through a normal
 and a failing-validation request appears in no log line.
 
-### 6.2 — Health in three rungs and data-plane checks ⬜
+### 6.2 — Health in three rungs and data-plane checks 🔶 (rungs built; data-plane checks pending)
+*Rungs done 2026-10-24* (lead). `core/observability/health.py`:
+- **live** (`/api/health/live/`, alias `/api/health/`): no I/O, no identity.
+- **ready** (`/api/health/ready/`): `SELECT 1` under a statement timeout plus a cache set/get
+  round-trip; 503 names the failed dependency from a closed set, never exception text. Both public
+  rungs are answered by `HealthShortCircuitMiddleware`, right after the request id: before sessions,
+  auth, CSRF, throttling and `ALLOWED_HOSTS` (tests: unknown Host header, hammered past the anon
+  throttle). Client timeouts are settings (`DB_CONNECT_TIMEOUT_SECONDS`, `CACHE_SOCKET_TIMEOUT_SECONDS`).
+- **components** (`/api/health/components/`, `core.health.view`): every `registry.health` probe
+  plus database, cache and a non-critical `migrations`, each `{status, detail, ms, critical}` under
+  `HEALTH_PROBE_TIMEOUT_SECONDS`. A probe that raises or hangs is reported, never propagated; only
+  a critical probe makes the install `down` (503); degraded is 200. Closes **DB-11**, **DB-27**.
+- **Callers moved to ready:** the compose healthcheck, `setup.sh`, the home page.
+- **Still open:** the data-plane check registry (OBSERVABILITY § 7: `ok | warn | fatal` with a
+  remedy) and probe `cache_seconds`. Both need `core/registry.py`, which 5.5 is editing; they land
+  right after it. The "broken check degrades to warn" done-when is proven for probes
+  (`test_a_probe_that_raises_is_reported_not_propagated`) and will be re-proven for data-plane checks.
 `/api/health/live` (no I/O), `/api/health/ready` (DB + cache, timeouts, no third parties, throttle-exempt),
 `/api/health/components` (permission-gated); a registry of data-plane checks for required rows. Closes **DB-11**.
 

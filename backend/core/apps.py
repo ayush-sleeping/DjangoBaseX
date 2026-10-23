@@ -10,6 +10,7 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from . import checks  # noqa: F401 — registers the dbx.* system checks
+        from .observability.health import HEALTH_GROUP
         from .permissions import SETTINGS_GROUP
         from .registry import registry
         from .routes import CORE_PUBLIC_ROUTES
@@ -17,7 +18,12 @@ class CoreConfig(AppConfig):
         for url_name, reason in CORE_PUBLIC_ROUTES.items():
             registry.public_routes.register(url_name, reason)
         registry.permissions.register(SETTINGS_GROUP)
+        registry.permissions.register(HEALTH_GROUP)
+        from .formatting import register_locale_settings
+
+        register_locale_settings(registry)
         post_migrate.connect(_report_settings, sender=self, dispatch_uid="core.settings_report")
+        post_migrate.connect(_seed_lookups, sender=self, dispatch_uid="core.seed_lookups")
 
 
 def _report_settings(sender, **kwargs):

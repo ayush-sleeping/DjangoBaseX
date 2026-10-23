@@ -10,7 +10,12 @@ to open an endpoint. dbx.E007 and the route test read the union; test_public_rou
 from collections.abc import Mapping
 
 CORE_PUBLIC_ROUTES: dict[str, str] = {
-    "core:health": "Liveness probe for load balancers and the frontend. Reports status only.",
+    "core:health": "Liveness alias (/api/health/): the URL existing probes point at. No I/O.",
+    "core:health-live": "Liveness for the container restart policy. No I/O, no identity.",
+    "core:health-ready": (
+        "Readiness for the container healthcheck and the load balancer: database and cache, "
+        "named from a closed set on failure, never exception text (OBSERVABILITY § 6)."
+    ),
     "core:public-config": (
         "The product's display name and tagline, which the sign-in page shows before anyone signs "
         "in. Public by nature; no user data, no boot identity (CONFIGURATION.md § 7)."

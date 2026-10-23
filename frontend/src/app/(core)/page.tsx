@@ -4,14 +4,11 @@ import { api, API_URL } from "@/core/lib/api";
 import { getIdentity } from "@/core/lib/identity";
 import { NavMenu } from "@/core/shell/nav-menu";
 
-type Health = {
-  status: "ok" | "degraded";
-  checks: Record<string, boolean>;
-};
+type Health = { status: "ok" } | { status: "unavailable"; failed: string[] };
 
 async function getHealth(): Promise<Health | null> {
   try {
-    return await api<Health>("/api/health/", { cache: "no-store" });
+    return await api<Health>("/api/health/ready/", { cache: "no-store" });
   } catch {
     return null;
   }
@@ -41,15 +38,12 @@ export default async function Home() {
                 {health.status}
               </span>
             </li>
-            {Object.entries(health.checks).map(([name, ok]) => (
-              <li key={name}>
-                {name}: {ok ? "✅" : "❌"}
-              </li>
-            ))}
+            {health.status === "unavailable" &&
+              health.failed.map((name) => <li key={name}>{name}: ❌</li>)}
           </ul>
         ) : (
           <p className="text-sm text-red-600">
-            Could not reach <code>{API_URL}/api/health/</code>. Is the Django server running?
+            Could not reach <code>{API_URL}/api/health/ready/</code>. Is the Django server running?
           </p>
         )}
       </section>

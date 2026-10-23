@@ -1,13 +1,17 @@
 from django.urls import path
 
 from .api.flags import FlagDetailView, FlagListView
+from .api.lookups import LookupListView, LookupWriteView
 from .api.settings import SettingDetailView, SettingListView, SettingResetView
-from .views import HealthView, NavigationView, PublicConfigView
+from .views import ComponentsView, LiveView, NavigationView, PublicConfigView, ReadyView
 
 app_name = "core"
 
 urlpatterns = [
-    path("health/", HealthView.as_view(), name="health"),
+    path("health/", LiveView.as_view(), name="health"),  # the alias every probe already uses
+    path("health/live/", LiveView.as_view(), name="health-live"),
+    path("health/ready/", ReadyView.as_view(), name="health-ready"),
+    path("health/components/", ComponentsView.as_view(), name="health-components"),
     path("public/config/", PublicConfigView.as_view(), name="public-config"),
     path("me/navigation/", NavigationView.as_view(), name="navigation"),
     # CONFIGURATION.md § 9.8. No create, no delete: a key exists because code declared it.

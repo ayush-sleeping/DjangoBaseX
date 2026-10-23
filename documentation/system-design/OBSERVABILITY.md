@@ -562,6 +562,13 @@ block rolled back), `test_request_body_not_captured` (canary), `test_occurrence_
 
 ## 6. Health — three rungs — **Tier 1 · Core**
 
+*Built 2026-10-24* (BUILD_ORDER 6.2): `core/observability/health.py`, the views in `core/views.py`,
+`HealthShortCircuitMiddleware` in `MIDDLEWARE[1]`. As built: probes are the existing
+`registry.health` `HealthCheck(key, label, check, critical)` entries, run under one global
+`HEALTH_PROBE_TIMEOUT_SECONDS`; per-probe `timeout` and `cache_seconds` are not built yet. Not built:
+the Celery and beat probes (no Celery), the `dataplane` block (§ 7, pending), Sentry/metrics
+exclusions (no Sentry or metrics yet). Tests: `tests/test_health.py`.
+
 **What.** Three endpoints answering three different questions, plus the `health` registry that
 plugins contribute probes to. Closes `TECH_DEBT` **DB-11** and replaces the current `HealthView`.
 

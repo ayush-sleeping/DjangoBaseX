@@ -1,37 +1,46 @@
 from django.conf import settings
-from django.db import connection
-from rest_framework import status
 from rest_framework.response import Response
+
+from core.observability import health
 
 from .api.views import BaseAPIView
 from .navigation import navigation_for
 
 
-class HealthView(BaseAPIView):
-    """Public liveness/readiness probe."""
+class LiveView(BaseAPIView):
+    """GET /api/health/live/ and its alias /api/health/: no I/O (OBSERVABILITY § 6).
+
+    HealthShortCircuitMiddleware answers first; this view exists so reverse() works and the
+    public-route ledger stays honest, and answers exactly the same."""
 
     public = True  # registry.public_routes
     authentication_classes: list = []
+    throttle_classes: list = []
+    schema = None  # excluded from the OpenAPI document
 
     def get(self, request):
-        checks = {"database": self._check_database()}
-        healthy = all(checks.values())
-        return Response(
-            {
-                "status": "ok" if healthy else "degraded",
-                "checks": checks,
-            },
-            status=status.HTTP_200_OK if healthy else status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+        return health.live()
 
-    @staticmethod
-    def _check_database() -> bool:
+
+class ReadyView(LiveView):
+    """GET /api/health/ready/: database + cache, fixed-token 503, never cached."""
+
+    def get(self, request):
+        return health.ready()
+
+
+class ComponentsView(BaseAPIView):
+    """GET /api/health/components/: every probe, per component; degraded is 200, down is 503."""
+
+    required_permissions = ["core.health.view"]
+    schema = None
+
+    def get(self, request):
         try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-            return True
-        except Exception:
-            return False
+            body, code = health.components()
+        except Exception:  # noqa: BLE001 — a health endpoint that 500s when unwell is useless
+            body, code = {"status": health.DOWN, "release": health.read_release()}, 503
+        return Response(body, status=code)
 
 
 class PublicConfigView(BaseAPIView):
