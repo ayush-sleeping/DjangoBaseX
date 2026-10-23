@@ -26,7 +26,8 @@ SECTION = NavSection(
 )
 
 
-# The audit verbs services.py emits (DATA_LIFECYCLE § 4): a plugin declares its own, under its label.
+# The audit verbs services.py emits (DATA_LIFECYCLE § 4). A plugin declares its own, under its
+# label; core never lists them.
 AUDIT_ACTIONS = (
     ("notes.note.created", "Note created", "success"),
     ("notes.note.deleted", "Note deleted", "warning"),
