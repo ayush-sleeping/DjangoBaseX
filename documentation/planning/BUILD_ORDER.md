@@ -775,7 +775,24 @@ production, do this before it does** — it replaces the single-purpose MFA key.
 **Done when:** rotating `SECRET_KEY` leaves every encrypted value readable; adding a new key and running
 `rotate_encryption` re-encrypts; a decrypt failure raises and never returns ciphertext.
 
-### 6.4 — Audit engine to spec ⬜
+### 6.4 — Audit engine to spec ✅
+*Done 2026-10-24* (junior `djangobasex-f6`, reviewed by the lead). Phase 6 complete.
+- **One table, one writer:** `core_activity_log` (core migration 0004) written only by
+  `core.audit.record()`, which never raises, uses its own savepoint, masks secrets at any depth and
+  leaves no row for a rolled-back change. `log_activity()` keeps its call shape as a wrapper, so
+  every existing audit call writes rows (closes **DB-41**).
+- **Diffs:** FK id + label, choice value + label, JSON per key, noisy fields skipped,
+  `status_changed`, truncation marker; opt in by `AuditedModelMixin`.
+- **Provenance:** command writes record the command, OS user, host and scrubbed argv; web writes
+  the request id; `AuditedCommand` batches a run. Inferred until the ActorContext binder (7.x).
+- **Read-only in four layers:** 405 on write verbs, `save()`/`delete()` refusal, queryset
+  refusal, and a vendor-guarded PostgreSQL trigger (tested under Postgres only).
+  `GET /api/core/activity/` and a streamed, escaped, itself-audited CSV export behind
+  `core.audit.view`/`core.audit.export`.
+- **Catalog:** `registry.audit_actions` (38 verbs) with a scan that fails on an unregistered
+  literal and on zero literals.
+- **Not built:** ActorContext binder, `DATABASES["audit"]` (DB-46), `capture_app()`, import mode,
+  per-record history, the write-failure metric.
 Extend the Phase 1 activity log with field diffs (secrets masked at any depth), source/via and CLI provenance,
 batch id, `status_changed`, structural read-only and a streamed export.
 

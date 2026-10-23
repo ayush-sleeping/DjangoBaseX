@@ -36,6 +36,7 @@ def check_registry_seals(app_configs, **kwargs):
         ("settings", registry.settings.defs),
         ("flags", registry.flags.defs),
         ("lookups", registry.lookups.defs),
+        ("audit_actions", registry.audit_actions.actions),
         ("guards", registry.guards.defs),
     ):
         try:

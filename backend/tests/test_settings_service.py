@@ -130,36 +130,37 @@ def test_resolve_returns_the_frozen_policy():
 # --- Writing and audit (§ 9.8) --------------------------------------------------------------------
 
 
-def test_every_change_is_audited_old_to_new(caplog, django_capture_on_commit_callbacks):
+def test_every_change_is_audited_old_to_new(audit_rows, django_capture_on_commit_callbacks):
     actor = UserFactory()
-    with caplog.at_level(logging.INFO, logger="audit"):
-        with django_capture_on_commit_callbacks(execute=True):
-            set_value(KEY, 30, actor=actor, reason="an audit finding")
-        with django_capture_on_commit_callbacks(execute=True):
-            set_value(KEY, 45, actor=actor)
-        with django_capture_on_commit_callbacks(execute=True):
-            assert reset(KEY, actor=actor) is True
-    events = [r for r in caplog.records if r.message.startswith("core.setting.")]
-    assert [e.message for e in events] == [
+    with django_capture_on_commit_callbacks(execute=True):
+        set_value(KEY, 30, actor=actor, reason="an audit finding")
+    with django_capture_on_commit_callbacks(execute=True):
+        set_value(KEY, 45, actor=actor)
+    with django_capture_on_commit_callbacks(execute=True):
+        assert reset(KEY, actor=actor) is True
+    events = [r for r in audit_rows() if r.action.startswith("core.setting.")]
+    assert [e.action for e in events] == [
         "core.setting.changed",
         "core.setting.changed",
         "core.setting.reset",
     ]
-    first, second, third = (e.audit_meta for e in events)
+    first, second, third = (e.meta for e in events)
     assert (first["old"], first["new"], first["old_source"]) == (15, 30, "default")
     assert (second["old"], second["new"]) == (30, 45)
     assert (third["old"], third["new"]) == (45, 15)
-    assert events[0].audit_actor == actor.public_id
+    assert events[0].actor_id == str(actor.public_id)
+    assert events[0].actor_label == actor.email  # the snapshot that survives the actor's deletion
 
 
-def test_a_write_that_changes_nothing_is_not_a_change(caplog, django_capture_on_commit_callbacks):
+def test_a_write_that_changes_nothing_is_not_a_change(
+    audit_rows, django_capture_on_commit_callbacks
+):
     with django_capture_on_commit_callbacks(execute=True):
         set_value(KEY, 30)
-    caplog.clear()  # drop the first write's audit record
-    with caplog.at_level(logging.INFO, logger="audit"):
-        with django_capture_on_commit_callbacks(execute=True):
-            set_value(KEY, 30)
-    assert not [r for r in caplog.records if r.message == "core.setting.changed"]
+    assert len(audit_rows("core.setting.changed")) == 1
+    with django_capture_on_commit_callbacks(execute=True):
+        set_value(KEY, 30)
+    assert len(audit_rows("core.setting.changed")) == 1  # the second wrote nothing
     assert Setting.objects.count() == 1
 
 

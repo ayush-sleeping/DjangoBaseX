@@ -2,8 +2,6 @@
 records and refuses with the declared code, an unreadable mode uses the declared default — and
 shipping a guard at its default changes no response."""
 
-import logging
-
 import pytest
 
 from core import guards as guards_module
@@ -38,10 +36,6 @@ def registered(monkeypatch):
     return reg
 
 
-def audits(caplog):
-    return [r for r in caplog.records if r.message.startswith("guard.")]
-
-
 def test_register_guard_declares_the_mode_switch_with_it(registered):
     defn = registered.settings.get(f"{KEY}.mode")
     assert defn.type.choices == ("off", "log_only", "enforce")
@@ -58,36 +52,36 @@ def test_a_default_of_enforce_needs_a_written_reason():
     )
 
 
-def test_not_violated_does_nothing_in_every_mode(registered, caplog):
+def guard_rows(audit_rows):
+    return [r for r in audit_rows() if r.action.startswith("guard.")]
+
+
+def test_not_violated_does_nothing_in_every_mode(registered, audit_rows):
     for mode in ("off", "log_only", "enforce"):
         set_value(f"{KEY}.mode", mode)
-        with caplog.at_level(logging.INFO, logger="audit"):
-            check_guard(KEY, violated=False)
-    assert audits(caplog) == []
+        check_guard(KEY, violated=False)
+    assert guard_rows(audit_rows) == []
 
 
-def test_off_records_nothing_and_passes(registered, caplog):
+def test_off_records_nothing_and_passes(registered, audit_rows):
     set_value(f"{KEY}.mode", "off")
-    with caplog.at_level(logging.INFO, logger="audit"):
-        check_guard(KEY, violated=True)
-    assert audits(caplog) == []
+    check_guard(KEY, violated=True)
+    assert guard_rows(audit_rows) == []
 
 
-def test_log_only_records_would_block_with_context_and_passes(registered, caplog):
-    with caplog.at_level(logging.INFO, logger="audit"):
-        check_guard(KEY, violated=True, code="users.probe")  # shipped default: log_only
-    (event,) = audits(caplog)
-    assert event.message == "guard.would_block"
-    assert event.audit_meta == {"guard": KEY, "mode": "log_only", "code": "users.probe"}
+def test_log_only_records_would_block_with_context_and_passes(registered, audit_rows):
+    check_guard(KEY, violated=True, code="users.probe")  # shipped default: log_only
+    (event,) = guard_rows(audit_rows)
+    assert event.action == "guard.would_block"
+    assert event.meta == {"guard": KEY, "mode": "log_only", "code": "users.probe"}
 
 
-def test_enforce_records_blocked_and_refuses_with_the_declared_code(registered, caplog):
+def test_enforce_records_blocked_and_refuses_with_the_declared_code(registered, audit_rows):
     set_value(f"{KEY}.mode", "enforce")
-    with caplog.at_level(logging.INFO, logger="audit"):
-        with pytest.raises(GuardRefused) as refusal:
-            check_guard(KEY, violated=True)
-    (event,) = audits(caplog)
-    assert event.message == "guard.blocked"
+    with pytest.raises(GuardRefused) as refusal:
+        check_guard(KEY, violated=True)
+    (event,) = guard_rows(audit_rows)
+    assert event.action == "guard.blocked"
     assert refusal.value.detail["error"]["code"] == "users.probe_refused"
     assert refusal.value.status_code == 403
 

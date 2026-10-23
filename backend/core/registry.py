@@ -431,6 +431,59 @@ class DataPlaneRegistry(_Catalog):
 # --- Encrypted fields ---------------------------------------------------------------------------
 
 
+# --- Audit actions ------------------------------------------------------------------------------
+
+# DATA_LIFECYCLE.md § 4.5: a closed set, so the UI has one colour map and a plugin cannot invent a
+# fourteenth shade of red.
+AUDIT_TONES = ("neutral", "info", "success", "warning", "danger", "security")
+AUDIT_ACTION_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,3}$")
+
+
+@dataclass(frozen=True)
+class AuditAction:
+    key: str  # "module.entity.verb" (two to four segments: "auth.login", "rbac.role.created")
+    label: str
+    tone: str  # one of AUDIT_TONES
+    channel: str  # auth · security · settings · rbac · data · per-plugin
+
+
+class AuditActionRegistry(_Catalog):
+    """Declared audit actions. An UNREGISTERED action still logs (losing an audit row because a
+    label was missing is the wrong trade); this catalog only supplies label, tone and channel."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._actions: dict[str, AuditAction] = {}
+
+    def register(self, *, key: str, label: str, tone: str, channel: str) -> None:
+        owner = _caller_module()
+        with self._lock:
+            name = f"audit action {key!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(key, str) or not AUDIT_ACTION_PATTERN.match(key):
+                raise RegistryError(f"{name}: not module.entity.verb (lowercase, digits, _)")
+            _require_label(name, label)
+            if tone not in AUDIT_TONES:
+                raise RegistryError(f"{name}: tone {tone!r} is not one of {AUDIT_TONES}")
+            if not isinstance(channel, str) or not _MODULE_PATTERN.match(channel):
+                raise RegistryError(f"{name}: channel must be a lowercase identifier")
+            if key in self._actions:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[key]}; "
+                    f"registered again by {owner}"
+                )
+            self._actions[key] = AuditAction(key, label, tone, channel)
+            self._owner_of[key] = owner
+
+    def get(self, key: str) -> AuditAction | None:
+        self.seal()
+        return self._actions.get(key)
+
+    def actions(self) -> tuple[AuditAction, ...]:
+        self.seal()
+        return tuple(self._actions[k] for k in sorted(self._actions))
+
+
 class EncryptedFieldRegistry(_Catalog):
     """Every column holding core.crypto ciphertext, so rotate_encryption walks the complete set.
     Purposes are validated against core.crypto's constants by a system check, not here: this
@@ -899,6 +952,7 @@ class Registry:
         self.health = HealthRegistry()
         self.dataplane = DataPlaneRegistry()
         self.encrypted_fields = EncryptedFieldRegistry()
+        self.audit_actions = AuditActionRegistry()
         self.api_routes = ApiRouteRegistry()
         self.public_routes = PublicRouteRegistry()
         self.settings = SettingRegistry()

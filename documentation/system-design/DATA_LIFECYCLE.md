@@ -265,6 +265,12 @@ version) and `test_a_status_transition_bumps_version`.
 
 ## 4. The activity / audit engine — **Tier 1 · Core**
 
+*Built 2026-10-24* (BUILD_ORDER 6.4): `core/audit.py`, `core/audit_diff.py`, `core/audit_actions.py`,
+`core/api/audit.py`, core migration 0004. As built: provenance is inferred (request id ⇒ web; argv ⇒
+command) until the ActorContext binder; `independent=True` degrades to the caller's transaction
+while `DATABASES["audit"]` is absent (TECH_DEBT DB-46). Tests: `tests/test_audit_record.py`,
+`tests/test_audit_diff.py`, `tests/architecture/test_audit_rules.py`.
+
 **What.** One append-only table, `core_activity_log`, with one writer (`core.audit.record()`), an
 opt-in automatic capture engine for model changes, and a structurally read-only read side. It extends
 [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 3.12 (which stays authoritative for the list of security

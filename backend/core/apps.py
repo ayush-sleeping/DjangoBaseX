@@ -12,18 +12,21 @@ class CoreConfig(AppConfig):
         from . import checks  # noqa: F401 — registers the dbx.* system checks
         from .dataplane import register_core_checks
         from .observability.health import HEALTH_GROUP
-        from .permissions import SETTINGS_GROUP
+        from .permissions import AUDIT_GROUP, SETTINGS_GROUP
         from .registry import registry
         from .routes import CORE_PUBLIC_ROUTES
 
         for url_name, reason in CORE_PUBLIC_ROUTES.items():
             registry.public_routes.register(url_name, reason)
         registry.permissions.register(SETTINGS_GROUP)
+        registry.permissions.register(AUDIT_GROUP)
         registry.permissions.register(HEALTH_GROUP)
         register_core_checks()
+        from .audit_actions import register_core_actions
         from .formatting import register_locale_settings
 
         register_locale_settings(registry)
+        register_core_actions(registry)
         from .crypto import self_test
 
         # A process that cannot encrypt must refuse to start, not store plaintext (§ 25). An empty

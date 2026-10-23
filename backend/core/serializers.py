@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from core.models import LookupValue
+from core.models import ActivityLog, LookupValue
 from core.settings_registry import SCOPES
 
 
@@ -93,3 +93,54 @@ class LookupWriteSerializer(serializers.Serializer):
     sort_order = serializers.IntegerField(min_value=0, required=False)
     is_active = serializers.BooleanField(required=False)
     meta = serializers.JSONField(required=False)
+
+
+class ActivityLogSerializer(serializers.ModelSerializer):
+    """Read-only by construction: every field is read-only and no write view exists (§ 4.6)."""
+
+    tone = serializers.SerializerMethodField()
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ActivityLog
+        fields = [
+            "id",
+            "created_at",
+            "channel",
+            "action",
+            "event",
+            "label",
+            "tone",
+            "description",
+            "actor_id",
+            "actor_kind",
+            "actor_label",
+            "target_type",
+            "target_id",
+            "target_repr",
+            "changes",
+            "meta",
+            "batch_id",
+            "source",
+            "via",
+            "origin_os_user",
+            "origin_host",
+            "origin_command",
+            "request_id",
+            "method",
+            "path",
+        ]
+        read_only_fields = fields
+
+    def _entry(self, row):
+        from core.registry import registry
+
+        return registry.audit_actions.get(row.action)
+
+    def get_label(self, row) -> str:
+        entry = self._entry(row)
+        return entry.label if entry else row.action
+
+    def get_tone(self, row) -> str:
+        entry = self._entry(row)
+        return entry.tone if entry else "neutral"

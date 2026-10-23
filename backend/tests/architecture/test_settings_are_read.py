@@ -46,6 +46,12 @@ def scan():
             if not isinstance(node, ast.Call) or not node.args:
                 continue
             func = node.func
+            if isinstance(func, ast.Attribute):
+                # Only `settings_service.reset(...)` etc. is a settings call: a ContextVar's
+                # `.reset(token)` and every other `.reset` on an unrelated object is not.
+                receiver = getattr(func.value, "id", getattr(func.value, "attr", ""))
+                if receiver != "settings_service":
+                    continue
             name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
             first = node.args[0]
             if name in READERS:

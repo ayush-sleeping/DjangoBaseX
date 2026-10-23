@@ -62,3 +62,15 @@ SETTINGS_GROUP = PermissionGroupSpec(
         ),
     ),
 )
+
+
+AUDIT_GROUP = PermissionGroupSpec(
+    code="audit",
+    label="Audit log",
+    module="core",  # core.audit.view reads the full log; there is NO write permission (§ 4.6)
+    order=95,
+    permissions=(
+        PermissionSpec("core.audit.view", "Read the audit log"),
+        PermissionSpec("core.audit.export", "Export the audit log (the export is itself audited)"),
+    ),
+)

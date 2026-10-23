@@ -1,7 +1,5 @@
 """RBAC: seeding, the backend and its cache, the bypass audit, scoping, and the boot checks."""
 
-import logging
-
 import pytest
 from django.contrib.auth.models import Group as DjangoGroup
 from django.contrib.auth.models import Permission as DjangoPermission
@@ -132,13 +130,11 @@ def test_django_groups_and_auth_permissions_are_not_a_second_grant_path():
     assert not fresh(user).has_perm("users.change_user")
 
 
-def test_every_superuser_bypass_is_audited(caplog):
+def test_every_superuser_bypass_is_audited(audit_rows):
     root = UserFactory(is_superuser=True)
-    with caplog.at_level(logging.INFO, logger="audit"):
-        assert root.has_perm("users.users.view")
-    bypasses = [r for r in caplog.records if r.getMessage() == "authz.superuser_bypass"]
-    assert len(bypasses) == 1
-    assert bypasses[0].audit_meta == {"permission": "users.users.view"}
+    assert root.has_perm("users.users.view")
+    (bypass,) = audit_rows("authz.superuser_bypass")
+    assert bypass.meta == {"permission": "users.users.view"}
 
 
 # --- Roles that require MFA ---------------------------------------------------------------------

@@ -160,3 +160,88 @@ class LookupValue(models.Model):
 
     def __str__(self):
         return f"{self.set_key}:{self.key}"
+
+
+class AppendOnlyError(Exception):
+    """A write the audit table refuses by construction (DATA_LIFECYCLE.md § 4.7)."""
+
+
+class ActivityLogQuerySet(models.QuerySet):
+    """Layer 3: ORM bulk writes refuse too. (Layer 4, the Postgres trigger, stops raw SQL.)"""
+
+    def update(self, **kwargs):
+        raise AppendOnlyError("core_activity_log is append-only: update() is refused")
+
+    def delete(self):
+        raise AppendOnlyError("core_activity_log is append-only: delete() is refused")
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        raise AppendOnlyError("core_activity_log is append-only: bulk_update() is refused")
+
+
+class ActivityLog(models.Model):
+    """
+    One append-only evidence row (DATA_LIFECYCLE.md § 4.1). Written ONLY by core.audit.record();
+    a source scan proves nothing else inserts. No foreign keys, on purpose: a SET_NULL would be an
+    UPDATE against evidence, and "who did this" must survive the actor's deletion, so every
+    reference is a snapshot (id + label) that still reads correctly on its own.
+    """
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=False)
+    channel = models.CharField(max_length=32)
+    action = models.CharField(max_length=64)
+    event = models.CharField(max_length=24, default="custom")
+    description = models.CharField(max_length=255, blank=True, default="")
+
+    actor_id = models.CharField(max_length=64, null=True, blank=True)  # noqa: DJ001
+    actor_kind = models.CharField(max_length=24, blank=True, default="")
+    actor_label = models.CharField(max_length=255, blank=True, default="")
+    consumer_id = models.CharField(max_length=64, null=True, blank=True)  # noqa: DJ001
+    impersonator_id = models.CharField(max_length=64, null=True, blank=True)  # noqa: DJ001
+    impersonator_label = models.CharField(max_length=255, blank=True, default="")
+
+    target_type = models.CharField(max_length=100, blank=True, default="")
+    target_id = models.CharField(max_length=64, blank=True, default="")
+    target_repr = models.CharField(max_length=255, blank=True, default="")
+
+    changes = models.JSONField(default=dict, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
+    batch_id = models.UUIDField(null=True, blank=True)
+
+    source = models.CharField(max_length=16, blank=True, default="")
+    via = models.CharField(max_length=16, blank=True, default="")
+    origin_os_user = models.CharField(max_length=64, blank=True, default="")
+    origin_host = models.CharField(max_length=255, blank=True, default="")
+    origin_command = models.CharField(max_length=500, blank=True, default="")
+
+    request_id = models.CharField(max_length=64, blank=True, default="")
+    method = models.CharField(max_length=8, blank=True, default="")
+    path = models.CharField(max_length=255, blank=True, default="")
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=200, blank=True, default="")
+
+    objects = ActivityLogQuerySet.as_manager()
+
+    class Meta:
+        db_table = "core_activity_log"
+        ordering = ["-id"]  # id is the sort key: one transaction shares a timestamp, never an id
+        indexes = [
+            models.Index(fields=["target_type", "target_id", "-id"], name="core_activity_target"),
+            models.Index(fields=["actor_id", "-id"], name="core_activity_actor"),
+            models.Index(fields=["channel", "-id"], name="core_activity_channel"),
+            models.Index(fields=["action"], name="core_activity_action"),
+            models.Index(fields=["batch_id"], name="core_activity_batch"),
+            models.Index(fields=["created_at"], name="core_activity_created"),
+        ]
+
+    def __str__(self):
+        return f"{self.action} #{self.pk}"
+
+    def save(self, *args, **kwargs):
+        # Layer 2: an existing row is never rewritten. Inserting through save() is the writer's own.
+        if not self._state.adding:
+            raise AppendOnlyError("core_activity_log is append-only: a saved row cannot change")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise AppendOnlyError("core_activity_log is append-only: delete() is refused")

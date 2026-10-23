@@ -83,13 +83,13 @@ def test_an_empty_catalog_is_seeded_first(monkeypatch):
     assert User.objects.get().has_perm("rbac.roles.view")
 
 
-def test_the_bootstrap_is_audited_with_no_actor(monkeypatch, caplog):
+def test_the_bootstrap_is_audited_with_no_actor(monkeypatch, audit_rows):
     answers(monkeypatch, STRONG, STRONG)
-    with caplog.at_level(logging.INFO, logger="audit"):
-        run("--email", EMAIL)
-    record = next(r for r in caplog.records if r.audit_verb == "users.user.bootstrapped")
-    assert record.audit_actor is None
-    assert record.audit_target == User.objects.get().public_id
+    run("--email", EMAIL)
+    (row,) = audit_rows("users.user.bootstrapped")
+    assert row.actor_id is None  # a first account has no actor, and none is invented (§ 4.8)
+    assert row.target_id == str(User.objects.get().public_id)
+    assert row.target_type == "users.user"
 
 
 # --- Refusals -----------------------------------------------------------------------------------

@@ -1,6 +1,5 @@
 """Feature flags: the six resolution rules, the writer, the gate, /me and the admin API (§ 11)."""
 
-import logging
 from datetime import date, timedelta
 
 import pytest
@@ -125,21 +124,17 @@ def test_the_writer_refuses_unknown_keys_and_junk_targeting():
     assert FeatureFlag.objects.count() == 0  # nothing written on refusal
 
 
-def test_a_toggle_lands_at_once_and_is_audited(caplog, django_capture_on_commit_callbacks):
+def test_a_toggle_lands_at_once_and_is_audited(audit_rows, django_capture_on_commit_callbacks):
     assert flag_enabled(KEY) is False  # cached absence
-    with caplog.at_level(logging.INFO, logger="audit"):
-        with django_capture_on_commit_callbacks(execute=True):
-            set_flag(KEY, enabled=True, actor=None, reason="launch")
+    with django_capture_on_commit_callbacks(execute=True):
+        set_flag(KEY, enabled=True, actor=None, reason="launch")
     assert flag_enabled(KEY) is True  # the generation bump abandons the cached absence
-    events = [r for r in caplog.records if r.message == "core.flag.changed"]
-    assert len(events) == 1
-    assert events[0].audit_meta["old"] is None and events[0].audit_meta["new"]["enabled"] is True
+    (event,) = audit_rows("core.flag.changed")
+    assert event.meta["old"] is None and event.meta["new"]["enabled"] is True
 
-    caplog.clear()
-    with caplog.at_level(logging.INFO, logger="audit"):
-        with django_capture_on_commit_callbacks(execute=True):
-            set_flag(KEY, enabled=True)  # no change: no audit
-    assert not [r for r in caplog.records if r.message == "core.flag.changed"]
+    with django_capture_on_commit_callbacks(execute=True):
+        set_flag(KEY, enabled=True)  # no change: no audit
+    assert len(audit_rows("core.flag.changed")) == 1
 
 
 # --- The route gate (§ 11: unreleased is undiscoverable) ------------------------------------------

@@ -42,3 +42,18 @@ def setting_override(db):
         return set_value(key, value, reason="test", **where)
 
     return apply
+
+
+@pytest.fixture
+def audit_rows(db):
+    """The rows the audit trail wrote since this fixture was requested, oldest first: `rows()` or
+    `rows("core.setting.changed")`. Row assertions replace the old caplog ones (DB-41)."""
+    from core.models import ActivityLog
+
+    start = ActivityLog.objects.order_by("-id").values_list("id", flat=True).first() or 0
+
+    def rows(action: str | None = None):
+        found = ActivityLog.objects.filter(id__gt=start).order_by("id")
+        return list(found.filter(action=action) if action else found)
+
+    return rows

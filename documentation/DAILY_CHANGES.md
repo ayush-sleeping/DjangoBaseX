@@ -26,6 +26,32 @@ Newest first.
 
 ## 2026-10-24
 
+### BUILD_ORDER 6.4: the audit engine — Phase 6 complete
+**What** (junior `djangobasex-f6`; closes DB-41):
+- **`core_activity_log`** (core migration 0004): the one append-only evidence table, written only
+  by `core.audit.record()`, which never raises, writes in its own savepoint, masks secrets at any
+  depth through the shared scrubber and leaves no row for a rolled-back change.
+  `log_activity()` keeps its call shape as a wrapper, so every existing call writes rows.
+- **Diffs** (`core/audit_diff.py`): FK id + label, choice value + label, JSON per key with scalar
+  coercion, noisy fields skipped, `status_changed`, truncation marker; `AuditedModelMixin`.
+- **Provenance:** command, OS user, host and scrubbed argv for CLI writes; the request id for web
+  writes; `AuditedCommand` run summaries.
+- **Read-only in four layers:** 405 on write verbs (after authentication, so anonymous still gets
+  401), `save()`/`delete()` refusal, queryset refusal, a vendor-guarded PostgreSQL trigger.
+  `GET /api/core/activity/` + streamed CSV export behind `core.audit.view`/`core.audit.export`.
+- **Catalog:** `registry.audit_actions` with a zero-literal-fails scan.
+**Why:** an audit log that can be edited, that loses a row when the request rolls back, or that
+stores a secret in a diff is evidence nobody can rely on.
+**Files:** `backend/core/{audit,audit_diff,audit_actions,models,registry,checks,apps,permissions,serializers,urls}.py`,
+`backend/core/api/audit.py`, `backend/core/migrations/0004_activitylog.py`, `backend/conftest.py`,
+`backend/tests/{test_audit_record,test_audit_diff}.py`, `backend/tests/architecture/test_audit_rules.py`,
+row-assertion updates in the settings, flags, guards, lookups and bootstrap tests,
+`DATA_LIFECYCLE.md` § 4, `BUILD_ORDER.md`, `TECH_DEBT.md`.
+**Verification:** junior: 1268 passed, 4 skipped (SQLite); 1269 passed, 3 skipped (PostgreSQL 16,
+the trigger test running). Lead's own run on both databases: in the commit.
+**Notes:** the first Postgres run of the migration failed on a literal `%` in the trigger SQL,
+caught by a local Postgres run before CI; the SQL now builds its message without one.
+
 ### BUILD_ORDER 8.1: frontend transport, typed errors and the data layer
 **What** (lead; owner decisions: TanStack Query v5, Vitest + MSW):
 - **Transport** (`src/core/lib/api/client.ts`): `request`/`upload`/`download`/`requestWithTotal`

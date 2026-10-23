@@ -1,6 +1,5 @@
 """Admin-editable lookups (CONFIGURATION.md § 14): stable keys, grandfathering, seed humility."""
 
-import logging
 from types import SimpleNamespace
 
 import pytest
@@ -72,13 +71,12 @@ def test_sync_inserts_missing_keys_only_and_never_touches_the_admins_edits():
 
 
 def test_an_admin_adds_a_value_with_no_deploy_and_the_key_is_stable(
-    caplog, django_capture_on_commit_callbacks
+    audit_rows, django_capture_on_commit_callbacks
 ):
-    with caplog.at_level(logging.INFO, logger="audit"):
-        with django_capture_on_commit_callbacks(execute=True):
-            row = set_lookup_value(SET, "contract-ended", create=True, label="Contract ended")
+    with django_capture_on_commit_callbacks(execute=True):
+        row = set_lookup_value(SET, "contract-ended", create=True, label="Contract ended")
     assert row.key == "contract-ended" and row.is_active
-    assert [r.message for r in caplog.records if r.message.startswith("core.lookup")] == [
+    assert [r.action for r in audit_rows() if r.action.startswith("core.lookup")] == [
         "core.lookup.created"
     ]
     with pytest.raises(LookupRefused, match="already exists"):
@@ -88,13 +86,12 @@ def test_an_admin_adds_a_value_with_no_deploy_and_the_key_is_stable(
         set_lookup_value(SET, "one-more", create=True, label="One more")
 
 
-def test_label_changes_are_audited_old_to_new(caplog, django_capture_on_commit_callbacks):
-    with caplog.at_level(logging.INFO, logger="audit"):
-        with django_capture_on_commit_callbacks(execute=True):
-            set_lookup_value(SET, "resigned", label="Resigned (voluntary)")
-    (event,) = [r for r in caplog.records if r.message == "core.lookup.changed"]
-    assert event.audit_meta["old"]["label"] == "Resigned"
-    assert event.audit_meta["new"]["label"] == "Resigned (voluntary)"
+def test_label_changes_are_audited_old_to_new(audit_rows, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        set_lookup_value(SET, "resigned", label="Resigned (voluntary)")
+    (event,) = audit_rows("core.lookup.changed")
+    assert event.meta["old"]["label"] == "Resigned"
+    assert event.meta["new"]["label"] == "Resigned (voluntary)"
 
 
 def test_a_system_value_cannot_be_deactivated():
