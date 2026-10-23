@@ -14,7 +14,12 @@ from core.models import Setting
 
 pytestmark = pytest.mark.django_db
 
-RULES = {"core_setting_scope_type_known": "A setting's scope must be platform, tenant or user."}
+# A bogus scope trips two constraints; which one the database reports first differs between
+# PostgreSQL and SQLite, so the rule map names both and the test accepts either.
+RULES = {
+    "core_setting_scope_type_known": "A setting's scope must be platform, tenant or user.",
+    "core_setting_scope_id_iff_not_platform": "Only a platform-scope setting may omit a scope id.",
+}
 
 
 @pytest.mark.parametrize(
@@ -48,8 +53,8 @@ def test_a_queryset_update_that_bypasses_clean_is_still_refused_by_the_database(
     with pytest.raises(InvariantViolation) as caught:
         with invariant_scope(RULES):
             Setting.objects.filter(pk=row.pk).update(scope_type="bogus")  # no clean() runs here
-    assert caught.value.constraint == "core_setting_scope_type_known"
-    assert str(caught.value) == RULES["core_setting_scope_type_known"]
+    assert caught.value.constraint in RULES
+    assert str(caught.value) == RULES[caught.value.constraint]
     assert caught.value.code == "invariant_violated"
     row.refresh_from_db()
     assert row.scope_type == "platform"  # the savepoint rolled the write back
