@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.utils.cache import patch_cache_control
 
+from core.settings_service import begin_snapshot, end_snapshot
+
 
 class NoStoreForAuthenticatedMiddleware:
     """
@@ -21,3 +23,22 @@ class NoStoreForAuthenticatedMiddleware:
         ):
             patch_cache_control(response, no_store=True, private=True)
         return response
+
+
+class SettingsSnapshotMiddleware:
+    """
+    One consistent value per setting for the whole request (CONFIGURATION.md § 9.7): a request that
+    reads a key twice never sees an admin's save land halfway through it. The snapshot ends with
+    the request, so it is never a per-process cache. A job runner needs the same per task (a Celery
+    task_prerun/task_postrun pair, when Celery arrives).
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        token = begin_snapshot()
+        try:
+            return self.get_response(request)
+        finally:
+            end_snapshot(token)

@@ -28,3 +28,17 @@ def _hermetic_cache():
     cache.clear()
     yield
     cache.clear()
+
+
+@pytest.fixture
+def setting_override(db):
+    """
+    setting_override(key, value): a platform override through the real writer, so a test exercises
+    the same coercion, cache and audit path as production. Rolled back with the test's transaction.
+    """
+    from core.settings_service import set_value
+
+    def apply(key, value, **where):
+        return set_value(key, value, reason="test", **where)
+
+    return apply

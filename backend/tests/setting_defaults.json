@@ -1,0 +1,4 @@
+{
+  "security.reauth.actions": [],
+  "security.reauth.window_minutes": 15
+}

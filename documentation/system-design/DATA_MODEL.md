@@ -150,7 +150,7 @@ class SoftDeletableModel(models.Model):
 | `Permission` | One capability | code (`module.feature.action`), label, group | **Registered in code, seeded to DB** — see [`RBAC_DESIGN.md`](RBAC_DESIGN.md) |
 | `PermissionGroup` | UI grouping | name, module, order | So the roles screen is readable |
 | `UserRole` | User ↔ Role | user, role | Explicit table; a user may hold several |
-| `Setting` | Runtime configuration | key, value, type, is_public | DB-backed, so non-developers can change it |
+| `Setting` | Runtime configuration **(built, 5.3)** | key, scope_type, scope_id, value `{"v": …}`, is_locked | Overrides only; the type, label and default are declared in code (`CONFIGURATION.md` § 9) |
 | `ActivityLog` | Audit trail | actor, verb, target (generic FK), meta, ip, at | D5. Append-only — **never updated or deleted** |
 | `Invitation` | Onboarding | email, role, token, expires_at, accepted_at | Token is **hashed at rest**, like a password |
 | `Session` | Active logins | user, token_id, ip, user_agent, last_seen, revoked_at | Needed for "sign out everywhere" and immediate revocation |

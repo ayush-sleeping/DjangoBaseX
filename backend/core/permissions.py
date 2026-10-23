@@ -13,6 +13,8 @@ A view states what it needs on the class, in one place:
 
 from rest_framework.permissions import BasePermission
 
+from core.registry import PermissionGroupSpec, PermissionSpec
+
 
 class DefaultDeny(BasePermission):
     """DRF's DEFAULT_PERMISSION_CLASSES (dbx.E004): a view that skips the bases serves nobody."""
@@ -40,3 +42,17 @@ def required_codes(view) -> list[str] | None:
     if isinstance(declared, dict):
         return declared.get(getattr(view, "action", None))
     return declared
+
+
+# --- core's own permission catalog (registered in CoreConfig.ready, like users' and rbac's) -------
+
+SETTINGS_GROUP = PermissionGroupSpec(
+    code="settings",
+    label="Settings",
+    module="settings",  # RBAC_DESIGN.md: settings.settings.manage is core's, under "settings."
+    order=30,
+    permissions=(
+        PermissionSpec("settings.settings.view", "View settings and their effective values"),
+        PermissionSpec("settings.settings.manage", "Change and reset settings"),
+    ),
+)

@@ -181,4 +181,13 @@ def registration_problems(plugin: Plugin, reg) -> list[str]:
     for url_name in reg.public_routes.routes():
         if mine(reg.public_routes, url_name) and not url_name.startswith(f"{label}:"):
             problems.append(f"{plugin.name}: public route {url_name!r} is not {label}:<name>")
+    for defn in reg.settings.defs():
+        if not mine(reg.settings, defn.key):
+            continue
+        # The reserved namespaces (platform., security.) are core's (CONFIGURATION.md § 9.1).
+        if defn.namespace != label or defn.module != label:
+            problems.append(
+                f"{plugin.name}: setting {defn.key!r} (module {defn.module!r}) must be "
+                f"{label}.<group>.<name> with module {label!r}"
+            )
     return problems

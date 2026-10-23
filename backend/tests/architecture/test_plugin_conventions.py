@@ -194,22 +194,40 @@ def register_from_plugin(plugin, source: str) -> Registry:
         sys.modules.pop("djx_conv_probe.probe_wiring", None)
 
 
-SCAFFOLD_WIRING = """
+SETTING_DEF = """
+from core.settings_registry import Int, SettingDef
+
+
+def setting(key, module):
+    return SettingDef(
+        key=key, type=Int(min=1, max=9), default=5, label="A probe", description="d",
+        group="Probes", module=module, changed_by_event="e", used_by=("Tests",),
+    )
+"""
+
+SCAFFOLD_WIRING = (
+    SETTING_DEF
+    + """
 from .wiring import GROUP, SECTION
 
 
 def register(reg):
+    reg.settings.register(setting("conv_probe.probe.limit", "conv_probe"))
     reg.permissions.register(GROUP)
     reg.api_routes.register(prefix="conv-probe", urlconf="djx_conv_probe.urls")
     reg.navigation.register(SECTION)
     reg.public_routes.register("conv_probe:home", "A probe route, public for this test only.")
 """
+)
 
-OUT_OF_LANE_WIRING = """
+OUT_OF_LANE_WIRING = (
+    SETTING_DEF
+    + """
 from core.registry import HealthCheck, NavItem, NavSection, PermissionGroupSpec, PermissionSpec
 
 
 def register(reg):
+    reg.settings.register(setting("security.probe.limit", "conv_probe"))
     # Impersonation: a group declared under another module's name, with that module's codes.
     reg.permissions.register(PermissionGroupSpec(
         code="users_extra", label="Extra", module="users",
@@ -223,6 +241,7 @@ def register(reg):
     ))
     reg.public_routes.register("users:extra", "Opened in another app's namespace.")
 """
+)
 
 
 def test_the_scaffold_registers_inside_its_prefixes(scaffold):
@@ -242,6 +261,7 @@ def test_the_registration_rule_flags_each_way_out_of_the_lane(scaffold):
     assert "health check 'database' must be 'conv-probe'" in problems
     assert "links '/billing/x', outside /conv-probe/" in problems
     assert "public route 'users:extra'" in problems
+    assert "setting 'security.probe.limit'" in problems  # reserved namespaces are core's
 
 
 def test_the_shadow_rule_flags_a_prefix_the_frontend_already_serves(scaffold):

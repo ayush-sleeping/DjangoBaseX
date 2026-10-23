@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from tests.factories import DEFAULT_PASSWORD, UserFactory
 from users.cookies import cookie_names
-from users.models import LoginAttempt, MfaDevice
+from users.models import LoginAttempt, MfaDevice, UserSession
 
 pytestmark = pytest.mark.django_db
 
@@ -199,8 +199,10 @@ def test_disable_needs_no_reauth_until_an_operator_opts_in(client):
     assert client.get(ME).json()["mfa_enabled"] is False
 
 
-def test_disable_with_reauth_on_answers_423_until_the_password_is_confirmed(client, settings):
-    settings.REAUTH_ACTIONS = ["mfa_disable"]
+def test_disable_with_reauth_on_answers_423_until_the_password_is_confirmed(
+    client, setting_override
+):
+    setting_override("security.reauth.actions", ["mfa_disable"])
     user = UserFactory()
     enrol(client, user)
 
@@ -213,8 +215,8 @@ def test_disable_with_reauth_on_answers_423_until_the_password_is_confirmed(clie
     assert post(client, DISABLE).status_code == 204
 
 
-def test_reauth_is_per_session_and_expires(client, settings):
-    settings.REAUTH_ACTIONS = ["mfa_disable"]
+def test_reauth_is_per_session_and_expires(client, setting_override):
+    setting_override("security.reauth.actions", ["mfa_disable"])
     user = UserFactory()
     _, codes = enrol(client, user)
     post(client, PASSWORD_CONFIRM, {"password": DEFAULT_PASSWORD})
@@ -223,5 +225,10 @@ def test_reauth_is_per_session_and_expires(client, settings):
     post(phone, VERIFY, {"mfa_token": mfa_token(user), "code": codes[0]})
     assert post(phone, DISABLE).status_code == 423  # the laptop's confirmation is not the phone's
 
-    settings.REAUTH_WINDOW_MINUTES = 0
+    # The window has a floor of one minute (zero would make every confirmation useless): age the
+    # confirmation past a shortened window instead.
+    setting_override("security.reauth.window_minutes", 1)
+    UserSession.objects.filter(user=user).update(
+        password_confirmed_at=timezone.now() - timedelta(minutes=2)
+    )
     assert post(client, DISABLE).status_code == 423

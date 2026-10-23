@@ -443,17 +443,14 @@ are the union** (`RBAC_DESIGN.md` § "The model").
 
 ### 3.13 `core_setting`
 
-| Column | Type | Null | Index | Notes |
-|---|---|---|---|---|
-| `id` | `BigAutoField` | no | PK | |
-| `key` | `CharField(128)` | no | **unique** | `security.reauth.window_minutes` |
-| `value` | `TextField` | no (`""`) | — | Serialised by `value_type` |
-| `value_type` | `CharField(16)` | no | — | `str` · `int` · `bool` · `json` |
-| `is_public` | `BooleanField` | no (`False`) | — | Exposed to the frontend bootstrap |
-| `updated_at` / `updated_by` | | | | |
-
-Runtime security settings live here (re-auth per action, lockout thresholds) so an operator can
-change them without a deploy. **Nothing that grants access lives here** — only thresholds.
+> **Superseded and built 2026-10-24 (BUILD_ORDER 5.3).** The table sketched here (key unique,
+> `value TextField`, `value_type`, `is_public`) became the typed settings registry of
+> [`CONFIGURATION.md`](CONFIGURATION.md) § 9: declarations live in code
+> (`core/settings_registry.py`, `registry.settings`), the `core_setting` table stores **overrides
+> only** as `{"v": …}` with a scope (`platform` · `tenant` · `user`), and `value_type` /
+> `is_public` became the declaration's `type` and `exposure`. Runtime security thresholds (re-auth
+> per action and its window) live there, written through `core/settings_service.py` and audited
+> old → new. Nothing that grants access lives in it, as before.
 
 ---
 

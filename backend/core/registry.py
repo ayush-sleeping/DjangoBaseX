@@ -20,7 +20,7 @@ import re
 import sys
 import threading
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import MISSING, dataclass, fields, replace
 from types import MappingProxyType
 
 # "<module>.<feature>.<action>". The action is deliberately not checked against a fixed list:
@@ -52,6 +52,8 @@ RESERVED_PREFIXES = frozenset(
         "users",
     }
 )
+# Where a policy dataclass field carries its declaration: core.settings_registry.meta() writes it.
+SETTING_METADATA_KEY = "core.setting"
 # A Django URL name, optionally namespaced (nested namespaces allowed): "schema", "users:login",
 # "billing:payments:callback". Hyphens and underscores, as Django's own names use both.
 URL_NAME_PATTERN = re.compile(r"^(?:[a-z][a-z0-9_-]*:)*[a-z][a-z0-9_-]*$")
@@ -457,6 +459,133 @@ class PublicRouteRegistry(_Catalog):
         return MappingProxyType(dict(sorted(self._routes.items())))
 
 
+# --- Settings -----------------------------------------------------------------------------------
+
+
+class SettingRegistry(_Catalog):
+    """
+    Declared settings (CONFIGURATION.md § 9.1). A key exists only if a module registered it; the
+    settings service refuses to read or write any other. The declarations themselves (SettingDef,
+    the types, meta()) are core.settings_registry's. This catalog takes them by shape, so this
+    module stays standard library only.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._defs: dict = {}
+        self._policies: dict[type, dict[str, str]] = {}
+        self._tenant_resolver: Callable | None = None
+
+    def register(self, definition) -> None:
+        self._add([definition], _caller_module())
+
+    def register_group(
+        self,
+        policy: type,
+        *,
+        prefix: str,
+        module: str,
+        group: str,
+        scopes: tuple[str, ...] | None = None,
+        exposure: str | None = None,
+    ) -> None:
+        """
+        A frozen dataclass of related settings: each field's default is the code default and its
+        metadata comes from core.settings_registry.meta(). All or nothing.
+        """
+        owner = _caller_module()
+        name = f"setting group {getattr(policy, '__name__', policy)!r}"
+        params = getattr(policy, "__dataclass_params__", None)
+        if params is None or not params.frozen:
+            raise RegistryError(f"{name} is not a frozen dataclass")
+        definitions, keys = [], {}
+        for f in fields(policy):
+            build = f.metadata.get(SETTING_METADATA_KEY)
+            if build is None:
+                raise RegistryError(f"{name}: field {f.name!r} has no meta(...) declaration")
+            if f.default is MISSING:
+                raise RegistryError(f"{name}: field {f.name!r} has no default (the code default)")
+            fixed = {"scopes": scopes, "exposure": exposure}
+            fixed = {k: v for k, v in fixed.items() if v is not None and k not in build.keywords}
+            definitions.append(
+                build(
+                    key=f"{prefix}.{f.name}", default=f.default, module=module, group=group, **fixed
+                )
+            )
+            keys[f.name] = f"{prefix}.{f.name}"
+        if not definitions:
+            raise RegistryError(f"{name} declares no fields")
+        self._add(definitions, owner, policy=(policy, keys))
+
+    def _add(self, definitions: list, owner: str, policy=None) -> None:
+        with self._lock:
+            for definition in definitions:
+                key = getattr(definition, "key", None)
+                name = f"setting {key!r}"
+                self._refuse_if_sealed(name)
+                if not callable(getattr(definition, "problems", None)):
+                    raise RegistryError(f"expected a SettingDef, got {type(definition).__name__}")
+                problems = definition.problems()
+                if problems:
+                    raise RegistryError(f"{name}: {'; '.join(problems)}")
+                if key in self._defs or sum(d.key == key for d in definitions) > 1:
+                    first = self._owner_of.get(key, owner)
+                    raise RegistryError(
+                        f"{name} is already registered by {first}; registered again by {owner}. "
+                        "One key, one declaration."
+                    )
+            if policy is not None and policy[0] in self._policies:
+                raise RegistryError(f"setting group {policy[0].__name__!r} is already registered")
+            for definition in definitions:
+                self._defs[definition.key] = definition
+                self._owner_of[definition.key] = owner
+            if policy is not None:
+                self._policies[policy[0]] = policy[1]
+
+    def set_tenant_resolver(self, resolver: Callable) -> None:
+        """
+        The tenant step of the cascade: resolver(user) -> the tenant's public id, or None. Core
+        registers none (ADR-0011), so the step is inert until a tenancy module does.
+        """
+        owner = _caller_module()
+        with self._lock:
+            self._refuse_if_sealed("the tenant resolver")
+            if not callable(resolver):
+                raise RegistryError("the tenant resolver must be callable")
+            if self._tenant_resolver is not None:
+                raise RegistryError(
+                    f"a tenant resolver is already registered by {self._owner_of['<tenant>']}; "
+                    f"registered again by {owner}"
+                )
+            self._tenant_resolver = resolver
+            self._owner_of["<tenant>"] = owner
+
+    def tenant_resolver(self) -> Callable | None:
+        self.seal()
+        return self._tenant_resolver
+
+    def get(self, key: str):
+        """The declaration for `key`. UnknownSetting (from core.settings_registry) is the service's
+        to raise; here a miss is a KeyError, like PermissionRegistry.group_for."""
+        self.seal()
+        return self._defs[key]
+
+    def defs(self) -> tuple:
+        """Every declaration, sorted by key."""
+        self.seal()
+        return tuple(self._defs[k] for k in sorted(self._defs))
+
+    def keys_of(self, policy: type) -> Mapping[str, str]:
+        """field name → key, for a policy registered with register_group(). KeyError otherwise."""
+        self.seal()
+        return MappingProxyType(self._policies[policy])
+
+    def policies(self) -> Mapping[type, Mapping[str, str]]:
+        """Every registered policy class → its field-name-to-key map. For the § 9.11 reader scan."""
+        self.seal()
+        return MappingProxyType({p: MappingProxyType(k) for p, k in self._policies.items()})
+
+
 def _caller_module() -> str:
     """The module that called register(), for naming both sides of a duplicate. Best effort."""
     try:
@@ -478,6 +607,7 @@ class Registry:
         self.health = HealthRegistry()
         self.api_routes = ApiRouteRegistry()
         self.public_routes = PublicRouteRegistry()
+        self.settings = SettingRegistry()
 
 
 # The process-wide instance. Tests build their own and never touch this one.

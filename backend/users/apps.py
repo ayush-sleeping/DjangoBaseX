@@ -13,6 +13,11 @@ class UsersConfig(AppConfig):
 
         signals.connect()
         registry.permissions.register(GROUP)
+        from .reauth import ReauthPolicy
+
+        registry.settings.register_group(
+            ReauthPolicy, prefix="security.reauth", module="users", group="Re-authentication"
+        )
         from .public_routes import PUBLIC_ROUTES
 
         for url_name, reason in PUBLIC_ROUTES.items():
