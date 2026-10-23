@@ -1,7 +1,6 @@
 from django.urls import path
 
 from .api.flags import FlagDetailView, FlagListView
-from .api.lookups import LookupListView, LookupWriteView
 from .api.settings import SettingDetailView, SettingListView, SettingResetView
 from .views import ComponentsView, LiveView, NavigationView, PublicConfigView, ReadyView
 

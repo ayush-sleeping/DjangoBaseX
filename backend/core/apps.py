@@ -19,11 +19,8 @@ class CoreConfig(AppConfig):
             registry.public_routes.register(url_name, reason)
         registry.permissions.register(SETTINGS_GROUP)
         registry.permissions.register(HEALTH_GROUP)
-        from .formatting import register_locale_settings
 
-        register_locale_settings(registry)
         post_migrate.connect(_report_settings, sender=self, dispatch_uid="core.settings_report")
-        post_migrate.connect(_seed_lookups, sender=self, dispatch_uid="core.seed_lookups")
 
 
 def _report_settings(sender, **kwargs):
