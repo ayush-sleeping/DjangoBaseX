@@ -135,6 +135,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Tests
+        run: npm test
+
       - name: Production build
         run: npm run build
 
@@ -153,6 +156,9 @@ jobs:
 
       - name: Typecheck, with the example plugin
         run: npm run typecheck
+
+      - name: Tests, with the example plugin
+        run: npm test
 
       - name: Production build, with the example plugin
         run: npm run build

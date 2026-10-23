@@ -26,6 +26,45 @@ Newest first.
 
 ## 2026-10-24
 
+### BUILD_ORDER 8.1: frontend transport, typed errors and the data layer
+**What** (lead; owner decisions: TanStack Query v5, Vitest + MSW):
+- **Transport** (`src/core/lib/api/client.ts`): `request`/`upload`/`download`/`requestWithTotal`
+  over one `buildHeaders()` (CSRF on unsafe methods, `Accept-Language`, client `X-Request-ID`,
+  `Idempotency-Key`, registered contributors), `credentials: "include"`, bounded timeouts with
+  `longTimeout`, single-flight refresh with one replay, a request-id/permissions-version store.
+  `src/core/lib/api.ts` is now a shim keeping every name existing pages import.
+- **Errors** (`src/core/lib/api/errors.ts`): the closed `kind` taxonomy decoded once, `isApiError`
+  by brand, nested field paths preserved, `Retry-After` delta-seconds or HTTP-date clamped to
+  3600 s, `messageFor` that never stringifies detail, `useCooldown`.
+- **Data layer** (`src/core/lib/query/`): `defineKeys`, `useApiQuery`/`useApiList` with disjoint
+  error → loading → empty → data, `useApiMutation` with a required `invalidates`,
+  `invalidateResource` (prefix + `meta.dependsOn`), `Providers` creating the client in `useState`,
+  `ListLoadError`.
+- **Lint:** `fetch`/`XMLHttpRequest`/`axios` refused outside the transport; TanStack hooks refused
+  outside the wrappers. Lesson recorded in the config: a later flat-config block *replaces* a
+  rule's options, so each block carries the shared `paths`.
+- **Tests (first frontend tests):** Vitest (`TZ=UTC`, forks, jsdom) + MSW at the network;
+  `tests/architecture/walk.ts` + two-way ratchet; `no-effect-fetch`, `no-false-empty`,
+  `query-keys`, `lint-smoke`, `errors.test.ts`, `use-api-query.test.tsx`. `npm test` in both CI
+  frontend passes.
+**Why:** three quarters of a studied product's pages hand-rolled `useEffect` + `setLoading` and
+shipped the same defects (a failed fetch as "nothing here", no cancellation, a cache not keyed by
+scope); per-feature fetch helpers forgot headers. One transport and one data layer, enforced by
+lint and a ratchet, is the fix.
+**Files:** `frontend/package.json` (+ lock), `frontend/vitest.config.ts`, `frontend/eslint.config.mjs`,
+`frontend/tests/**`, `frontend/src/core/lib/api/**`, `frontend/src/core/lib/api.ts`,
+`frontend/src/core/lib/query/**`, `frontend/src/core/lib/config/defaults.ts`,
+`frontend/src/core/providers/Providers.tsx`, `frontend/src/core/components/ListLoadError.tsx`,
+`frontend/src/app/layout.tsx`, `.github/workflows/ci.yml`, `FRONTEND_PLATFORM.md` §§ 2–5, 26,
+`PLATFORM_BLUEPRINT.md` § 6, `BUILD_ORDER.md`, `TECH_DEBT.md` (DB-5).
+**Verification:** `npm run lint` clean, `npm run typecheck` clean, `npm test`: 6 files, 24 passed.
+Done-when: `no-effect-fetch` positive control catches `useEffect→setIsLoading()` and
+`useEffect→fetch()`; `use-api-query.test.tsx` renders the error surface, not the empty state, on a
+500. `npm run build` not run (not in the routine gate).
+**Notes:** as built, the browser base stays `NEXT_PUBLIC_API_URL`; the code→message map is local
+until § 24; no scope context yet; existing pages still call `api()` and move to `useApiList` as
+8.2+ touches them.
+
 ### BUILD_ORDER 6.3: the encryption service
 **What** (junior `djangobasex-f6`; closes DB-33):
 - **`core/crypto.py`:** a `FIELD_ENCRYPTION_KEYS` keyring (newest first; boot refuses a key equal to

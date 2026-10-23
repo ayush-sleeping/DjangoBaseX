@@ -870,7 +870,31 @@ cache clear.
 
 *Spec: [`FRONTEND_PLATFORM.md`](../system-design/FRONTEND_PLATFORM.md). Depends on 1.1 (auth) and 1.4 (`/me`).*
 
-### 8.1 — Transport, typed errors and the data layer ⬜
+### 8.1 — Transport, typed errors and the data layer ✅
+*Done 2026-10-24* (lead). Owner decisions: **TanStack Query v5** (PLATFORM_BLUEPRINT pending #1) and
+**Vitest + MSW** as the frontend test runner (closes the "no frontend tests" half of DB-5).
+- **Transport** `src/core/lib/api/client.ts`: `request`/`upload`/`download`/`requestWithTotal`,
+  one `buildHeaders()` (CSRF on unsafe methods, `Accept-Language`, a client `X-Request-ID`,
+  `Idempotency-Key`, registered header contributors), `credentials: "include"`, timeouts with
+  `longTimeout`, single-flight refresh with one replay, the request-id / permissions-version
+  store. `src/core/lib/api.ts` keeps every name existing pages import.
+- **Errors** `src/core/lib/api/errors.ts`: the closed `kind` taxonomy decoded once, `isApiError`
+  by brand, nested field paths preserved, `Retry-After` in both formats clamped, `messageFor`
+  that never stringifies detail, `useCooldown`.
+- **Data layer** `src/core/lib/query/`: `defineKeys`, `useApiQuery`/`useApiList` with the
+  disjoint load-state contract (`showError`, `isEmpty = isSuccess && empty`, `refetch` never
+  rejects, "couldn't refresh" announced once per distinct error), `useApiMutation` with a
+  required `invalidates`, `invalidateResource` by prefix + `meta.dependsOn`, `Providers` with the
+  client in `useState`.
+- **Lint:** `fetch`/`XMLHttpRequest`/`axios` refused outside `src/core/lib/api/`; TanStack's hooks
+  refused outside `src/core/lib/query/`; `tests/lint-smoke.test.ts` proves each rule fires.
+- **Done-when:** `tests/architecture/no-effect-fetch.test.ts` (TS-AST two-way ratchet, positive
+  control) fails on a `useEffect` + `setIsLoading` fetch; `use-api-query.test.tsx` renders
+  `ListLoadError`, never an empty state, on a failed list fetch (MSW at the network).
+- **As built / not yet:** the browser base URL stays `NEXT_PUBLIC_API_URL` (separate dev origins),
+  not the relative `/api` § 2 prefers; the code→message map is a short local one until § 24's
+  generated catalogue; no scope context provider yet (`{}` is inserted); existing pages still
+  call `api()` directly (migration to `useApiList` is per-page work in 8.2+).
 One transport module with typed errors and `retry_after` handling; ESLint bans `fetch` elsewhere; one data/cache
 layer (decide first — `PLATFORM_BLUEPRINT.md` § 6); `useApiQuery` / `useApiList` / `usePagedQuery` with the
 load-state contract.

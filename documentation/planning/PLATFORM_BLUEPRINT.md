@@ -300,7 +300,7 @@ endpoint is built.
 
 Beyond § 5, the specs raise these. None blocks Phases 1–2.
 
-1. **One frontend data layer** — TanStack Query (recommended) or RTK Query. `FRONTEND_PLATFORM.md`.
+1. ~~**One frontend data layer** — TanStack Query (recommended) or RTK Query.~~ **Decided 2026-10-24: TanStack Query v5** (BUILD_ORDER 8.1). `FRONTEND_PLATFORM.md`.
 2. **Built-in error tracking or Sentry-only.** `OBSERVABILITY.md`.
 3. **Celery from day one, or an in-process worker first** (the monitor design works for both). `JOBS_AND_INTEGRATIONS.md`.
 4. **Where plugin documentation lives** — in each plugin repo, or all in core. `ENGINEERING_PRACTICES.md`.

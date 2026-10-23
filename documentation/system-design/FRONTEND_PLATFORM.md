@@ -127,6 +127,10 @@ order by probing contexts (a `PermissionProvider` above `SessionProvider` fails)
 
 ## 2. The transport module — **Tier 1 · Core**
 
+*Built 2026-10-24* (BUILD_ORDER 8.1): `src/core/lib/api/client.ts`. As built the browser base is
+`NEXT_PUBLIC_API_URL`, not relative `/api` (the dev topology uses two origins); per-namespace
+generated clients wait for § 24.
+
 **What.** One module that every backend call goes through, with four entry points sharing one
 `buildHeaders()`.
 
@@ -202,6 +206,9 @@ contributors are a registry (`registerRequestContext(fn)`), not a literal header
 
 ## 3. The typed error taxonomy — **Tier 1 · Core**
 
+*Built 2026-10-24* (BUILD_ORDER 8.1): `src/core/lib/api/errors.ts`; the code → message map is
+local until the backend exports its catalogue (§ 24). Tests: `errors.test.ts`.
+
 **What.** Every non-2xx is decoded **once**, in the transport, into one of a closed set of error
 types. Components switch on `err.kind`; nothing downstream parses a response body.
 
@@ -263,6 +270,9 @@ remediation URLs are backend data.
 ---
 
 ## 4. One data and cache layer — **Tier 1 · Core**
+
+*Built 2026-10-24* (BUILD_ORDER 8.1, owner decision: TanStack Query v5): `src/core/lib/query/`.
+Not yet: `useJobStatus`, transitional polling, HydrationBoundary seeding.
 
 **What.** **TanStack Query v5** is the only server-state cache. Query keys are the contract between
 readers and writers.
@@ -345,6 +355,9 @@ const archive = useApiMutation({
 ---
 
 ## 5. The load-state contract — **Tier 1 · Core**
+
+*Built 2026-10-24* (BUILD_ORDER 8.1): `useApiQuery`/`useApiList`, `ListLoadError`, the
+`no-effect-fetch` and `no-false-empty` guards. Toast copy is a plain string until § 22.
 
 **What.** `useApiQuery` and `useApiList` wrap TanStack and return a shape where **failure, loading,
 empty and data are disjoint** — and the page renders them in that order.
@@ -1389,6 +1402,11 @@ plugin key; the generated registry equals a fresh generation).
 ---
 
 ## 26. Frontend tests — **Process**
+
+*Started 2026-10-24* (BUILD_ORDER 8.1): Vitest (non-watch, `TZ=UTC`, forks, jsdom), MSW at the
+network, `tests/architecture/walk.ts` as the one walker, `lint-smoke.test.ts`. `npm test` runs in
+CI. Not yet: typechecked tests via a separate tsconfig, the Playwright projects, the
+non-whole-hour-offset timezone job.
 
 **What.** The runner, the guard tests that encode this file, and the browser sweeps.
 [`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md) owns general practice and the ratchet helper.

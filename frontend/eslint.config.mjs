@@ -22,25 +22,59 @@ const PLUGIN_IMPORTS_OUTWARD =
 
 const PLUGIN_DEPTHS = [0, 1, 2, 3, 4, 5];
 
+// One transport (FRONTEND_PLATFORM § 2): every backend call goes through src/core/lib/api/, so
+// headers, credentials, timeouts, refresh and error decoding are never forgotten by a copy.
+const RAW_FETCH =
+  "Call the backend through src/core/lib/api (request/upload/download or the api() shim), never " +
+  "fetch/XMLHttpRequest/axios directly (FRONTEND_PLATFORM § 2).";
+// One data layer (§ 4): callers use useApiQuery/useApiList/useApiMutation, which add the scope
+// context to every key, the load-state contract and the required invalidation.
+const RAW_TANSTACK =
+  "Use useApiQuery / useApiList / useApiMutation from @/core/lib/query, not TanStack's hooks " +
+  "directly (FRONTEND_PLATFORM § 4).";
+// ESLint flat config: a later block REPLACES a rule's options, so every block that configures
+// no-restricted-imports must carry these paths itself.
+const AXIOS = { name: "axios", message: RAW_FETCH };
+const TANSTACK = {
+  name: "@tanstack/react-query",
+  importNames: ["useQuery", "useMutation", "useInfiniteQuery", "useQueries", "useSuspenseQuery"],
+  message: RAW_TANSTACK,
+};
+const CORE_PATTERNS = [
+  // By alias: @/project/…, @/app/(project)/…
+  { regex: "^@/(project|app/\\(project\\))(/|$)", message: CORE_IMPORTS_PROJECT },
+  // By relative path: ../../project/…, ../(project)/…, at any depth.
+  { regex: "^\\.{1,2}/(.*/)?(project|\\(project\\))(/|$)", message: CORE_IMPORTS_PROJECT },
+  { regex: "^@/plugins(/|$)", message: CORE_IMPORTS_PLUGIN },
+  { regex: "^\\.{1,2}/(.*/)?plugins(/|$)", message: CORE_IMPORTS_PLUGIN },
+];
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    files: ["src/**", "tests/**"],
+    ignores: ["src/core/lib/api/**"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        { name: "fetch", message: RAW_FETCH },
+        { name: "XMLHttpRequest", message: RAW_FETCH },
+      ],
+      "no-restricted-imports": ["error", { paths: [AXIOS, TANSTACK] }],
+    },
+  },
+  {
     files: ["src/core/**", "src/app/(core)/**"],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            // By alias: @/project/…, @/app/(project)/…
-            { regex: "^@/(project|app/\\(project\\))(/|$)", message: CORE_IMPORTS_PROJECT },
-            // By relative path: ../../project/…, ../(project)/…, at any depth.
-            { regex: "^\\.{1,2}/(.*/)?(project|\\(project\\))(/|$)", message: CORE_IMPORTS_PROJECT },
-            { regex: "^@/plugins(/|$)", message: CORE_IMPORTS_PLUGIN },
-            { regex: "^\\.{1,2}/(.*/)?plugins(/|$)", message: CORE_IMPORTS_PLUGIN },
-          ],
-        },
-      ],
+      "no-restricted-imports": ["error", { paths: [AXIOS, TANSTACK], patterns: CORE_PATTERNS }],
+    },
+  },
+  {
+    // The one place TanStack's own hooks are called: the wrappers.
+    files: ["src/core/lib/query/**"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: [AXIOS], patterns: CORE_PATTERNS }],
     },
   },
   // One block per directory depth inside a plugin, so `../` is refused only when it climbs out of
@@ -52,6 +86,7 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
+          paths: [AXIOS, TANSTACK],
           patterns: [
             { regex: "^@/(project|plugins|app)(/|$)", message: PLUGIN_IMPORTS_OUTWARD },
             { regex: `^(\\.\\./){${depth + 1},}`, message: PLUGIN_IMPORTS_OUTWARD },
