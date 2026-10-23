@@ -33,7 +33,7 @@ from tests.architecture.sources import (
 )
 
 CURRENCIES = frozenset(
-    line.strip()
+    line.split()[0]
     for line in (BACKEND / "core" / "data" / "iso4217.txt").read_text().splitlines()
     if line.strip() and not line.startswith("#")
 )

@@ -79,6 +79,13 @@ documents, ingestion) are Tier 3 plugins built on them.**
 
 ## 1. Money — **Tier 1 · Core**
 
+*Built 2026-10-24* (BUILD_ORDER 6.5): `core/money.py`, `core/api/fields.py`, `core/invariants.py`.
+As built: `money_fields()`/`money_property()` live in `core/money.py` (no `core/models/` package);
+the currency scale comes from `core/data/iso4217.txt` (`CODE MINOR_UNITS`) rather than the lookup
+table, until a currency lookup carries minor units. Not built: `frontend/src/core/lib/money.ts` and
+its lint rule. Tests: `tests/test_money.py`, `tests/test_money_api.py`, `tests/test_invariants.py`,
+`tests/architecture/test_no_float_money.py`.
+
 **What.** `core/money.py`: a `Money` value object, a `Rate` value object, one quantisation helper, an
 allocation helper, model-field helpers and a serializer field. The billing module
 (`REUSABLE_MODULES.md`) is built on it; so is every product that shows a price.
