@@ -24,6 +24,7 @@ your task below, read the **Start Here** file, and stop.
 | **Understand what this is FOR — read this first** | [`VISION.md`](VISION.md) |
 | **See every capability a strong base must have — the master map** | [`planning/PLATFORM_BLUEPRINT.md`](planning/PLATFORM_BLUEPRINT.md) |
 | **Make something configurable / avoid hard-coding a value** | [`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md) |
+| **Declare or read a runtime setting; rename the product** | [`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md) § 7 (identity, built) and § 9 (settings registry, built) |
 | **Add a registry, a plugin seam, or a plugin contribution** | [`system-design/EXTENSIBILITY.md`](system-design/EXTENSIBILITY.md) |
 | **Build list endpoints, errors, rate limits, tokens, uploads** | [`system-design/API_PLATFORM.md`](system-design/API_PLATFORM.md) |
 | **Add a background job, webhook, integration or secret** | [`system-design/JOBS_AND_INTEGRATIONS.md`](system-design/JOBS_AND_INTEGRATIONS.md) |

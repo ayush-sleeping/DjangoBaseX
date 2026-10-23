@@ -522,6 +522,14 @@ missing required key and a retired key each produce their own error.
 
 ## 7. Project identity — one name derives the rest — **Tier 1 · Core**
 
+*Built 2026-10-22* (BUILD_ORDER 5.2): `backend/core/identity.py` (the shipped defaults, the slug
+rule shared with `scripts/lib/project.sh`), the identity block in `config/settings.py`, `cfg.W003`,
+`GET /api/public/config/` and the root layout's `generateMetadata`. As built:
+- **`MFA_ISSUER`** keeps its name instead of being renamed `OTP_ISSUER`. It defaults to `PRODUCT_NAME`.
+- **Not built yet:** the Celery, log `service`, export `source` and compose-name rows of the table.
+  Celery, the error tracker and export do not exist yet; compose's name comes from `setup.sh`'s slug.
+- **Tests:** `tests/test_identity.py` and `tests/architecture/test_no_boilerplate_identity.py`.
+
 **What.** A product sets a name, a slug and a domain once. Everything that spells the product's name
 somewhere derives from them. Every shipped default **announces that it is a default.**
 
@@ -672,6 +680,14 @@ colour string is refused; every field in `FALLBACKS` is in the public serializer
 
 ## 9. The typed settings registry — **Tier 1 · Core**
 
+> **Built 2026-10-24 (BUILD_ORDER 5.3), backend only:** `core/settings_registry.py` (types and
+> `SettingDef`), `registry.settings` (the catalog), `core/models.py::Setting`,
+> `core/settings_service.py`, `manage.py sync_settings` / `set_setting`, the three
+> `/api/core/settings/` endpoints, and `security.reauth.*` as the first registered settings.
+> Not yet built: the generated screen (§ 9.10), `/me/preferences`, `used_by` live counts,
+> `settings_doctor` beyond `sync_settings`, the env-prefill path (§ 9.14 step 3), and the
+> fallback metric (a structured `core.setting.fallback` warning stands in; TECH_DEBT).
+
 **What.** The one mechanism for operator-tunable policy values: **declared in code** by the module
 that reads them, **stored** as overrides in one table, **resolved** through a scope cascade into
 typed values that never raise, **cached** in the shared cache with a version bump, **audited** on
@@ -761,6 +777,8 @@ the cache, from "never written" or "the cache miss sentinel". **Every stored val
 - `bool` accepts only JSON `true`/`false` from the API; from text (CLI, env prefill) only `true`,
   `false`, `1`, `0`. **`"false"` → `True` is the bug nobody finds until a security control is quietly
   off.**
+- `str_list` (an accepted addition) is a list of unique names, optionally closed over `choices`
+  — the shape of `security.reauth.actions`; from text it is comma-separated.
 - `int` rejects Python `bool` (a subclass of `int`); `decimal` accepts strings only, never floats;
   `string` ≤ 1,000 characters by default, `text` ≤ 20,000; `choice` must be in `choices`; `json` is
   validated by the declaration's schema when one is given.
@@ -1484,6 +1502,15 @@ registry-completeness test.
 
 ## 18. The anti-hard-coding tests — **Tier 1 · Core** · **Process**
 
+*Partly built 2026-10-22* (BUILD_ORDER 5.6).
+- **Built:** `test_no_locale_literals` (currency and Area/Location zones, with BCP-47 tags not yet
+  covered), `test_no_role_name_literals`, `test_secret_env_reads` (the credential-shaped half of
+  `test_env_reads`) and `test_no_boilerplate_identity` (5.2).
+- **How they share code:** the scope walker is `tests/architecture/sources.py`, and the ratchet is
+  `_ratchet.py`.
+- **Allow-lists:** they live in each test, with a reason per entry.
+- **Still planned:** the other rows in the table below.
+
 **What.** The tests that make "nothing hard-coded" fail a build. Each is a source-walking test in
 `backend/tests/architecture/` (AST, not regex, wherever the language allows) or a frontend
 ESLint/vitest rule, with a shrink-only baseline for pre-existing hits
@@ -1537,7 +1564,7 @@ Recorded, not edited — each needs the owner or the owning doc's next change.
 |---|---|---|---|
 | 1 | `AGENTS.md` § 1 protected files; [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 12; [`DJANGO_STANDARDS.md`](DJANGO_STANDARDS.md) § 2 | All name a single `backend/config/settings.py`. § 3 splits it into a `config/settings/` package | If accepted: the protected-file entry becomes `backend/config/settings/`, and § 2 step 1 of `DJANGO_STANDARDS.md` says `config/settings/base.py`. Pending decision #1 |
 | 2 | [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 3.13; [`DATA_MODEL.md`](DATA_MODEL.md) § 3 (`Setting` row) | `core_setting(key unique, value TextField, value_type, is_public)` has no scope, no `{"v"}` wrapper, no strict types, and stores what should be code metadata | Replace with § 9.2's table; `value_type` and `is_public` move into the code declaration (`type`, `exposure`) |
-| 3 | [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 3.13 vs § 12 | § 3.13 says lockout thresholds live in `core_setting`; § 12 lists `LOCKOUT_THRESHOLD` / `LOCKOUT_WINDOW` / `LOCKOUT_DURATION` as env vars | Registry settings `security.lockout.*` (§ 9.6 example), env keys marked retired with `moved_to` (§ 6) |
+| 3 | [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 3.13 vs § 12 | § 3.13 says lockout thresholds live in `core_setting`; § 12 lists `LOCKOUT_THRESHOLD` / `LOCKOUT_WINDOW` / `LOCKOUT_DURATION` as env vars | Registry settings `security.lockout.*` (§ 9.6 example), env keys marked retired with `moved_to` (§ 6). **Owner decision 2026-10-24:** only `REAUTH_*` moved with 5.3 (shipped default off, so no prefill needed); `LOCKOUT_*`, `MAX_SESSIONS_PER_USER` and `*_RETENTION_DAYS` stay in env until the § 16 prefill exists |
 | 4 | [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 12 and § 9.2 | Production behaviour keyed on `DEBUG`: `AUTH_COOKIE_SECURE` defaults to `not DEBUG`, `ADMIN_ENABLED` to `DEBUG`, `dbx.E005`/`dbx.E008` fire "while `DEBUG=False`" | Key on `is_production_like()` (§ 4). `DEBUG=True` in production is itself refused (`cfg.E002`), so the checks stop depending on the switch being honest |
 | 5 | [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 9.2 heading "At boot" | System checks do not run under gunicorn, uvicorn or a Celery worker | Keep `dbx.E00x` for `check` and `check --deploy`; the boot guard is § 5's import-time audit, which carries `cfg.*` twins of the configuration-only checks |
 | 6 | [`AUTH_BLUEPRINT.md`](AUTH_BLUEPRINT.md) § 12 and Ch. 18 | `DEFAULT_FROM_EMAIL` defaults to a literal address; cookie names are written as a literal `dbx_` prefix | Derive from identity (§ 7); `dbx_` becomes `<AUTH_COOKIE_PREFIX>_` — § 12's own note ("derives from a slug setting") already intends this |
@@ -1553,13 +1580,16 @@ Recorded, not edited — each needs the owner or the owning doc's next change.
 1. **Split settings package.** Accept `config/settings/{base,dev,prod,test}.py` and update the
    protected-file list (⚠️ #1)? The alternative — one file with `if` blocks per environment — is how
    staging silently diverges.
-2. **Code defaults resolved live, or materialised at first registration?** This file resolves the
+2. ✅ **Decided 2026-10-24: resolved live**, with the defaults snapshot test
+   (`tests/test_setting_defaults_snapshot.py`) making any change a reviewed diff. Original question:
+   code defaults resolved live, or materialised at first registration? This file resolves the
    default from code when no override exists, so a core update can change behaviour for installations
    that never touched a value (made visible by the defaults snapshot test). Materialising pins every
    value at install time — safer across upgrades, but a fixed bad default then never reaches existing
    installations.
-3. **Tenant scope in core.** The cascade reserves `tenant` and activates it only when a tenancy module
-   registers a resolver. Confirm core never ships tenancy itself ([`REUSABLE_MODULES.md`](REUSABLE_MODULES.md)).
+3. ✅ **Decided 2026-10-24: confirmed** (per [ADR-0011](../adr/0011-no-organisation-in-core.md)).
+   The cascade reserves `tenant`; it activates only when a tenancy module calls
+   `registry.settings.set_tenant_resolver()`. Core registers none.
 4. **Feature flags in Phase 1 or Phase 2** (⚠️ #9).
 5. **No default currency or country** — confirm the first-run wizard asks, versus shipping a
    placeholder default that announces itself.
@@ -1568,8 +1598,8 @@ Recorded, not edited — each needs the owner or the owning doc's next change.
    between variants.
 7. **Lookup label translation** — one `label` now; a `labels` map per locale when a product needs
    translation.
-8. **Unknown setting key raises in production.** Chosen here because the registry and caller share a
-   process; the alternative (log and return `None`) hides typos. Confirm.
+8. ✅ **Decided 2026-10-24: confirmed.** An unregistered key raises `UnknownSetting` everywhere,
+   production included; the registry and caller share a process, so a mismatch is a typo.
 9. **Plugins never read env.** Chosen here for validation and ownership; the escape hatch, if one is
    ever needed, is the product's composition root reading env and registering a default.
 

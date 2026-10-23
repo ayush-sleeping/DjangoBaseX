@@ -69,7 +69,7 @@ class Command(BaseCommand):
             services.recompute_administrator()
 
             user = user_model.objects.create_superuser(email, password, full_name=full_name)
-            administrator = Role.objects.get(slug="administrator")
+            administrator = Role.objects.get(slug=services.ADMINISTRATOR)
             services.assign_role(actor=None, user=user, role=administrator)
             log_activity("users.user.bootstrapped", target=user)
 

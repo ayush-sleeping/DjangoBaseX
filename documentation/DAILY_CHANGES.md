@@ -24,6 +24,107 @@ Newest first.
 
 ---
 
+## 2026-10-22
+
+### BUILD_ORDER 4.1–4.4, 5.2, 5.3, 5.6: setup, Compose, core drift guard, identity, settings registry, scans
+**What:**
+- **5.3 Typed settings registry** (junior `djangobasex-f6`, 2026-10-24, backend only):
+  - **Declared in code:** `core/settings_registry.py` (typed values incl. `StrList`),
+    `registry.settings` sealed like every catalog.
+  - **Stored as overrides only:** `core.Setting` (`{"v": …}`, partial-unique scope rows); core's
+    first migration. `sync_settings` reports, never writes.
+  - **Read path** (`core/settings_service.py`): cascade honouring declared scopes and locks, a
+    shared-cache generation, one snapshot per request, fallback logged as `core.setting.fallback`,
+    `UnknownSetting` always.
+  - **One writer**, audited on commit; CLI `set_setting`; `GET/PATCH /api/core/settings/` behind
+    `settings.settings.view|manage`.
+  - **Moved from env:** `REAUTH_*` → `security.reauth.*` (settings.py, settings_test.py and
+    `.env.example` edited by the lead with owner approval). Defaults unchanged.
+  - **Setup fixes:** the 11 defects a reviewer found in `setup.sh`, `envfile.py` and compose
+    (APP_ENV-missing refusal, atomic 600 writes, `export`/quoted values, stale `node_modules`,
+    bounded `up --wait` with logs, new DB password vs existing volume, TCP `pg_isready`, Python 3.9
+    on the host, `-p` on every compose call). `core/env.py` gained `from __future__ import annotations`.
+- **4.1 `scripts/setup.sh`** (junior `djangobasex-f6`, from WIP started 2026-10-13):
+  - **What it does:** one command from a fresh clone to a signed-in app, on Docker or with
+    `--no-docker` (SQLite).
+  - **Identity per checkout:** the project name (`<slug>-dev`) and cookie prefix come from the
+    directory (`scripts/lib/project.sh`).
+  - **Env files:** writes `.env`, `backend/.env` and `frontend/.env.local` with mode 600, filling
+    only empty or placeholder keys. Secrets come from `core/secret_policy.py`, which is shared with
+    the boot audit and the new `manage.py generate_secret`.
+  - **Ports:** free loopback ports are chosen once and kept; a taken port is re-chosen.
+  - **Bring-up:** builds the images, migrates, runs `bootstrap_admin` only when no user exists, and
+    waits until both apps answer.
+  - **Safety:** refuses a production-like backend env. `--reset` asks for the name to be typed back.
+- **4.4 Compose:**
+  - **Services:** PostgreSQL 16 with the OPERATIONS § 12 settings, Redis 7.4 (password, not
+    published) and both apps.
+  - **Hardening:** ports on 127.0.0.1, every secret `${VAR:?}`, `cap_drop: [ALL]`,
+    `no-new-privileges`, capped log drivers and healthchecks. App images run as uid 1000, and
+    nothing migrates on start.
+  - **Policy as tests:** `tests/infra/test_compose_policy.py` reads `docker compose config`, and
+    every rule has positive controls.
+- **4.2 `scripts/core_doctor.py` + `core.manifest.json`, 4.3 `core-guard.yml`:**
+  - **Manifest:** generated for the first time (214 core files) and verified current.
+  - **Guard proof:** the workflow's `run:` steps were executed under bash 5 in throwaway
+    repositories: 15/15 core and product scenarios behaved as specified. `actionlint` is clean.
+  - **Docs:** `UPGRADING.md` now documents the doctor and the guard; the 🔜 markers are gone.
+- **5.2 Project identity:**
+  - **The source:** `core/identity.py` holds the shipped defaults ("Unnamed product",
+    `no-reply@localhost`) and the slug rule shared with `project.sh`.
+  - **Derived from it:** `PRODUCT_NAME`, `PRODUCT_SLUG` and `PRIMARY_DOMAIN` produce the MFA
+    issuer, the from-address, the auth cookie prefix, the admin's session and CSRF cookie names,
+    the cache `KEY_PREFIX` and the API title. An explicit env value still wins.
+  - **Production warning:** `cfg.W003` fires on shipped defaults.
+  - **New public route:** `GET /api/public/config/`.
+  - **Frontend:** the root layout's `generateMetadata` (60 s ISR) titles every page, and the
+    sign-in and home pages show the name and tagline. `setup.sh` writes `PRODUCT_SLUG`, and compose
+    requires `AUTH_COOKIE_PREFIX` (the literal `dbx` default is gone).
+- **5.6 Anti-hard-coding scans:**
+  - **Shared helpers:** `tests/architecture/sources.py` (one scope walker) and `_ratchet.py` (the
+    two-way ratchet).
+  - **The guards:** `test_no_locale_literals.py`, `test_no_role_name_literals.py` and
+    `test_secret_env_reads.py`, each with a positive control.
+  - **First catch:** `bootstrap_admin` looked its role up by the literal `"administrator"`.
+**Why:** Phase 4 is what makes this a core and not a snapshot. A product starts in one command, and
+its edits to core are visible. 5.2 removes the most expensive hard-coding: an authenticator issuer
+and cookie names that every product would otherwise have inherited. 5.6 makes "nothing
+hard-coded" fail a build instead of being a sentence in a doc.
+**Files:**
+- **Setup and compose:** `scripts/setup.sh`, `scripts/lib/{project,log,ports}.sh`,
+  `scripts/lib/envfile.py`, `docker-compose.yml`, `backend/Dockerfile.dev`, `frontend/Dockerfile.dev`.
+- **Core drift guard:** `scripts/core_doctor.py`, `core.manifest.json`, `VERSION`,
+  `.github/workflows/core-guard.yml`.
+- **Backend:** `backend/core/{identity,secret_policy,config_audit,views,urls,routes}.py`,
+  `backend/core/observability/scrub.py`, `backend/core/management/commands/generate_secret.py`,
+  `backend/core/data/iso4217.txt`, `backend/config/{settings,settings_test,urls}.py`,
+  `backend/.env.example`, `backend/rbac/management/commands/bootstrap_admin.py`.
+- **Tests:** `backend/tests/{test_identity,test_secret_policy,test_scrub,test_config_audit}.py`,
+  `backend/tests/infra/`, and in `backend/tests/architecture/`: `sources.py`, `_ratchet.py`,
+  `test_no_{boilerplate_identity,locale_literals,role_name_literals}.py`,
+  `test_secret_env_reads.py`, `test_public_routes.py`.
+- **Frontend:** `frontend/src/core/lib/{identity,identity-defaults,api}.ts`,
+  `frontend/src/app/layout.tsx`, `frontend/src/app/(core)/**/page.tsx` (titles).
+- **Docs:** `README.md`, `UPGRADING.md`, `NEW_PROJECT.md`, `VERSION_SUMMARY.md`,
+  `CONFIGURATION.md` (§ 7, § 18), `ENGINEERING_PRACTICES.md` § 52, `CORE_ARCHITECTURE_PLAN.md` § 6,
+  `BUILD_ORDER.md`, `TECH_DEBT.md` (DB-12 updated; DB-38 to DB-42 added).
+**Verification** (2026-10-24, lead's own run):
+- `ruff check .` / `ruff format --check .`: clean (backend, `scripts/`, `examples/`).
+- `manage.py check`: no issues. `makemigrations --check --dry-run`: no changes.
+- `shellcheck -x setup.sh lib/*.sh`, `actionlint`: clean.
+- `pytest`: 1066 passed, 2 skipped (before 5.3); junior's run after 5.3: 1105 passed, 2 skipped on
+  SQLite and on PostgreSQL 16. Lead's post-5.3 rerun: **1105 passed, 2 skipped** (SQLite), with
+  ruff, format, `check` and `makemigrations --check` all clean.
+- Frontend `npm run lint` and `npm run typecheck`: clean.
+- **Not run:** `npm run build`, and the GitHub side (2.3 proof PRs, 4.3's first real run).
+**Notes:**
+- **Owner decisions taken for 5.3:** live code defaults, an unregistered read raises everywhere,
+  tenant scope inert (ADR-0011), backend only, and only `REAUTH_*` moves.
+- **Still open:** 2.3's red/green proof PRs and 4.3's first real GitHub run both need `gh auth`
+  and an approved push.
+- **The ADR-0005 question:** the default dev path is now Postgres, but `settings.py` still
+  defaults to SQLite. Whether to supersede ADR-0005 is the owner's call (DB-12).
+
 ## 2026-10-11
 
 ### BUILD_ORDER 3.2–3.5: plugin conventions, scripts/plugins.py, the example plugin, frontend mounting — Phase 3 complete

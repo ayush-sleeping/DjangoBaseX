@@ -448,20 +448,71 @@ Anything unclaimed is a 404, and static core routes always win.
 
 ## Phase 4 — reusability
 
-### 4.1 — `scripts/setup.sh` ⬜
+### 4.1 — `scripts/setup.sh` ✅
 Rename from the directory name, generate a **fresh `SECRET_KEY`**, write env files, migrate, seed,
 print the URL. Idempotent and safe to re-run.
 
-### 4.2 — `core.manifest.json` + `scripts/core_doctor.py` ⬜
+*Done 2026-10-22* (junior `djangobasex-f6`, reviewed by the lead).
+- **What it does:** one command from a fresh clone to a signed-in app, on Docker (Postgres + Redis)
+  or with `--no-docker` (SQLite, host dev servers).
+- **Identity per checkout:** the slug comes from the directory (`scripts/lib/project.sh`), which
+  names the compose project `<slug>-dev` and gives each checkout its own cookie prefix.
+- **Env files and secrets:** writes `.env`, `backend/.env` and `frontend/.env.local` (mode 600).
+  Only empty or placeholder keys are filled, with secrets from `core/secret_policy.py`. The boot
+  audit and `manage.py generate_secret` use the same module.
+- **Ports:** free loopback ports are chosen once and kept.
+- **Bring-up:** builds the images, migrates, runs `bootstrap_admin` only when no user exists, and
+  waits until both apps answer.
+- **Proof:** a re-run leaves all three env files byte-for-byte identical, a second checkout runs
+  beside the first, and a taken port is re-chosen. `--reset` asks for the name to be typed back.
+- **Tests:** `tests/infra/test_setup_script.py` and `tests/test_secret_policy.py`.
+
+### 4.2 — `core.manifest.json` + `scripts/core_doctor.py` ✅
 A SHA per core file; the doctor names every core file a checkout has changed. Regenerated **only in
 this repo** — doing it in a product records that product's drift as correct.
 
-### 4.3 — `core-guard.yml` ⬜
+*Done 2026-10-22.* Built to `ENGINEERING_PRACTICES.md` § 52.
+- **Core is a list:** the trees and files in the manifest header (ADR-0010).
+- **Drift classes:** modified, missing, and added. An untracked file under a core tree counts as
+  added.
+- **Modes:** `--json`, `--verify` (is the manifest current?) and `--list-core`.
+- **`--write` is guarded:** it refuses unless `origin` is this repository, and never echoes the URL.
+- **Tests:** `tests/infra/test_core_doctor.py`, including that the committed header equals the core
+  list. Usage is in `UPGRADING.md` § "If you edited core".
+
+### 4.3 — `core-guard.yml` ✅ (local proof; GitHub run pending)
 Fail a PR that edits `core/` without a `core-change` label. In the core repo itself, instead assert
 the manifest was regenerated.
 
-### 4.4 — Docker Compose ⬜
-*Partly in place since 2026-10-11:* `docker-compose.yml` runs **both apps for development** (live
+*Done 2026-10-22.*
+- **How it decides:** this repository is recognised by its explicit name (case-insensitive).
+  Every other repository is a product.
+- **Core:** a PR that touches core without the manifest fails, and `--verify` runs on PRs and on
+  pushes to `main`.
+- **Product:** a PR that touches core needs the `core-change` label. The doctor also runs on the
+  whole tree, so drift from a direct push or a merge fails as well. A missing manifest is never
+  excused by the label.
+- **Proof:** `actionlint` is clean. The workflow's own `run:` steps were executed under bash 5 in
+  throwaway repositories: **15/15 scenarios** behaved as specified (core: clean, unregenerated,
+  regenerated, stale, name case, push; product: clean, unlabelled, labelled, deleted file, drifted
+  main, no manifest, push clean/drifted).
+- **Still to see:** a real GitHub run, which comes with the 2.3 proof PRs.
+
+### 4.4 — Docker Compose ✅
+*Done 2026-10-22* (junior `djangobasex-f6`, reviewed by the lead).
+- **Services:** PostgreSQL 16 (OPERATIONS § 12 server settings, named volume), Redis 7.4 (password,
+  not published) and both apps, namespaced by `COMPOSE_PROJECT_NAME`.
+- **Hardening:** ports on 127.0.0.1 only, every secret `${VAR:?}`, `cap_drop: [ALL]`,
+  `no-new-privileges`, capped log drivers, healthchecks, and uid 1000 in the app images. Nothing
+  migrates on start.
+- **Policy as tests:** `tests/infra/test_compose_policy.py` checks the file `docker compose config`
+  resolves, and every rule has positive controls.
+- **Proven on a running stack:** sign-in through the API, a second checkout side by side, and the
+  `--reset` confirmation.
+- **DB-12:** the default `setup.sh` path now develops against Postgres. A plain host `runserver`
+  still uses SQLite by ADR-0005.
+
+*Was partly in place since 2026-10-11:* `docker-compose.yml` runs **both apps for development** (live
 reload, SQLite, ports on `127.0.0.1`) from `backend/Dockerfile.dev` and `frontend/Dockerfile.dev`.
 What this task still adds: Postgres, Redis, the compose project naming of `OPERATIONS.md` § 1 and
 the rest of the § 15 hygiene.
@@ -520,18 +571,60 @@ Keep `dbx.E005`–`E008` for `check --deploy`. Closes **DB-7**, **DB-19**.
 valid production config imports (tested *first*); a CI step asserts the refusal; `APP_ENV=Production` and
 `APP_ENV=staging` are both treated as production-like.
 
-### 5.2 — Project identity ⬜
+### 5.2 — Project identity ✅
 `PRODUCT_NAME`, `PRODUCT_SLUG`, `PRIMARY_DOMAIN` in settings; OTP issuer, default from-address, cookie names and the
 API title derive from them. Shipped defaults announce themselves on screen.
+
+*Done 2026-10-22* (lead: backend and frontend; junior `djangobasex-f6`: `setup.sh` and compose).
+- **Shipped defaults:** `core/identity.py` holds them ("Unnamed product", `no-reply@localhost`) and
+  the slug rule, which a test pins equal to `scripts/lib/project.sh`.
+- **Derived from the three inputs:** `MFA_ISSUER`, `DEFAULT_FROM_EMAIL`, `AUTH_COOKIE_PREFIX`, the
+  admin's `SESSION_COOKIE_NAME` and `CSRF_COOKIE_NAME`, the cache `KEY_PREFIX` and the OpenAPI title.
+  An explicit env value still wins.
+- **Production warning:** `cfg.W003` fires while the name or domain is still the shipped default.
+- **Frontend:** `GET /api/public/config/` is a new public route, entered in the ledger. The root
+  layout's `generateMetadata` (60 s ISR) titles every page `<page> — <product>`, and the sign-in
+  and home pages show the name and tagline.
+- **Scrubbing:** the scrubber covers the new admin cookie names.
+- **`setup.sh`** writes `PRODUCT_SLUG` per checkout. Compose now requires `AUTH_COOKIE_PREFIX`,
+  instead of defaulting it to the old literal.
+- **Done-when:** `tests/architecture/test_no_boilerplate_identity.py` finds neither the name nor
+  the old literal cookie prefix in core (with a positive control).
+  `tests/test_identity.py::test_changing_the_name_changes_every_derived_value` imports the real
+  settings in a fresh interpreter.
 
 **Done when:** a test greps `backend/core/` and `frontend/src/core/` for the boilerplate's own name and finds
 nothing outside the settings defaults; changing `PRODUCT_NAME` changes all four derived values.
 
-### 5.3 — The typed settings registry ⬜
-`registry.settings.register(key, type, default, group, module, label, description, scope, min/max/choices)`;
-`sync_settings` in `post_migrate` refreshes metadata and **never resets a value**; strict coercion; values stored
+### 5.3 — The typed settings registry ✅
+*Done 2026-10-24* (junior `djangobasex-f6`, reviewed by the lead), backend only.
+- **Declared in code:** `registry.settings.register(SettingDef(...))` or a frozen policy dataclass
+  via `register_group`; validated at boot (`dbx.E009`).
+- **Stored as overrides only:** `core_setting` holds `{"v": …}` rows with partial-unique scopes;
+  core's first migration. `sync_settings` reports and never writes.
+- **Read path:** cascade user → tenant → platform → code default, honouring declared scopes and
+  locked rows; a shared-cache generation bumped per committed write; one snapshot per request;
+  readers never raise on storage failure. Tenant is inert until `set_tenant_resolver()`.
+- **Write path:** one writer (`set_value` / `reset`), audited old → new on commit, through the CLI
+  (`set_setting`) and `GET/PATCH /api/core/settings/` behind `settings.settings.view|manage`.
+- **Moved from env:** `security.reauth.actions` and `security.reauth.window_minutes`.
+- **Proof:** 37 new tests, a defaults snapshot, an AST scan for unregistered or unread keys, and
+  a plugin-conventions rule. 1105 passed on SQLite and on PostgreSQL 16.
+`registry.settings.register(SettingDef(key, type, default, label, description, group, module, scopes, …))`, with
+typed values (`Bool`, `Int(min, max)`, `Choice(…)`, … per `CONFIGURATION.md` § 9.1/§ 9.4);
+`sync_settings` in `post_migrate` **validates and reports only — it has no write path, so it can never reset a
+value** (§ 9.2: metadata lives in code, never in a table); strict coercion; values stored
 as `{"v": …}`; cached behind a version key bumped on write; every change audited old → new; scope cascade
-user → tenant → platform → code default (the tenant level stays inert until DB-23 is decided). Supersedes the
+user → tenant → platform → code default (the tenant level stays inert behind a resolver hook:
+[ADR-0011](../adr/0011-no-organisation-in-core.md) put no organisation in core).
+
+*Owner decisions, 2026-10-22:*
+- **Defaults:** code defaults resolve live, with a snapshot test (CONFIGURATION pending #2).
+- **Unknown keys:** an unregistered read raises everywhere (#8).
+- **Tenant level:** inert (#3).
+- **Scope:** backend only (engine, model, service, CLI, admin API). The admin screen is a later task.
+- **What moves:** only `REAUTH_ACTIONS` and `REAUTH_WINDOW_MINUTES` move from env into the registry.
+  LOCKOUT, the session cap and retention move once an env → registry prefill exists. Supersedes the
 narrower `core_setting` of `AUTH_BLUEPRINT.md` § 3.13 — reconcile the two in the same PR.
 
 **Done when:** re-running `sync_settings` keeps an admin-edited value; `"false"` coerces to `False` and `"yes"` is
@@ -553,11 +646,32 @@ ISO-8601 on the wire.
 **Done when:** an admin can add a lookup value with no deploy; a deactivated value is refused on new writes but
 still renders on old rows; the API never returns a display-formatted date.
 
-### 5.6 — Anti-hard-coding scans ⬜
+### 5.6 — Anti-hard-coding scans ✅
 `tests/architecture/` scans for ISO-4217 and IANA timezone literals, role-name string literals and secret-shaped
 `env()`/`os.environ` reads outside settings — each with a ratchet allow-list whose entries must still offend.
 
 **Done when:** adding `"USD"` to a service fails a test that names the file and line.
+
+*Done 2026-10-22* (pulled ahead of 5.3–5.5: tests only, no migration).
+- **Shared helpers:** `tests/architecture/sources.py` is one scope walker for every scan (platform
+  apps, `project/`, plugins, `config/`, `scripts/`, `frontend/src`; tests, migrations and fixtures
+  excluded by path). `_ratchet.py` is the two-way ratchet, keyed by `path::value` and never by
+  line, with a reason required per entry.
+- **The guards:**
+  - `test_no_locale_literals.py` checks ISO-4217 codes against `core/data/iso4217.txt` and
+    Area/Location zones against `zoneinfo`, in Python ASTs and TS/TSX literals.
+  - `test_no_role_name_literals.py` catches `has_role("…")`, `role.name == "…"`, `Role.objects.get(name=…)`
+    and `role__slug=` / `groups__name=`.
+  - `test_secret_env_reads.py` catches credential-shaped `os.environ` / `getenv` / `env()` reads
+    outside `config/settings*.py`, resolving module-level constant keys.
+- **Positive controls:** each guard has a `test_catches_*`. Done-when proven on the real tree: a
+  probe `"USD"` in `backend/core/` failed with
+  `backend/core/zz_probe_service.py:2: USD`.
+- **First real catch:** `bootstrap_admin` looked its role up by the literal `"administrator"`. It
+  now uses `rbac.services.ADMINISTRATOR`.
+- **Allow-list:** one entry, `BOOTSTRAP_ADMIN_PASSWORD`, a one-shot CLI input.
+- **Not built:** the BCP-47 locale-tag check (no locale settings exist until 5.5), and a vitest
+  twin (there is no frontend test runner; the TS literals are scanned from Python instead).
 
 ---
 
