@@ -26,6 +26,61 @@ Newest first.
 
 ## 2026-10-24
 
+### BUILD_ORDER 6.3: the encryption service
+**What** (junior `djangobasex-f6`; closes DB-33):
+- **`core/crypto.py`:** a `FIELD_ENCRYPTION_KEYS` keyring (newest first; boot refuses a key equal to
+  `SECRET_KEY` or `JWT_SIGNING_KEY`), HKDF-SHA256 per purpose (`PURPOSES` constants), a boot
+  self-test in `CoreConfig.ready`, masking with a distinct `UNREADABLE` marker, and `DecryptionError`
+  that never returns ciphertext or `None` and carries no `__cause__`.
+- **Rotation:** `manage.py rotate_encryption [--purpose] [--batch] [--dry-run]`, resumable, refuses
+  to drop a key while `--verify` still finds rows under it. `GET /api/system/crypto/` behind the new
+  `settings.crypto.view`.
+- **MFA on it:** `MfaDevice.totp_secret_ciphertext` under purpose `mfa_totp`; `users` migration
+  0006 re-encrypts from `MFA_ENCRYPTION_KEY` (read once, via settings or the environment) and fails
+  loudly rather than lose a device. `MFA_ENCRYPTION_KEY` is retired from settings, the env example,
+  `setup.sh` and the test pins (the lead applied the protected edits with owner approval).
+- **Checks:** `dbx.crypto.E001–E003`, `cfg.E013`/`W008` now about the keyring, keyring entries in
+  the pairwise-distinct secret check.
+- **Guards:** `test_encrypted_columns_are_registered.py` and `test_no_decrypt_on_access.py`, each
+  with a positive control.
+**Why:** a single key with no list makes rotation a flag day, and a decrypt helper that returns
+its input on failure makes a restored production dump "work" with every credential read as
+garbage. Both have happened elsewhere.
+**Files:** `backend/core/{crypto,checks,config_audit,formatting}.py`, `backend/core/api/crypto.py`,
+`backend/core/management/commands/rotate_encryption.py`, `backend/users/{mfa,apps}.py`,
+`backend/users/models/mfa.py`, `backend/users/services/mfa.py`, `backend/users/migrations/0006_*.py`,
+`backend/config/{settings,settings_test}.py`, `backend/.env.example`, `scripts/setup.sh`,
+`backend/tests/test_crypto.py`, `backend/tests/architecture/test_{encrypted_columns_are_registered,no_decrypt_on_access}.py`,
+pins in `test_config_audit`, `test_production_boot`, `test_env_example`, `test_setup_script`,
+`users/tests/test_mfa_*`, `JOBS_AND_INTEGRATIONS.md` § 25, `TECH_DEBT.md` (DB-33 closed, DB-45),
+`VERSION_SUMMARY.md` (Breaking).
+**Verification:** junior: ruff, format, `check`, `makemigrations --check` clean; pytest 1205 passed,
+2 skipped on SQLite and on PostgreSQL 16. Lead's combined gate: in the commit.
+**Notes:** the populated-table path of migration 0006 has no unit test (DB-45).
+
+### BUILD_ORDER 6.5: money and invariants
+**What** (lead):
+- **`core/money.py`:** `Money` quantised to its currency's scale from `core/data/iso4217.txt`
+  (now `CODE MINOR_UNITS`; both readers take the first token), `Rate` as a separate type
+  (`Money - Rate` is a `TypeError`), `to_money()` as the one quantisation point (float is a
+  `TypeError`, garbage a `ValueError`, one `ROUNDING`), `allocate()` by largest remainder,
+  `PriceNotFound` (`pricing_incomplete`), `money_fields()`/`money_property()`.
+- **`core/api/fields.py`:** `StrictMoneyField` refuses JSON numbers, over-precise amounts and
+  non-money codes; `MoneySerializerField` for output; amounts are strings both ways.
+- **`core/invariants.py`:** `invariant_scope()` runs writes in a savepoint and maps the database's
+  refusal (PostgreSQL and SQLite message shapes) to `InvariantViolation` with the rule's message.
+- **`test_no_float_money.py`:** a `FloatField` named like money fails the build; skips with a
+  reason while no money-named field exists.
+**Why:** five surfaces each rounding for themselves, a rate subtracted from a total, and a float
+in a request body reaching a balance are the money bugs the studied codebases shipped.
+**Files:** `backend/core/{money,invariants}.py`, `backend/core/api/fields.py`,
+`backend/core/data/iso4217.txt`, `backend/tests/{test_money,test_money_api,test_invariants}.py`,
+`backend/tests/architecture/{test_no_float_money,test_no_locale_literals}.py`,
+`DOMAIN_PRIMITIVES.md` § 1, `BUILD_ORDER.md`.
+**Verification:** `test_money` 13, `test_money_api` 11, `test_invariants` 7 and the scan's control
+pass (34 passed, 1 designed skip); done-when proven by
+`test_a_queryset_update_that_bypasses_clean_is_still_refused_by_the_database`. Full gate: in the commit.
+
 ### BUILD_ORDER 5.5: admin-editable lookups; locale, currency, timezone and formats
 **What** (junior `djangobasex-f6`, backend only):
 - **Lookups (CONFIGURATION § 14):** `registry.lookups` + `core_lookup_value` (core migration

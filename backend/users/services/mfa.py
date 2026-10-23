@@ -40,7 +40,9 @@ def begin_setup(user, label: str = "") -> dict:
     secret = mfa.new_secret()  # raises nothing; encryption below fails loudly if no key is set
     with transaction.atomic():
         MfaDevice.objects.filter(user=user, confirmed_at__isnull=True).delete()
-        MfaDevice.objects.create(user=user, label=label[:64], secret=mfa.encrypt_secret(secret))
+        device = MfaDevice(user=user, label=label[:64])
+        device.set_secret(secret)
+        device.save()
     log_activity("auth.mfa_setup_started", actor=user)
     return {"otpauth_uri": mfa.provisioning_uri(secret, user.email), "secret": secret}
 
@@ -56,7 +58,9 @@ def confirm_setup(user, code: str) -> list[str]:
         )
         if device is None:
             raise InvalidCode
-        step = mfa.verify_totp(mfa.decrypt_secret(device.secret), code, device.last_used_timestep)
+        step = mfa.verify_totp(
+            mfa.decrypt_secret(device.totp_secret_ciphertext), code, device.last_used_timestep
+        )
         if step is None:
             raise InvalidCode
         now = timezone.now()
@@ -120,7 +124,7 @@ def _accept_totp(user, code: str) -> bool:
     with transaction.atomic():
         for device in MfaDevice.objects.confirmed().select_for_update().filter(user=user):
             step = mfa.verify_totp(
-                mfa.decrypt_secret(device.secret), code, device.last_used_timestep
+                mfa.decrypt_secret(device.totp_secret_ciphertext), code, device.last_used_timestep
             )
             if step is not None:
                 device.last_used_timestep = step  # monotonic: this code can never be replayed

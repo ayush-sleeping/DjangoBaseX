@@ -176,3 +176,67 @@ def check_routes_are_gated(app_configs, **kwargs):
                 Error(f"registry.public_routes[{name!r}] has no real reason.", id="dbx.E007")
             )
     return errors
+
+
+@register()
+def check_encryption_keys(app_configs, **kwargs):
+    """dbx.crypto.E001/E002 (JOBS_AND_INTEGRATIONS.md § 25): the keyring is usable, separate from
+    the signing keys, and a probe round-trips per purpose. cfg.E013/W008 are the boot-refusal
+    twins; this is the `manage.py check` face of the same rules."""
+    from cryptography.fernet import Fernet
+
+    from . import crypto
+    from .env import is_production_like
+    from .registry import registry
+
+    def registry_encrypted_fields():
+        return registry.encrypted_fields.fields()
+
+    errors = []
+    keys = [k.strip() for k in getattr(settings, "FIELD_ENCRYPTION_KEYS", []) if k.strip()]
+    if not keys:
+        if is_production_like(settings.APP_ENV):
+            errors.append(
+                Error(
+                    "FIELD_ENCRYPTION_KEYS is empty outside development.",
+                    hint="Generate a key: manage.py generate_secret --kind fernet. § 25.",
+                    id="dbx.crypto.E001",
+                )
+            )
+        return errors
+    for position, key in enumerate(keys):
+        try:
+            Fernet(key)
+        except Exception:  # noqa: BLE001
+            errors.append(
+                Error(
+                    f"FIELD_ENCRYPTION_KEYS[{position}] is not a valid Fernet key.",
+                    hint="manage.py generate_secret --kind fernet. The value is never shown.",
+                    id="dbx.crypto.E001",
+                )
+            )
+    for other in ("SECRET_KEY", "JWT_SIGNING_KEY"):
+        if getattr(settings, other, "") in keys:
+            errors.append(
+                Error(
+                    f"FIELD_ENCRYPTION_KEYS contains {other}.",
+                    hint="Rotating one must not brick the other; use a separate key. § 25.",
+                    id="dbx.crypto.E001",
+                )
+            )
+    for spec in registry_encrypted_fields():
+        if spec.purpose not in crypto.PURPOSES:
+            errors.append(
+                Error(
+                    f"{spec.model}.{spec.field} registers purpose {spec.purpose!r}, which is not "
+                    "in core.crypto.PURPOSES.",
+                    hint="Purposes are registered constants; add it there (a reviewed change).",
+                    id="dbx.crypto.E003",
+                )
+            )
+    if not errors:
+        try:
+            crypto.self_test()
+        except Exception as exc:  # noqa: BLE001 — the probe's failure is the finding
+            errors.append(Error(f"The encryption self-test failed: {exc}", id="dbx.crypto.E002"))
+    return errors

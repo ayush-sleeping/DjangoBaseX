@@ -63,7 +63,7 @@ env = environ.Env(
     LOGIN_ATTEMPT_RETENTION_DAYS=(int, 90),
     SESSION_RETENTION_DAYS=(int, 30),
     PASSWORD_RESET_TOKEN_RETENTION_DAYS=(int, 7),
-    MFA_ENCRYPTION_KEY=(str, ""),
+    FIELD_ENCRYPTION_KEYS=(list, []),
     MFA_ISSUER=(str, ""),
     MFA_TOKEN_LIFETIME=(int, 300),
     AUTH_COOKIE_DOMAIN=(str, ""),
@@ -296,9 +296,10 @@ PASSWORD_RESET_TOKEN_RETENTION_DAYS = env("PASSWORD_RESET_TOKEN_RETENTION_DAYS")
 PASSWORD_SETUP_TOKEN_LIFETIME = env("PASSWORD_SETUP_TOKEN_LIFETIME")
 INVITATION_LIFETIME = env("INVITATION_LIFETIME")  # seconds; 7 days (§ 3.5)
 
-# MFA (A16, § 6.8). The key is a Fernet key encrypting TOTP secrets at rest. Empty is allowed so the
-# app boots without MFA configured; enabling MFA then fails loudly (users.mfa).
-MFA_ENCRYPTION_KEY = env("MFA_ENCRYPTION_KEY")
+# The encryption-at-rest keyring, NEWEST FIRST (JOBS_AND_INTEGRATIONS § 25). Separate from
+# SECRET_KEY and JWT_SIGNING_KEY; rotation: prepend a key, deploy, manage.py rotate_encryption.
+# Empty is allowed in development so the app boots without MFA; enabling MFA then fails loudly.
+FIELD_ENCRYPTION_KEYS = env("FIELD_ENCRYPTION_KEYS")
 # The name authenticator apps show. Written into every enrolled device: set PRODUCT_NAME before
 # the first user enrols, because correcting it later means re-enrolling them.
 MFA_ISSUER = env("MFA_ISSUER") or PRODUCT_NAME

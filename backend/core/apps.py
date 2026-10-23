@@ -24,6 +24,11 @@ class CoreConfig(AppConfig):
         from .formatting import register_locale_settings
 
         register_locale_settings(registry)
+        from .crypto import self_test
+
+        # A process that cannot encrypt must refuse to start, not store plaintext (§ 25). An empty
+        # keyring in development is not a failure; production-like boots refuse it via cfg.E013.
+        self_test()
         post_migrate.connect(_report_settings, sender=self, dispatch_uid="core.settings_report")
         post_migrate.connect(_seed_lookups, sender=self, dispatch_uid="core.seed_lookups")
 

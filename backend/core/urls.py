@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .api.crypto import CryptoStatusView
 from .api.flags import FlagDetailView, FlagListView
 from .api.lookups import LookupListView, LookupWriteView
 from .api.settings import SettingDetailView, SettingListView, SettingResetView
@@ -20,6 +21,7 @@ urlpatterns = [
     path("core/settings/<str:key>/reset/", SettingResetView.as_view(), name="setting-reset"),
     path("core/flags/", FlagListView.as_view(), name="flags"),
     path("core/flags/<str:key>/", FlagDetailView.as_view(), name="flag"),
+    path("system/crypto/", CryptoStatusView.as_view(), name="crypto-status"),
     path("core/lookups/", LookupListView.as_view(), name="lookups"),
     path("core/lookups/<str:set_key>/values/", LookupWriteView.as_view(), name="lookup-add"),
     path(

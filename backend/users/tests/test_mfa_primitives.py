@@ -7,8 +7,9 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import pyotp
 import pytest
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 
+from core.crypto import DecryptionError
 from users import mfa
 
 AT = datetime(2026, 10, 11, 12, 0, 15, tzinfo=UTC)
@@ -32,30 +33,31 @@ def test_new_secrets_are_random_base32():
 def test_a_secret_round_trips_and_is_not_stored_in_the_clear():
     secret = mfa.new_secret()
     token = mfa.encrypt_secret(secret)
-    assert isinstance(token, bytes)
-    assert secret.encode() not in token
+    assert isinstance(token, str)  # a TextField ciphertext (JOBS § 25), never bytes
+    assert secret not in token
     assert mfa.decrypt_secret(token) == secret
 
 
-def test_decrypt_accepts_a_memoryview_as_postgres_binaryfield_returns():
-    secret = mfa.new_secret()
-    assert mfa.decrypt_secret(memoryview(mfa.encrypt_secret(secret))) == secret
-
-
-def test_an_empty_key_means_mfa_is_not_configured(settings):
+def test_an_empty_keyring_means_mfa_is_not_configured(settings):
     token = mfa.encrypt_secret(SECRET)
-    settings.MFA_ENCRYPTION_KEY = ""
+    settings.FIELD_ENCRYPTION_KEYS = []
     with pytest.raises(mfa.MfaNotConfigured):
         mfa.encrypt_secret(SECRET)
     with pytest.raises(mfa.MfaNotConfigured):
         mfa.decrypt_secret(token)
 
 
-def test_a_secret_encrypted_under_another_key_is_refused(settings):
+def test_a_secret_encrypted_under_another_keyring_raises_and_survives_rotation(settings):
     token = mfa.encrypt_secret(SECRET)
-    settings.MFA_ENCRYPTION_KEY = Fernet.generate_key().decode()
-    with pytest.raises(InvalidToken):
+    settings.FIELD_ENCRYPTION_KEYS = [Fernet.generate_key().decode()]
+    with pytest.raises(DecryptionError):
         mfa.decrypt_secret(token)
+    # Prepending the new key while KEEPING the old one is the rotation posture: still readable.
+    settings.FIELD_ENCRYPTION_KEYS = [
+        Fernet.generate_key().decode(),
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    ]
+    assert mfa.decrypt_secret(token) == SECRET
 
 
 def test_the_provisioning_uri_names_the_issuer_and_the_account(settings):

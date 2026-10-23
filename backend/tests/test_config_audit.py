@@ -25,7 +25,7 @@ def valid_production() -> dict:
         "SECRET_KEY": secrets.token_urlsafe(64),
         "JWT_SIGNING_KEY": secrets.token_urlsafe(48),
         "JWT_SIGNING_KEY_FALLBACKS": [],
-        "MFA_ENCRYPTION_KEY": Fernet.generate_key().decode(),
+        "FIELD_ENCRYPTION_KEYS": [Fernet.generate_key().decode()],
         "ALLOWED_HOSTS": ["api.acme.test"],
         "CORS_ALLOW_CREDENTIALS": True,
         "CORS_ALLOWED_ORIGINS": ["https://app.acme.test"],
@@ -157,9 +157,9 @@ CASES = [
     ),
     (
         "mfa-not-fernet",
-        {"MFA_ENCRYPTION_KEY": "not-a-fernet-key"},
+        {"FIELD_ENCRYPTION_KEYS": ["not-a-fernet-key"]},
         "cfg.E013",
-        "MFA_ENCRYPTION_KEY",
+        "FIELD_ENCRYPTION_KEYS",
     ),
     ("log-text", {"LOG_FORMAT": "text"}, "cfg.E015", "LOG_FORMAT"),
     ("hsts-off", {"SECURE_HSTS_SECONDS": 0}, "cfg.W001", "SECURE_HSTS_SECONDS"),
@@ -179,7 +179,12 @@ CASES = [
         "cfg.W005",
         "JWT_SIGNING_KEY_FALLBACKS",
     ),
-    ("mfa-empty", {"MFA_ENCRYPTION_KEY": ""}, "cfg.W008", "MFA_ENCRYPTION_KEY"),
+    (
+        "keyring-empty-dev",
+        {"APP_ENV": "development", "FIELD_ENCRYPTION_KEYS": []},
+        "cfg.W008",
+        "FIELD_ENCRYPTION_KEYS",
+    ),
 ]
 
 
@@ -224,13 +229,19 @@ def test_each_fallback_key_is_checked_for_strength_and_reuse():
     assert [f.code for f in warnings] == ["cfg.W005"]
 
 
-def test_mfa_key_equal_to_another_secret_is_refused():
+def test_an_encryption_key_equal_to_another_secret_is_refused():
     ns = valid_production()
-    ns["SECRET_KEY"] = ns["MFA_ENCRYPTION_KEY"] + secrets.token_urlsafe(8)
-    ns["JWT_SIGNING_KEY"] = ns["MFA_ENCRYPTION_KEY"]
-    assert ("cfg.E004", "JWT_SIGNING_KEY, MFA_ENCRYPTION_KEY") in {
+    ns["JWT_SIGNING_KEY"] = ns["FIELD_ENCRYPTION_KEYS"][0]
+    assert ("cfg.E004", "JWT_SIGNING_KEY, FIELD_ENCRYPTION_KEYS[0]") in {
         (f.code, f.key) for f in audit(ns)[0]
     }
+    assert ("cfg.E013", "FIELD_ENCRYPTION_KEYS") in {(f.code, f.key) for f in audit(ns)[0]}
+
+
+def test_an_empty_keyring_is_an_error_in_production_and_a_warning_in_development():
+    ns = valid_production()
+    ns["FIELD_ENCRYPTION_KEYS"] = []
+    assert ("cfg.E013", "FIELD_ENCRYPTION_KEYS") in {(f.code, f.key) for f in audit(ns)[0]}
 
 
 def test_origins_are_only_checked_when_credentials_are_allowed():
@@ -316,7 +327,7 @@ def test_no_value_in_any_message(caplog):
         SECRET_KEY=CANARY,
         JWT_SIGNING_KEY=CANARY,
         JWT_SIGNING_KEY_FALLBACKS=[CANARY, CANARY + "x"],
-        MFA_ENCRYPTION_KEY=CANARY,
+        FIELD_ENCRYPTION_KEYS=[CANARY],
         ALLOWED_HOSTS=[],
         CORS_ALLOWED_ORIGINS=[f"http://{CANARY}.test", "*"],
         CSRF_TRUSTED_ORIGINS=[f"https://localhost/{CANARY}"],

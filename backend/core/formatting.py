@@ -25,8 +25,9 @@ from core.settings_registry import Choice, SettingType, meta
 
 # Data, not code: the scan (§ 18) reads the same file to refuse these codes as literals elsewhere.
 ISO4217_FILE = Path(__file__).resolve().parent / "data" / "iso4217.txt"
+# Each data line starts with the code; later columns (minor units, for core.money) are ignored here.
 CURRENCY_CODES = frozenset(
-    line.strip()
+    line.split()[0]
     for line in ISO4217_FILE.read_text(encoding="utf-8").splitlines()
     if line.strip() and not line.startswith("#")
 )

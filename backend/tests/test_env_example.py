@@ -17,7 +17,7 @@ EXAMPLE = Path(__file__).resolve().parents[1] / ".env.example"
 SECRETS = {
     "SECRET_KEY": SECRET_KEY_MIN_LENGTH,
     "JWT_SIGNING_KEY": JWT_KEY_MIN_LENGTH,
-    "MFA_ENCRYPTION_KEY": JWT_KEY_MIN_LENGTH,  # a Fernet key is 44 characters
+    "FIELD_ENCRYPTION_KEYS": JWT_KEY_MIN_LENGTH,  # each entry is a 44-character Fernet key
 }
 # Keys whose names look secret-ish but are not secrets. Each line is a reviewed decision.
 NOT_SECRETS = {

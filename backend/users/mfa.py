@@ -13,8 +13,11 @@ import time
 from datetime import datetime
 
 import pyotp
-from cryptography.fernet import Fernet
 from django.conf import settings
+
+from core.crypto import CryptoNotConfigured
+from core.crypto import decrypt as _decrypt
+from core.crypto import encrypt as _encrypt
 
 DIGITS = 6
 STEP_SECONDS = 30
@@ -27,28 +30,30 @@ RECOVERY_GROUPS, RECOVERY_GROUP_LENGTH = 2, 6
 
 
 class MfaNotConfigured(Exception):
-    """MFA_ENCRYPTION_KEY is empty: secrets cannot be stored, so MFA cannot be offered."""
+    """FIELD_ENCRYPTION_KEYS is empty: secrets cannot be stored, so MFA cannot be offered."""
+
+
+PURPOSE = "mfa_totp"  # the core.crypto purpose; its HKDF info label never changes (JOBS § 25)
 
 
 def new_secret() -> str:
     return pyotp.random_base32()
 
 
-def _fernet() -> Fernet:
-    key = settings.MFA_ENCRYPTION_KEY
-    if not key:
-        raise MfaNotConfigured("MFA_ENCRYPTION_KEY is not set.")
-    return Fernet(key)
+def encrypt_secret(secret_b32: str) -> str:
+    try:
+        return _encrypt(secret_b32, purpose=PURPOSE)
+    except CryptoNotConfigured as exc:
+        raise MfaNotConfigured(str(exc)) from None
 
 
-def encrypt_secret(secret_b32: str) -> bytes:
-    return _fernet().encrypt(secret_b32.encode())
-
-
-def decrypt_secret(token: bytes | memoryview) -> str:
-    """Accepts memoryview: BinaryField returns one on PostgreSQL. Raises
-    cryptography.fernet.InvalidToken for a value encrypted under another key."""
-    return _fernet().decrypt(bytes(token)).decode()
+def decrypt_secret(token: str) -> str:
+    """Raises core.crypto.DecryptionError for a value encrypted under a key not in the keyring —
+    never the ciphertext and never None (§ 25)."""
+    try:
+        return _decrypt(token, purpose=PURPOSE)
+    except CryptoNotConfigured as exc:
+        raise MfaNotConfigured(str(exc)) from None
 
 
 def provisioning_uri(secret_b32: str, account_email: str) -> str:

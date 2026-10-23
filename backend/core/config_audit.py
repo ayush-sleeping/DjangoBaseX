@@ -137,8 +137,10 @@ def _shared_secrets(ns):
     named = [
         ("SECRET_KEY", _get(ns, "SECRET_KEY", "")),
         ("JWT_SIGNING_KEY", _get(ns, "JWT_SIGNING_KEY", "")),
-        ("MFA_ENCRYPTION_KEY", _get(ns, "MFA_ENCRYPTION_KEY", "")),
     ]
+    keyring = _get(ns, "FIELD_ENCRYPTION_KEYS", [])
+    for index, value in enumerate(keyring if isinstance(keyring, list) else []):
+        named.append((f"FIELD_ENCRYPTION_KEYS[{index}]", value))
     for index, value in enumerate(_as_list(_get(ns, "JWT_SIGNING_KEY_FALLBACKS", []))):
         named.append((f"JWT_SIGNING_KEY_FALLBACKS[{index}]", value))
     present = [(k, v.strip()) for k, v in named if isinstance(v, str) and v.strip()]
@@ -282,27 +284,61 @@ def _throttling(ns):
         )
 
 
-def _mfa_key(ns):
-    key = _get(ns, "MFA_ENCRYPTION_KEY", "")
-    if not isinstance(key, str) or not key.strip():
-        yield Finding(
-            "cfg.W008",
-            "MFA_ENCRYPTION_KEY",
-            "MFA_ENCRYPTION_KEY is empty: MFA unavailable (setup answers 503).",
-            "Generate a Fernet key to offer two-factor authentication.",
-        )
-        return
-    try:
-        from cryptography.fernet import Fernet
-
-        Fernet(key.strip())
-    except Exception:  # noqa: BLE001 — any parse failure is the finding; the value is never shown
+def _encryption_keys(ns):
+    """FIELD_ENCRYPTION_KEYS (JOBS_AND_INTEGRATIONS.md § 25): the keyring everything encrypted at
+    rest depends on. Separate from SECRET_KEY and JWT_SIGNING_KEY — rotating one must not brick the
+    others — and never empty where real secrets live."""
+    keys = _get(ns, "FIELD_ENCRYPTION_KEYS", [])
+    keys = (
+        [k.strip() for k in keys if isinstance(k, str) and k.strip()]
+        if isinstance(keys, list)
+        else None
+    )
+    if keys is None:
         yield Finding(
             "cfg.E013",
-            "MFA_ENCRYPTION_KEY",
-            "MFA_ENCRYPTION_KEY is set but is not a valid Fernet key.",
-            "Generate one with cryptography.fernet.Fernet.generate_key().",
+            "FIELD_ENCRYPTION_KEYS",
+            "FIELD_ENCRYPTION_KEYS is not a list of keys.",
+            "Set a comma-separated list of Fernet keys, newest first.",
         )
+        return
+    if not keys:
+        if is_production_like(_get(ns, "APP_ENV", "")):
+            yield Finding(
+                "cfg.E013",
+                "FIELD_ENCRYPTION_KEYS",
+                "FIELD_ENCRYPTION_KEYS is empty: nothing can be encrypted at rest, so MFA and "
+                "every stored secret are unavailable.",
+                "Generate a key (manage.py generate_secret --kind fernet) and set it.",
+            )
+        else:
+            yield Finding(
+                "cfg.W008",
+                "FIELD_ENCRYPTION_KEYS",
+                "FIELD_ENCRYPTION_KEYS is empty: MFA unavailable (setup answers 503).",
+                "Generate a key (manage.py generate_secret --kind fernet) to offer two-factor.",
+            )
+        return
+    from cryptography.fernet import Fernet
+
+    for position, key in enumerate(keys):
+        try:
+            Fernet(key)
+        except Exception:  # noqa: BLE001 — any parse failure is the finding; the value never shows
+            yield Finding(
+                "cfg.E013",
+                "FIELD_ENCRYPTION_KEYS",
+                f"FIELD_ENCRYPTION_KEYS[{position}] is not a valid Fernet key.",
+                "Generate one with manage.py generate_secret --kind fernet.",
+            )
+    for other in ("SECRET_KEY", "JWT_SIGNING_KEY"):
+        if _get(ns, other, "") in keys:
+            yield Finding(
+                "cfg.E013",
+                "FIELD_ENCRYPTION_KEYS",
+                f"FIELD_ENCRYPTION_KEYS contains {other}: rotating one would brick the other.",
+                "Encryption keys are their own secrets, never reused from signing keys.",
+            )
 
 
 def _app_env(ns):
@@ -403,7 +439,7 @@ RULES = (
     _database,
     _frontend_url,
     _throttling,
-    _mfa_key,
+    _encryption_keys,
     _log_format,
     _hsts,
     _proxy,

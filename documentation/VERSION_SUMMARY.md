@@ -28,6 +28,12 @@ exist before does.
   once. The first two: `security.reauth.actions` and `security.reauth.window_minutes`.
   - **Breaking:** `REAUTH_ACTIONS` and `REAUTH_WINDOW_MINUTES` are no longer read from env. A
     product that set them must run `manage.py set_setting security.reauth.actions <list>` once.
+- **Encryption at rest with key rotation** (2026-10-24): a `FIELD_ENCRYPTION_KEYS` keyring,
+  `manage.py rotate_encryption --verify`, and MFA secrets on it.
+  - **Breaking:** `MFA_ENCRYPTION_KEY` is replaced by `FIELD_ENCRYPTION_KEYS` (comma-separated,
+    newest first). Put the old key's value there before migrating; `users` migration 0006 reads the
+    old key once to re-encrypt and refuses to run if devices exist and no key is available.
+- **Money** (2026-10-24): `core.money` value objects, `allocate()`, string amounts on the wire.
 - **Project identity** (2026-10-22): set `PRODUCT_NAME` (and `PRIMARY_DOMAIN`), and page titles,
   the sign-in page, the API title, the authenticator issuer, the from-address and the cookie and
   cache prefixes all follow.

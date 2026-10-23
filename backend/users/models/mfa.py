@@ -15,8 +15,9 @@ class MfaDevice(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mfa_devices"
     )
     label = models.CharField(max_length=64, blank=True, default="")
-    # Fernet-encrypted with MFA_ENCRYPTION_KEY (users.mfa). Never the raw base32 secret.
-    secret = models.BinaryField()
+    # core.crypto ciphertext, purpose "mfa_totp" (JOBS § 25) — never the raw base32 secret, and
+    # never decrypted on attribute access: reading it is an explicit users.mfa.decrypt_secret call.
+    totp_secret_ciphertext = models.TextField()
     confirmed_at = models.DateTimeField(null=True, blank=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
     # The replay guard: a code whose time step is <= this is refused (§ 6.8).
@@ -31,6 +32,16 @@ class MfaDevice(models.Model):
     def __str__(self):
         state = "confirmed" if self.confirmed_at else "pending"
         return f"mfa device ({state}) for user {self.user_id}"
+
+    def set_secret(self, secret_b32: str) -> None:
+        """Encrypt and store. The ONE write path: nothing assigns the ciphertext column raw."""
+        from users import mfa
+
+        self.totp_secret_ciphertext = mfa.encrypt_secret(secret_b32)
+
+    @property
+    def has_secret(self) -> bool:
+        return bool(self.totp_secret_ciphertext)
 
 
 class MfaRecoveryCode(models.Model):

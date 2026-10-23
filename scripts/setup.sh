@@ -180,7 +180,7 @@ env_files() {
     | sed 's/^/    backend: /'
   envfile secret "$BACKEND_ENV" SECRET_KEY django | sed 's/^/    backend: /'
   envfile secret "$BACKEND_ENV" JWT_SIGNING_KEY jwt | sed 's/^/    backend: /'
-  envfile secret "$BACKEND_ENV" MFA_ENCRYPTION_KEY fernet | sed 's/^/    backend: /'
+  envfile secret "$BACKEND_ENV" FIELD_ENCRYPTION_KEYS fernet | sed 's/^/    backend: /'
 
   envfile ensure "$FRONTEND_ENV" --from "$REPO/frontend/.env.example" | sed 's/^/    frontend: /'
   envfile fill "$FRONTEND_ENV" NEXT_PUBLIC_AUTH_COOKIE_PREFIX "$(cookie_prefix "$SLUG")" \

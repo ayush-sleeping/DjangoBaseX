@@ -1408,6 +1408,13 @@ windowed.
 
 ## 25. The encryption service   — **Tier 1 · Core**
 
+*Built 2026-10-24* (BUILD_ORDER 6.3): `core/crypto.py`, `manage.py rotate_encryption`,
+`GET /api/system/crypto/`, `registry.encrypted_fields`, `dbx.crypto.E001–E003`. As built: purposes are
+module constants (`PURPOSES`) validated by `E003`; the fingerprint is the first 8 hex of SHA-256 of
+the key material; the only registered column is MFA's. The credential store (§ 26) is not built.
+Tests: `tests/test_crypto.py`, `tests/architecture/test_encrypted_columns_are_registered.py`,
+`test_no_decrypt_on_access.py`.
+
 **What.** `core.crypto` — the one place anything is encrypted at rest: MFA secrets, integration
 credentials, webhook signing secrets, provider tokens. A keyring of Fernet keys (`MultiFernet`),
 separate from `SECRET_KEY`, with per-purpose derivation, a boot self-test, masking and a rotation

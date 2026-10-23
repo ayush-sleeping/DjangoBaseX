@@ -36,7 +36,7 @@ VALID_PRODUCTION = {
     "EMAIL_HOST": "smtp.example.com",
     "FRONTEND_BASE_URL": "https://app.example.com",
     "LOG_FORMAT": "json",
-    "MFA_ENCRYPTION_KEY": "kH3t6pR2vX9qL5mN8bC1dF4gJ7wZ0sA2eY6uI9oP3rU=",
+    "FIELD_ENCRYPTION_KEYS": "kH3t6pR2vX9qL5mN8bC1dF4gJ7wZ0sA2eY6uI9oP3rU=",
 }
 PROBE = "from django.conf import settings; settings.INSTALLED_APPS; print('IMPORTED')"
 

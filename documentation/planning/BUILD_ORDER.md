@@ -758,7 +758,16 @@ and a failing-validation request appears in no log line.
 **Done when:** `ready` answers 503 with the database stopped while `live` answers 200; a deliberately broken
 check degrades to `warn` instead of raising.
 
-### 6.3 — Encryption service ⬜
+### 6.3 — Encryption service ✅
+*Done 2026-10-24* (junior `djangobasex-f6`, reviewed by the lead). `core/crypto.py`: a
+`FIELD_ENCRYPTION_KEYS` keyring (newest first; boot refuses equality with `SECRET_KEY` or
+`JWT_SIGNING_KEY`), HKDF-SHA256 per purpose, a boot self-test, masking with a distinct `UNREADABLE`
+marker, and `DecryptionError` that never returns ciphertext or `None`. `manage.py rotate_encryption`
+(batched, resumable, `--verify`) makes rotation a procedure. `GET /api/system/crypto/` shows
+fingerprints and per-key counts behind `settings.crypto.view`. MFA's secret moved to
+`totp_secret_ciphertext` under purpose `mfa_totp` by a data migration that fails loudly rather than
+lose a device; `MFA_ENCRYPTION_KEY` is retired. Two architecture tests: every `*_ciphertext` column
+is registered, and no model decrypts on attribute access. Closes **DB-33**.
 `FIELD_ENCRYPTION_KEYS` (MultiFernet, newest first, separate from `SECRET_KEY`), a startup self-test, explicit
 encrypt/decrypt functions, masking, and `rotate_encryption`. ⚠️ **If Phase 1 has not yet stored an MFA secret in
 production, do this before it does** — it replaces the single-purpose MFA key.
@@ -773,7 +782,17 @@ batch id, `status_changed`, structural read-only and a streamed export.
 **Done when:** an update records only changed fields with FK names and choice labels; a management command's
 writes are attributed to the command, the OS user and the host; no write route exists on the log.
 
-### 6.5 — Money and invariants ⬜
+### 6.5 — Money and invariants ✅
+*Done 2026-10-24* (lead). `core/money.py`: `Money` (quantised to the currency's scale from
+`core/data/iso4217.txt`, never a default of 2), `Rate` (a separate type; `Money - Rate` is a
+`TypeError`), `to_money()` as the one quantisation point (rejects float, one platform-wide rounding
+mode), `allocate()` by largest remainder (1,000 random splits sum exactly), `PriceNotFound`,
+`money_fields()`/`money_property()`. `core/api/fields.py`: `StrictMoneyField` refuses JSON numbers
+and over-precise amounts; responses are strings. `core/invariants.py`: `invariant_scope()` maps the
+database's refusal to `InvariantViolation`; a test proves a `QuerySet.update()` that bypasses
+`clean()` is still refused by the constraint. `test_no_float_money.py` scans for a `FloatField`
+named like money (positive control; skips with a reason while no money-named field exists).
+**Not built:** `frontend/src/core/lib/money.ts` and its lint rule (no frontend money yet).
 `core.money` (Decimal + currency, one quantisation helper, one rounding mode) and the invariant pattern: a
 `clean()` validator plus a DB constraint plus an `IntegrityError` mapping.
 

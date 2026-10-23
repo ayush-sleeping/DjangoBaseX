@@ -18,6 +18,13 @@ class UsersConfig(AppConfig):
         registry.settings.register_group(
             ReauthPolicy, prefix="security.reauth", module="users", group="Re-authentication"
         )
+        from core.registry import EncryptedField
+
+        registry.encrypted_fields.register(
+            EncryptedField(
+                model="users.MfaDevice", field="totp_secret_ciphertext", purpose="mfa_totp"
+            )
+        )
         from .public_routes import PUBLIC_ROUTES
 
         for url_name, reason in PUBLIC_ROUTES.items():

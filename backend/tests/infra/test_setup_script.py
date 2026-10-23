@@ -22,7 +22,7 @@ REPO = Path(__file__).resolve().parents[3]
 ENVFILE = REPO / "scripts" / "lib" / "envfile.py"
 SECRET_KEYS = {
     ".env": ("POSTGRES_PASSWORD", "REDIS_PASSWORD"),
-    "backend/.env": ("SECRET_KEY", "JWT_SIGNING_KEY", "MFA_ENCRYPTION_KEY"),
+    "backend/.env": ("SECRET_KEY", "JWT_SIGNING_KEY", "FIELD_ENCRYPTION_KEYS"),
 }
 
 # Answers the calls setup.sh makes; logs every invocation. `compose port` reports nothing (no stack
@@ -599,7 +599,7 @@ def test_envfile_runs_on_the_host_python_without_django(tmp_path):
         ("ensure", str(target), "--from", str(REPO / "backend/.env.example")),
         ("refuse-production", str(target)),
         ("secret", str(target), "SECRET_KEY", "django"),
-        ("secret", str(target), "MFA_ENCRYPTION_KEY", "fernet"),
+        ("secret", str(target), "FIELD_ENCRYPTION_KEYS", "fernet"),
         ("set", str(target), "API_PORT", "8123"),
         ("get", str(target), "API_PORT"),
     ):

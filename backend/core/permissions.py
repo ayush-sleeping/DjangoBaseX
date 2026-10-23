@@ -57,5 +57,8 @@ SETTINGS_GROUP = PermissionGroupSpec(
         PermissionSpec("settings.flags.view", "View feature flags, targeting and expiry"),
         PermissionSpec("settings.flags.manage", "Toggle feature flags and change targeting"),
         PermissionSpec("settings.lookups.manage", "Add and edit lookup values and labels"),
+        PermissionSpec(
+            "settings.crypto.view", "View encryption key fingerprints and rotation state"
+        ),
     ),
 )

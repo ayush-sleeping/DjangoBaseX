@@ -73,7 +73,9 @@ def test_enrolment_issues_ten_recovery_codes_and_shows_on_me(client):
 def test_the_secret_is_stored_encrypted_not_as_base32(client):
     user = UserFactory()
     secret, _ = enrol(client, user)
-    assert secret.encode() not in bytes(MfaDevice.objects.get(user=user).secret)
+    device = MfaDevice.objects.get(user=user)
+    assert secret not in device.totp_secret_ciphertext
+    assert device.has_secret
 
 
 def test_setup_is_refused_once_mfa_is_on(client):
@@ -89,7 +91,7 @@ def test_an_unconfirmed_device_does_not_trigger_the_code_step(client):
 
 
 def test_setup_without_an_encryption_key_answers_503(client, settings):
-    settings.MFA_ENCRYPTION_KEY = ""
+    settings.FIELD_ENCRYPTION_KEYS = []
     sign_in(client, UserFactory())
     response = post(client, SETUP)
     assert response.status_code == 503
