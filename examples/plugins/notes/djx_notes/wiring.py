@@ -26,7 +26,16 @@ SECTION = NavSection(
 )
 
 
+# The audit verbs services.py emits (DATA_LIFECYCLE § 4): a plugin declares its own, under its label.
+AUDIT_ACTIONS = (
+    ("notes.note.created", "Note created", "success"),
+    ("notes.note.deleted", "Note deleted", "warning"),
+)
+
+
 def register() -> None:
     registry.permissions.register(GROUP)
     registry.api_routes.register(prefix="notes", urlconf="djx_notes.urls")
     registry.navigation.register(SECTION)
+    for key, label, tone in AUDIT_ACTIONS:
+        registry.audit_actions.register(key=key, label=label, tone=tone, channel="notes")

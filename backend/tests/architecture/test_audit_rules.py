@@ -80,7 +80,8 @@ def test_every_audit_action_literal_is_registered_and_the_scan_sees_some():
     registered = {a.key for a in registry.audit_actions.actions()}
     missing = sorted({f"{p}:{line} {a}" for p, line, a in literals if a not in registered})
     assert missing == [], (
-        f"unregistered audit actions (register them in core/audit_actions.py): {missing}"
+        f"unregistered audit actions (core: core/audit_actions.py; a plugin: its own wiring, "
+        f"under its label): {missing}"
     )
 
 
