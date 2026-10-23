@@ -54,5 +54,7 @@ SETTINGS_GROUP = PermissionGroupSpec(
     permissions=(
         PermissionSpec("settings.settings.view", "View settings and their effective values"),
         PermissionSpec("settings.settings.manage", "Change and reset settings"),
+        PermissionSpec("settings.flags.view", "View feature flags, targeting and expiry"),
+        PermissionSpec("settings.flags.manage", "Toggle feature flags and change targeting"),
     ),
 )

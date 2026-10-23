@@ -24,6 +24,9 @@ MACHINERY = {
     "core/api/settings.py",
     "core/management/commands/set_setting.py",
     "core/management/commands/sync_settings.py",
+    # Guards read their own `<key>.mode` setting generically (core.guards.guard_mode); those keys
+    # are counted as read below, from the guard catalog, instead of by literal.
+    "core/guards.py",
 }
 READERS = {"get_setting", "resolve_setting", "set_value", "reset"}
 
@@ -68,6 +71,8 @@ def test_every_key_read_is_registered_and_every_registered_key_is_read():
     for policy, field_keys in registry.settings.policies().items():
         if policy.__name__ in policies:
             read |= set(field_keys.values())
+    # Every registered guard's mode is read by check_guard/guard_mode, by construction.
+    read |= {f"{guard.key}.mode" for guard in registry.guards.defs()}
     unread = registered - read
     assert not unread, (
         f"registered settings nothing reads (§ 9.11 — withdraw them or wire the reader): "

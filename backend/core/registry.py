@@ -21,6 +21,7 @@ import sys
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import MISSING, dataclass, fields, replace
+from datetime import date
 from types import MappingProxyType
 
 # "<module>.<feature>.<action>". The action is deliberately not checked against a fixed list:
@@ -459,6 +460,129 @@ class PublicRouteRegistry(_Catalog):
         return MappingProxyType(dict(sorted(self._routes.items())))
 
 
+# --- Feature flags and guards ---------------------------------------------------------------------
+
+# "<module>.<name>", two segments: a guard's mode setting appends ".mode" and must still be a valid
+# three-segment setting key.
+FLAG_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
+GUARD_MODES = ("off", "log_only", "enforce")
+
+
+@dataclass(frozen=True)
+class FlagDef:
+    """A temporary gate (CONFIGURATION.md § 11). State and targeting live in the database; the
+    declaration carries what review owns: who answers for it and when it must be gone."""
+
+    key: str
+    owner: str  # a team or person who answers "can this be removed yet?"
+    expires_on: date  # past it, CI fails (test_no_expired_flags)
+    description: str
+
+
+@dataclass(frozen=True)
+class GuardDef:
+    """A refusal added to live traffic (CONFIGURATION.md § 13). Its mode is the registry setting
+    `<key>.mode`; core.guards.register_guard declares both, so no guard exists without a switch."""
+
+    key: str
+    default_mode: str  # today's behaviour: off or log_only; enforce needs a written reason
+    description: str
+    error_code: str  # the stable code an enforce refusal answers with
+    enforce_reason: str = ""
+
+
+class FlagRegistry(_Catalog):
+    """Declared feature flags. An unregistered key is off, always; no default parameter exists."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._defs: dict[str, FlagDef] = {}
+
+    def register(self, definition: FlagDef) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(definition, FlagDef):
+                raise RegistryError(f"expected a FlagDef, got {type(definition).__name__}")
+            name = f"flag {definition.key!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(definition.key, str) or not FLAG_KEY_PATTERN.match(definition.key):
+                raise RegistryError(f"{name}: not <module>.<name> (lowercase, digits, _)")
+            if not isinstance(definition.expires_on, date):
+                raise RegistryError(f"{name} has no expiry date: flags are temporary (§ 11)")
+            for field_name in ("owner", "description"):
+                if (
+                    not isinstance(getattr(definition, field_name), str)
+                    or not getattr(definition, field_name).strip()
+                ):
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            if definition.key in self._defs:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[definition.key]}; "
+                    f"registered again by {owner}"
+                )
+            self._defs[definition.key] = definition
+            self._owner_of[definition.key] = owner
+
+    def __contains__(self, key: str) -> bool:
+        self.seal()
+        return key in self._defs
+
+    def get(self, key: str) -> FlagDef:
+        self.seal()
+        return self._defs[key]
+
+    def defs(self) -> tuple[FlagDef, ...]:
+        self.seal()
+        return tuple(self._defs[k] for k in sorted(self._defs))
+
+
+class GuardRegistry(_Catalog):
+    """Declared guards. Register through core.guards.register_guard, which also declares the
+    `<key>.mode` setting — this catalog alone would be a guard without a switch."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._defs: dict[str, GuardDef] = {}
+
+    def register(self, definition: GuardDef) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(definition, GuardDef):
+                raise RegistryError(f"expected a GuardDef, got {type(definition).__name__}")
+            name = f"guard {definition.key!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(definition.key, str) or not FLAG_KEY_PATTERN.match(definition.key):
+                raise RegistryError(f"{name}: not <module>.<name> (lowercase, digits, _)")
+            if definition.default_mode not in GUARD_MODES:
+                raise RegistryError(f"{name}: default_mode must be one of {GUARD_MODES}")
+            if definition.default_mode == "enforce" and not definition.enforce_reason.strip():
+                raise RegistryError(
+                    f"{name} defaults to enforce without a written reason (§ 13: the shipped "
+                    "default is today's behaviour unless it closes a known vulnerability)"
+                )
+            for field_name in ("description", "error_code"):
+                if (
+                    not isinstance(getattr(definition, field_name), str)
+                    or not getattr(definition, field_name).strip()
+                ):
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            if definition.key in self._defs:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[definition.key]}; "
+                    f"registered again by {owner}"
+                )
+            self._defs[definition.key] = definition
+            self._owner_of[definition.key] = owner
+
+    def get(self, key: str) -> GuardDef:
+        self.seal()
+        return self._defs[key]
+
+    def defs(self) -> tuple[GuardDef, ...]:
+        self.seal()
+        return tuple(self._defs[k] for k in sorted(self._defs))
+
+
 # --- Settings -----------------------------------------------------------------------------------
 
 
@@ -608,6 +732,8 @@ class Registry:
         self.api_routes = ApiRouteRegistry()
         self.public_routes = PublicRouteRegistry()
         self.settings = SettingRegistry()
+        self.flags = FlagRegistry()
+        self.guards = GuardRegistry()
 
 
 # The process-wide instance. Tests build their own and never touch this one.

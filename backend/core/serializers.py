@@ -48,3 +48,30 @@ class SettingResetSerializer(serializers.Serializer):
     scope = serializers.ChoiceField(choices=SCOPES, default="platform")
     scope_id = serializers.CharField(max_length=64, required=False, allow_null=True, default=None)
     reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+
+class FlagSerializer(serializers.Serializer):
+    """One flag: the code declaration beside the stored state — and how long it has left."""
+
+    def to_representation(self, item):
+        defn, row = item["definition"], item["row"]
+        return {
+            "key": defn.key,
+            "description": defn.description,
+            "owner": defn.owner,
+            "expires_on": defn.expires_on.isoformat(),
+            "days_remaining": item["days_remaining"],
+            "enabled": bool(row and row.enabled),
+            "user_ids": list(row.user_ids or []) if row else [],
+            "role_slugs": list(row.role_slugs or []) if row else [],
+            "tenant_ids": list(row.tenant_ids or []) if row else [],
+            "updated_at": row.updated_at.isoformat() if row else None,
+        }
+
+
+class FlagWriteSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField(required=False)
+    user_ids = serializers.ListField(child=serializers.CharField(), required=False)
+    role_slugs = serializers.ListField(child=serializers.CharField(), required=False)
+    tenant_ids = serializers.ListField(child=serializers.CharField(), required=False)
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")

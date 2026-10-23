@@ -129,6 +129,8 @@ That is why the rules are stricter than a product repo's.
   core change that forgets it makes every product report as drifted. In this repository, core-guard
   fails a PR that touches core without the manifest, and runs `--verify` on every PR and every push
   to `main`. `--write` refuses to run anywhere whose `origin` is not the core repository
+- **Regenerate from a clean tree.** `--write` hashes the working tree. Run it with nothing
+  uncommitted under a core tree, or from a detached worktree of the commit you are publishing
 - **A version bump is a core change too.** `VERSION` is in the manifest's header, so bump it, then
   regenerate
 - **Never rewrite published history.** A force-push to `core/main` breaks the merge base for every

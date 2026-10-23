@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from core.flags import flags_for
 from core.registry import registry
 
 from .models import User
@@ -37,6 +38,7 @@ class MeSerializer(serializers.ModelSerializer):
     # Effective permission codes arrive with RBAC (BUILD_ORDER 1.2); the shape is fixed now.
     permissions = serializers.SerializerMethodField()
     mfa_enabled = serializers.SerializerMethodField()
+    flags = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -49,6 +51,7 @@ class MeSerializer(serializers.ModelSerializer):
             "mfa_enabled",
             "mfa_enforced",
             "permissions",
+            "flags",
         ]
         read_only_fields = fields
 
@@ -60,6 +63,10 @@ class MeSerializer(serializers.ModelSerializer):
 
     def get_mfa_enabled(self, user) -> bool:
         return user.mfa_devices.filter(confirmed_at__isnull=False).exists()
+
+    def get_flags(self, user) -> list[str]:
+        # Only what is ON for this caller — never the catalogue of unreleased names (§ 11).
+        return flags_for(user)
 
 
 class RoleSummarySerializer(serializers.Serializer):

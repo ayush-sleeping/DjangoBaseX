@@ -1002,6 +1002,14 @@ the "unread setting" test (§ 9.11) removes switches that survive admission but 
 
 ## 11. Feature flags — **Tier 1 · Core**
 
+> **Built 2026-10-24 (BUILD_ORDER 5.4), backend only:** `registry.flags` + `FlagDef` (owner and
+> expiry required), `core_feature_flag` (state and targeting; no NULL targeting — empty means
+> none), `core/flags.py` (`flag_enabled` pinning the six rules, `flags_for`, the audited
+> `set_flag`, `requires_flag` answering 404), `/api/auth/me/` `"flags"`, admin
+> `GET/PATCH /api/core/flags/` behind new `settings.flags.view|manage`, and
+> `test_no_expired_flags`. Not yet built: `flags_doctor`, `test_single_flag_mechanism` (§ 18),
+> the admin screen and `useFlag` (frontend).
+
 **What.** One registry of **temporary** gates on code paths: declared in code with an owner and an
 expiry, toggled and targeted by an admin, resolved with a fixed kill-switch-first rule, exposed to the
 frontend in the bootstrap, and deleted when the launch is done.
@@ -1131,6 +1139,15 @@ capability list is written in core.
 ---
 
 ## 13. Guard modes — `off|log_only|enforce` — **Tier 1 · Core**
+
+> **Built 2026-10-24 (BUILD_ORDER 5.4), backend only:** `core/guards.py` —
+> `register_guard(GuardDef)` declares the guard and its `<key>.mode` Choice setting in one call
+> (enforce as a default needs a written `enforce_reason`), `check_guard` records
+> `guard.would_block` / `guard.blocked` through `log_activity` and refuses with the declared
+> error code, an unreadable mode resolves to the declared default. No guard is registered yet —
+> the day-one AUTH_BLUEPRINT guards enforce from the first commit and are out of this section's
+> scope. Not yet built: the would-block counts beside the switch (needs the 6.4 audit table) and
+> `guard_decisions_total` (needs metrics).
 
 **What.** Every new *refusal* introduced into a system that already has traffic is a registered guard
 with a mode setting — `off`, `log_only` or `enforce` — whose shipped default reproduces today's

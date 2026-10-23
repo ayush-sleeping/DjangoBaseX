@@ -24,6 +24,31 @@ Newest first.
 
 ---
 
+## 2026-10-24
+
+### BUILD_ORDER 5.4: feature flags and guard modes
+**What** (junior `djangobasex-f6`, backend only):
+- **Flags (CONFIGURATION § 11):** declared in `registry.flags` with a required owner and expiry;
+  state and targeting (user/role/tenant public ids) in `core_feature_flag` (core migration 0002).
+  Resolution is kill-switch-first and each of the six rules is pinned by a test; a storage failure
+  resolves off. One audited writer; `GET/PATCH /api/core/flags/` behind `settings.flags.view|manage`;
+  `requires_flag()` makes an off route 404; `/api/auth/me/` gains `flags` (on-for-me only).
+  `test_no_expired_flags.py` fails CI on an expired flag.
+- **Guard modes (§ 13):** `register_guard(GuardDef)` declares the guard and its `<key>.mode`
+  Choice setting (off · log_only · enforce) in one call; a default of `enforce` needs a written
+  reason. `check_guard` refuses only at `enforce`, with the guard's stable error code.
+**Why:** a flag with a `default=True` parameter or a guard that enforces by accident is how a
+boilerplate ships a surprise; both are now impossible by construction, and tests prove that
+shipping a guard at its default changes no response.
+**Files:** `backend/core/{flags,guards,registry,checks,models,permissions,serializers,urls}.py`,
+`backend/core/api/flags.py`, `backend/core/migrations/0002_featureflag.py`,
+`backend/users/serializers.py`, `backend/tests/{test_flags,test_guard_modes}.py`,
+`backend/tests/architecture/{test_no_expired_flags,test_settings_are_read}.py`,
+`CONFIGURATION.md` § 11/§ 13, `BUILD_ORDER.md`, `TECH_DEBT.md` (DB-43, DB-44), `UPGRADING.md`.
+**Verification:** lead's run: ruff, format, `check`, `makemigrations --check` clean;
+pytest **1130 passed, 2 skipped** (SQLite). Junior's run: the same on PostgreSQL 16.
+**Notes:** not built: `flags_doctor`, would-block counts (6.4), `guard_decisions_total` (metrics).
+
 ## 2026-10-22
 
 ### BUILD_ORDER 4.1–4.4, 5.2, 5.3, 5.6: setup, Compose, core drift guard, identity, settings registry, scans

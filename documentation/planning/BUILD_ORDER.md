@@ -634,7 +634,16 @@ narrower `core_setting` of `AUTH_BLUEPRINT.md` § 3.13 — reconcile the two in 
 refused; an unregistered key cannot be written; a test fails on any registered key that no code outside the
 settings app reads.
 
-### 5.4 — Feature flags and guard modes ⬜
+### 5.4 — Feature flags and guard modes ✅
+*Done 2026-10-24* (junior `djangobasex-f6`, reviewed by the lead), backend only.
+- **Flags:** declared in `registry.flags` with a required owner and expiry; state and targeting in
+  `core_feature_flag`. Six-rule kill-switch-first resolution, each rule pinned by a test; a storage
+  failure resolves off. `requires_flag()` makes an off route 404; `/api/auth/me/` exposes `flags`.
+  `test_no_expired_flags.py` fails CI on an expired flag.
+- **Guards:** `register_guard(GuardDef)` declares the guard and its `<key>.mode` Choice setting;
+  `check_guard` refuses only at `enforce`, with a stable error code. A test proves a guard shipped
+  at its default changes no response (positive control at `enforce`).
+- **Not built:** `flags_doctor`, would-block counts (needs 6.4's table), `guard_decisions_total`.
 `FeatureFlag` with kill-switch-first resolution (disabled beats targeting; unknown key is off; no
 `default=True` parameter exists), owner and expiry; a `GuardMode` helper for `off · log_only · enforce`.
 

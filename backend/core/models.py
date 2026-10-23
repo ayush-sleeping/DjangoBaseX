@@ -83,3 +83,35 @@ class Setting(models.Model):
     def __str__(self):
         where = self.scope_type if self.scope_id is None else f"{self.scope_type}:{self.scope_id}"
         return f"{self.key} @ {where}"
+
+
+class FeatureFlag(models.Model):
+    """
+    A flag's state and targeting (CONFIGURATION.md § 11). The declaration — owner, expiry,
+    description — lives in code (registry.flags); a row exists once an admin writes one, and a key
+    with no row is off. Read and write through core.flags only.
+    """
+
+    key = models.CharField(max_length=128, unique=True)
+    # The kill switch: False is off for everyone, targets included (§ 11 rule 3).
+    enabled = models.BooleanField(default=False)
+    # Targeting narrows who a live flag reaches; it never switches one on. Public ids and slugs,
+    # not foreign keys: a deleted user or role must never delete or break the flag row.
+    user_ids = models.JSONField(default=list, blank=True)
+    role_slugs = models.JSONField(default=list, blank=True)
+    tenant_ids = models.JSONField(default=list, blank=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_feature_flag"
+        ordering = ["key"]
+
+    def __str__(self):
+        return f"{self.key} ({'enabled' if self.enabled else 'disabled'})"

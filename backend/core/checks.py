@@ -32,6 +32,8 @@ def check_registry_seals(app_configs, **kwargs):
         ("api_routes", registry.api_routes.routes),
         ("public_routes", registry.public_routes.routes),
         ("settings", registry.settings.defs),
+        ("flags", registry.flags.defs),
+        ("guards", registry.guards.defs),
     ):
         try:
             read()
