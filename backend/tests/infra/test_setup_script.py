@@ -72,13 +72,23 @@ def sandbox(tmp_path):
     for name, body in (("docker", STUB_DOCKER), ("curl", STUB_CURL)):
         (bin_dir / name).write_text(body)
         (bin_dir / name).chmod(0o755)
+    # The host's tools, minus docker and curl: a CI runner has a real /usr/bin/docker, and a test
+    # that removes the stub must then find nothing, not the runner's daemon.
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    for directory in ("/usr/bin", "/bin"):
+        for tool in Path(directory).iterdir():
+            if tool.name not in {"docker", "curl"} and not (tools / tool.name).exists():
+                (tools / tool.name).symlink_to(tool)
     return root, bin_dir, tmp_path / "docker.log"
 
 
 def run(sandbox, *args, **extra_env):
     root, bin_dir, log = sandbox
     env = {
-        "PATH": f"{bin_dir}{os.pathsep}{Path(sys.executable).parent}{os.pathsep}/usr/bin:/bin",
+        "PATH": os.pathsep.join(
+            [str(bin_dir), str(Path(sys.executable).parent), str(bin_dir.parent / "tools")]
+        ),
         "HOME": os.environ.get("HOME", str(root)),
         "CI": "1",
         "DBX_STUB_LOG": str(log),
