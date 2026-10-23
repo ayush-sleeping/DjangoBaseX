@@ -650,7 +650,24 @@ settings app reads.
 **Done when:** the resolution order is pinned by tests; a flag past its expiry fails a test; the flags a user
 sees are exposed on `/me`; shipping a new guard at its default changes no response (a test proves it).
 
-### 5.5 — Vocabularies, locale, currency and time ⬜
+### 5.5 — Vocabularies, locale, currency and time ✅
+*Done 2026-10-24* (junior `djangobasex-f6`, reviewed by the lead), backend only.
+- **Lookups (CONFIGURATION § 14):** `registry.lookups` declares a set and its seed keys; one
+  `core_lookup_value` table (core migration 0003) holds stable keys with editable label, order and
+  active state. Seeding inserts missing keys only, so an admin's edits survive every reseed. Values
+  deactivate, never delete: `LookupField` refuses a deactivated value on new or changed data and
+  grandfathers it on the record that holds it. API: `GET /api/core/lookups/`, `POST`/`PATCH` behind
+  `settings.lookups.manage`. Proven at the API: a value added with no deploy is accepted with no
+  restart.
+- **Locale (§ 15):** seven `platform.*` registry settings (locale, timezone, date/time styles, week
+  start, currency, country); currency and country have no default and are never substituted.
+  `core/formatting.py` is the one formatter home: `format_date`/`format_datetime` refuse each
+  other's type, zones resolve per viewer (invalid → UTC), money is the bare ISO form and raises on a
+  missing currency. A test pins the API to ISO-8601.
+- **Key rule:** two-segment setting keys are legal only under the reserved `platform.`/`security.`
+  namespaces (positive control: `users.probe` refused).
+- **Not built:** the `/me` locale block and `TimezoneMiddleware`, label translation, the frontend
+  formatter home, a two-timezone CI run. A new SET still needs code; only VALUES are deploy-free.
 A `Lookup` base (stable non-editable key, editable label, `is_active`, order) with request-time membership
 validation; platform / tenant / user settings for locale, currency, timezone and formats; storage in UTC and
 ISO-8601 on the wire.

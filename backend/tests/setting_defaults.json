@@ -1,4 +1,11 @@
 {
+  "platform.country": null,
+  "platform.currency": null,
+  "platform.date_style": "locale",
+  "platform.locale": "en",
+  "platform.time_style": "locale",
+  "platform.timezone": "UTC",
+  "platform.week_start": "locale",
   "security.reauth.actions": [],
   "security.reauth.window_minutes": 15
 }

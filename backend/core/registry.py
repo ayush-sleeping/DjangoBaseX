@@ -583,6 +583,77 @@ class GuardRegistry(_Catalog):
         return tuple(self._defs[k] for k in sorted(self._defs))
 
 
+# --- Lookups --------------------------------------------------------------------------------------
+
+# Seed entries: (key, label) or (key, label, is_system). A system entry is one code refers to by
+# key (an "other — please specify"); it cannot be deactivated.
+LOOKUP_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
+
+
+@dataclass(frozen=True)
+class LookupSetDef:
+    """An admin-editable vocabulary (CONFIGURATION.md § 14). The set and its seed keys are code's;
+    every value, label and ordering is the admin's, in core_lookup_value."""
+
+    set_key: str  # "crm.lead_source" — <module>.<name>
+    label: str
+    seed: tuple = ()
+    admin_can_add: bool = True
+    meta_schema: Callable | None = None  # validates a value's meta dict; raises ValueError
+
+
+class LookupRegistry(_Catalog):
+    """Declared lookup sets. Membership of VALUES is the table's, at request time — this catalog
+    only says which sets exist and what they seed."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._defs: dict[str, LookupSetDef] = {}
+
+    def register(self, definition: LookupSetDef) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(definition, LookupSetDef):
+                raise RegistryError(f"expected a LookupSetDef, got {type(definition).__name__}")
+            name = f"lookup set {definition.set_key!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(definition.set_key, str) or not FLAG_KEY_PATTERN.match(
+                definition.set_key
+            ):
+                raise RegistryError(f"{name}: not <module>.<name> (lowercase, digits, _)")
+            _require_label(name, definition.label)
+            seen = set()
+            for entry in definition.seed:
+                if not isinstance(entry, tuple) or len(entry) not in (2, 3):
+                    raise RegistryError(f"{name}: seed entries are (key, label[, is_system])")
+                key, label = entry[0], entry[1]
+                if not isinstance(key, str) or not LOOKUP_KEY_PATTERN.match(key):
+                    raise RegistryError(f"{name}: seed key {key!r} is not a slug")
+                _require_label(f"{name}: seed {key!r}", label)
+                if key in seen:
+                    raise RegistryError(f"{name} seeds {key!r} twice")
+                seen.add(key)
+            if definition.set_key in self._defs:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[definition.set_key]}; "
+                    f"registered again by {owner}"
+                )
+            self._defs[definition.set_key] = definition
+            self._owner_of[definition.set_key] = owner
+
+    def __contains__(self, set_key: str) -> bool:
+        self.seal()
+        return set_key in self._defs
+
+    def get(self, set_key: str) -> LookupSetDef:
+        self.seal()
+        return self._defs[set_key]
+
+    def defs(self) -> tuple[LookupSetDef, ...]:
+        self.seal()
+        return tuple(self._defs[k] for k in sorted(self._defs))
+
+
 # --- Settings -----------------------------------------------------------------------------------
 
 
@@ -733,6 +804,7 @@ class Registry:
         self.public_routes = PublicRouteRegistry()
         self.settings = SettingRegistry()
         self.flags = FlagRegistry()
+        self.lookups = LookupRegistry()
         self.guards = GuardRegistry()
 
 

@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 
+from core.models import LookupValue
 from core.settings_registry import SCOPES
 
 
@@ -75,3 +76,20 @@ class FlagWriteSerializer(serializers.Serializer):
     role_slugs = serializers.ListField(child=serializers.CharField(), required=False)
     tenant_ids = serializers.ListField(child=serializers.CharField(), required=False)
     reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+
+class LookupValueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LookupValue
+        # The key is readable (records store it) and never writable (§ 14): this serializer only
+        # ever renders; writes go through core.lookups.set_lookup_value.
+        fields = ["set_key", "key", "label", "sort_order", "is_active", "is_system", "meta"]
+        read_only_fields = fields
+
+
+class LookupWriteSerializer(serializers.Serializer):
+    key = serializers.SlugField(max_length=64, required=False)  # create only; never an edit
+    label = serializers.CharField(max_length=128, required=False)
+    sort_order = serializers.IntegerField(min_value=0, required=False)
+    is_active = serializers.BooleanField(required=False)
+    meta = serializers.JSONField(required=False)

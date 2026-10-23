@@ -1218,6 +1218,14 @@ guard cannot exist without a switch and a label.
 
 ## 14. Admin-editable lookups — **Tier 1 · Core**
 
+> **Built 2026-10-24 (BUILD_ORDER 5.5), backend only:** `registry.lookups` + `LookupSetDef`,
+> `core_lookup_value`, `core/lookups.py` (`sync_lookups` inserts missing seed keys only; the one
+> audited writer; `LookupField` validating membership from the table with grandfathering),
+> `GET /api/core/lookups/?set=` for any signed-in user and `POST/PATCH` behind the new
+> `settings.lookups.manage`. Not yet built: the FK-`PROTECT` pattern (no referencing model exists
+> in core yet), `test_no_choices_for_lookups`, the empty-set data-plane check (6.2's), label
+> translation (pending #7), `useLookup` (frontend).
+
 **What.** One generic model for list-shaped vocabularies admins maintain — sources, reasons,
 categories — with a **stable key admins cannot reach** and an **editable label** hanging off it.
 Membership is validated **from the table at request time**; values are **deactivated, never deleted**.
@@ -1304,6 +1312,16 @@ seed keys (code).
 ---
 
 ## 15. Locale, currency, timezone and formats — **Tier 1 · Core**
+
+> **Built 2026-10-24 (BUILD_ORDER 5.5), backend only:** the settings table below registered as
+> `LocalePolicy` under the reserved `platform.` namespace (two-segment keys are legal only there —
+> owner ruling 2026-10-24), timezone validated against `zoneinfo`, currency against
+> `core/data/iso4217.txt`, country by shape (no ISO-3166 data file yet), **no default currency or
+> country and never a substitute**; `core/formatting.py` as the backend formatter home
+> (`locale_policy(user)`, `format_date`/`format_datetime` refusing each other's type,
+> `format_money` raising on a missing currency). Not yet built: the `/me` `locale` block and
+> `TimezoneMiddleware` (files outside 5.5's slice), the frontend format home, the two-timezone CI
+> run, true locale patterns (the named styles are fixed until i18n).
 
 **What.** Locale, timezone, currency and display formats are **registry settings at platform, tenant
 and user scope**, delivered to the frontend in the bootstrap, and applied by **one formatter home** on

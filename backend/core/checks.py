@@ -33,6 +33,7 @@ def check_registry_seals(app_configs, **kwargs):
         ("public_routes", registry.public_routes.routes),
         ("settings", registry.settings.defs),
         ("flags", registry.flags.defs),
+        ("lookups", registry.lookups.defs),
         ("guards", registry.guards.defs),
     ):
         try:

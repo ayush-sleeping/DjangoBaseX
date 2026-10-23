@@ -26,6 +26,28 @@ Newest first.
 
 ## 2026-10-24
 
+### BUILD_ORDER 5.5: admin-editable lookups; locale, currency, timezone and formats
+**What** (junior `djangobasex-f6`, backend only):
+- **Lookups (CONFIGURATION § 14):** `registry.lookups` + `core_lookup_value` (core migration
+  0003): stable keys, editable labels, deactivate-never-delete with grandfathering in `LookupField`,
+  seeding that inserts missing keys only, one audited writer, `GET/POST/PATCH /api/core/lookups/`
+  behind `settings.lookups.manage`.
+- **Locale (§ 15):** seven `platform.*` settings with validated types (zoneinfo, ISO-4217 from
+  `core/data/iso4217.txt`, BCP-47); `core/formatting.py` as the one formatter home; the API stays
+  ISO-8601 (pinned by a test).
+- **Rule change:** setting keys may drop the middle segment only under `platform.`/`security.`.
+**Why:** list-shaped vocabularies and market settings are the configuration an operator changes
+most and the one a code constant gets wrong for every product but the first.
+**Files:** `backend/core/{lookups,formatting,registry,models,permissions,serializers,urls,apps,settings_registry}.py`,
+`backend/core/api/lookups.py`, `backend/core/migrations/0003_*.py`,
+`backend/tests/{test_lookups,test_locale_settings}.py`, `backend/tests/setting_defaults.json`,
+`CONFIGURATION.md` § 14/§ 15, `BUILD_ORDER.md`.
+**Verification:** junior: ruff, format, `makemigrations --check` clean; pytest 1174 passed, 2
+skipped (SQLite), Postgres 16 identical once the defaults snapshot was regenerated. Lead's own gate
+run: recorded in the commit.
+**Notes:** not built: `/me` locale block, `TimezoneMiddleware`, label translation, the frontend
+formatter, a two-timezone CI run.
+
 ### BUILD_ORDER 6.2: health in three rungs (data-plane checks pending)
 **What** (lead):
 - **`core/observability/health.py`:** `live()` answers from memory; `ready()` runs `SELECT 1`

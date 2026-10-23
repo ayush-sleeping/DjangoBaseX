@@ -115,3 +115,48 @@ class FeatureFlag(models.Model):
 
     def __str__(self):
         return f"{self.key} ({'enabled' if self.enabled else 'disabled'})"
+
+
+class LookupValueQuerySet(models.QuerySet):
+    def in_set(self, set_key: str):
+        return self.filter(set_key=set_key)
+
+    def active(self):
+        return self.filter(is_active=True)
+
+
+class LookupValue(models.Model):
+    """
+    One value of an admin-editable vocabulary (CONFIGURATION.md § 14). The STABLE key is what
+    records store and reports group by; admins edit the label, the order and whether it is active.
+    Deactivate, never delete: a value already held by records stays valid and keeps its label.
+    """
+
+    set_key = models.CharField(max_length=64, db_index=True)  # declared in code (registry.lookups)
+    key = models.SlugField(max_length=64, editable=False)  # stable; never in a writable serializer
+    label = models.CharField(max_length=128)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    # Code refers to it by key (an "other — please specify"): it cannot be deactivated.
+    is_system = models.BooleanField(default=False)
+    meta = models.JSONField(default=dict, blank=True)  # validated by the set's meta_schema
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = LookupValueQuerySet.as_manager()
+
+    class Meta:
+        db_table = "core_lookup_value"
+        ordering = ["set_key", "sort_order", "key"]
+        constraints = [
+            models.UniqueConstraint(fields=["set_key", "key"], name="core_lookup_value_uq")
+        ]
+
+    def __str__(self):
+        return f"{self.set_key}:{self.key}"

@@ -19,8 +19,11 @@ class CoreConfig(AppConfig):
             registry.public_routes.register(url_name, reason)
         registry.permissions.register(SETTINGS_GROUP)
         registry.permissions.register(HEALTH_GROUP)
+        from .formatting import register_locale_settings
 
+        register_locale_settings(registry)
         post_migrate.connect(_report_settings, sender=self, dispatch_uid="core.settings_report")
+        post_migrate.connect(_seed_lookups, sender=self, dispatch_uid="core.seed_lookups")
 
 
 def _report_settings(sender, **kwargs):
@@ -36,3 +39,12 @@ def _report_settings(sender, **kwargs):
             "core.setting.stored_problem",
             extra={"setting_key": finding.key, "scope": finding.scope, "problem": finding.problem},
         )
+
+
+def _seed_lookups(sender, **kwargs):
+    """sync_lookups after every migrate: inserts MISSING seed keys only (CONFIGURATION.md § 14) —
+    it never relabels, reactivates or deletes, so the admin's edits survive every reseed."""
+    from .lookups import sync_lookups
+
+    for created in sync_lookups():
+        logging.getLogger("core.lookups").info("core.lookup.seeded", extra={"value": created})

@@ -46,8 +46,11 @@ SCOPES = ("user", "tenant", "platform")
 # Namespaces any core app may use besides its own label (§ 9.1).
 RESERVED_NAMESPACES = frozenset({"platform", "security"})
 EXPOSURES = frozenset({"private", "authenticated", "public"})
-# "<namespace>.<group>.<name>": dotted, stable, the API contract.
-KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
+# "<namespace>.<group>.<name>": dotted, namespaced, stable, the API contract. Two segments are
+# allowed ONLY under the reserved namespaces (the § 15 platform identity keys); a module's or
+# plugin's key always carries its group, so "namespace = module" keeps meaning something.
+KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$")
+TWO_SEGMENT = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
 _MODULE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
@@ -342,6 +345,11 @@ class SettingDef:
         out = []
         if not isinstance(self.key, str) or not KEY_PATTERN.match(self.key):
             return [f"key {self.key!r} is not <namespace>.<group>.<name> (a-z, 0-9, _)"]
+        if TWO_SEGMENT.match(self.key) and self.namespace not in RESERVED_NAMESPACES:
+            return [
+                f"key {self.key!r} has two segments: only the reserved namespaces "
+                f"({', '.join(sorted(RESERVED_NAMESPACES))}) may drop the group"
+            ]
         if not isinstance(self.module, str) or not _MODULE_PATTERN.match(self.module):
             out.append(f"module {self.module!r}: lowercase letters, digits and _ only")
         elif self.namespace != self.module and self.namespace not in RESERVED_NAMESPACES:
