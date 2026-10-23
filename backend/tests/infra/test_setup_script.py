@@ -74,11 +74,13 @@ def sandbox(tmp_path):
         (bin_dir / name).chmod(0o755)
     # The host's tools, minus docker and curl: a CI runner has a real /usr/bin/docker, and a test
     # that removes the stub must then find nothing, not the runner's daemon.
+    # On Linux /bin is /usr/bin and some entries are dangling symlinks, so test by name
+    # (lexists), not by whether the link's target resolves.
     tools = tmp_path / "tools"
     tools.mkdir()
     for directory in ("/usr/bin", "/bin"):
         for tool in Path(directory).iterdir():
-            if tool.name not in {"docker", "curl"} and not (tools / tool.name).exists():
+            if tool.name not in {"docker", "curl"} and not os.path.lexists(tools / tool.name):
                 (tools / tool.name).symlink_to(tool)
     return root, bin_dir, tmp_path / "docker.log"
 
