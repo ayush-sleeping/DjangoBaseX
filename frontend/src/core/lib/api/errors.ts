@@ -8,8 +8,6 @@
  * (core/api/errors.py). Structured detail is never stringified into copy: if no message can be
  * derived, the copy is the code map's entry, else "Something went wrong (HTTP <status>)".
  */
-import { useEffect, useState } from "react";
-
 import { transport } from "@/core/lib/config/defaults";
 
 export type ErrorKind =
@@ -270,27 +268,4 @@ export function messageFor(err: ApiError): string {
     console.warn(`[api] no message for error code "${err.code}"`);
   }
   return err.status ? `Something went wrong (HTTP ${err.status}).` : MESSAGES.network;
-}
-
-/** The cooldown a rate-limited error asks for; every submit that can be throttled uses it. */
-export function useCooldown(err: unknown): { disabled: boolean; secondsLeft: number } {
-  const seconds = isApiError(err) && err.kind === "rate_limited" ? (err.retryAfterSeconds ?? 0) : 0;
-  const [until, setUntil] = useState(0);
-  const [now, setNow] = useState(0);
-  // A new error object starts a new cooldown. The clock is read in callbacks, never in render.
-  useEffect(() => {
-    const start = setTimeout(() => {
-      const at = Date.now();
-      setNow(at);
-      setUntil(seconds > 0 ? at + seconds * 1000 : 0);
-    }, 0);
-    return () => clearTimeout(start);
-  }, [err, seconds]);
-  useEffect(() => {
-    if (until <= now) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [until, now]);
-  const secondsLeft = Math.max(0, Math.ceil((until - now) / 1000));
-  return { disabled: secondsLeft > 0, secondsLeft };
 }

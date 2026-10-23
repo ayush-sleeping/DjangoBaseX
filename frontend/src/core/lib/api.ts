@@ -7,7 +7,8 @@ import { request, type RequestOpts } from "./api/client";
 import { ApiError, isApiError } from "./api/errors";
 
 export { API_URL, download, request, upload } from "./api/client";
-export { ApiError, isApiError, messageFor, useCooldown } from "./api/errors";
+export { ApiError, isApiError, messageFor } from "./api/errors";
+export { useCooldown } from "./api/cooldown";
 export type { ErrorKind, FieldError } from "./api/errors";
 
 /** DRF's page envelope, as every paginated list endpoint returns it. */

@@ -86,7 +86,8 @@ lint and a ratchet, is the fix.
 **Verification:** `npm run lint` clean, `npm run typecheck` clean, `npm test`: 6 files, 24 passed.
 Done-when: `no-effect-fetch` positive control catches `useEffect→setIsLoading()` and
 `useEffect→fetch()`; `use-api-query.test.tsx` renders the error surface, not the empty state, on a
-500. `npm run build` not run (not in the routine gate).
+500. `npm run build`: the first CI run failed because `errors.ts` pulled React hooks into server
+components; `useCooldown` moved to a `"use client"` module and the build passes.
 **Notes:** as built, the browser base stays `NEXT_PUBLIC_API_URL`; the code→message map is local
 until § 24; no scope context yet; existing pages still call `api()` and move to `useApiList` as
 8.2+ touches them.
