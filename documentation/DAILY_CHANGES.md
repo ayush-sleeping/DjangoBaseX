@@ -116,7 +116,10 @@ hard-coded" fail a build instead of being a sentence in a doc.
   SQLite and on PostgreSQL 16. Lead's post-5.3 rerun: **1105 passed, 2 skipped** (SQLite), with
   ruff, format, `check` and `makemigrations --check` all clean.
 - Frontend `npm run lint` and `npm run typecheck`: clean.
-- **Not run:** `npm run build`, and the GitHub side (2.3 proof PRs, 4.3's first real run).
+- **GitHub (2026-10-24):** the push's `core-guard` run passed. Its `CI` run failed on one test
+  that found the runner's real `docker`; fixed in `fix(test)` and re-pushed. 2.3 proof: the red PR
+  and this green PR (links recorded in the 2.3 entry's merge).
+- **Not run:** `npm run build`.
 **Notes:**
 - **Owner decisions taken for 5.3:** live code defaults, an unregistered read raises everywhere,
   tenant scope inert (ADR-0011), backend only, and only `REAUTH_*` moves.

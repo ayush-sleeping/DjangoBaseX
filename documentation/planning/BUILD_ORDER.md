@@ -346,7 +346,10 @@ In `backend/tests/architecture/`, per [`TESTING_STRATEGY.md`](TESTING_STRATEGY.m
 **Done when:** both pass, and deliberately breaking one (open a view with `AllowAny`, branch a
 migration) makes the right test fail with a readable message.
 
-### 2.3 — CI ⬜
+### 2.3 — CI ✅
+*Done 2026-10-24.* Proven on GitHub: a PR with a deliberate lint error went red
+(`test/ci-red-proof`) and this clean PR went green; both run links are in `DAILY_CHANGES.md`.
+The first real push also caught a non-hermetic test (`fix(test)` on `main`).
 *In place since 2026-10-11:* `.github/workflows/ci.yml` as specified below. The suite was run
 locally against PostgreSQL 16 first (43 passed), and the frontend `next build` passed. **Still
 open:** the "Done when" proof below, a deliberately red PR next to a green one.
