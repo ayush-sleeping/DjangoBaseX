@@ -1,3 +1,4 @@
+import os  # noqa-free on purpose: BUILD_ORDER 2.3 red-PR proof
 """
 Project identity: one name derives the rest (CONFIGURATION.md § 7, BUILD_ORDER 5.2).
 
