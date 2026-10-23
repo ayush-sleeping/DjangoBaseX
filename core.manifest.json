@@ -103,7 +103,7 @@
     "backend/tests/architecture/permission_refs.py": "02e5f7e75b47a0b0e88f9aeb78998784cad3d9e44b8a1a21fa3b36f57cc54c29",
     "backend/tests/architecture/plugin_rules.py": "d6319f3d11a10a7b90f59e39b17aefdd03e3a01a97723f435bdca1e5a96d034b",
     "backend/tests/architecture/sources.py": "56130725364f7c81ab401fa960996b2095066fc69d4296a537fb90748849f38e",
-    "backend/tests/architecture/test_audit_rules.py": "fd9ce20118073faa5d97774590e1712768ad506ab790156c799c292832f70c5f",
+    "backend/tests/architecture/test_audit_rules.py": "aeb05dfe0f0b8d767f144746bf0e72981af1884316b28af4c6b8e43b78afbc6c",
     "backend/tests/architecture/test_core_boundary.py": "d73a3fff7e3b422f6da3832f5214af2fe2aa2d4539ed2bb4852f513e505928fd",
     "backend/tests/architecture/test_encrypted_columns_are_registered.py": "2319c1e95c420307914ad62a1adafb561ef3bed4ccb5018bdd7491998a2113a1",
     "backend/tests/architecture/test_migrations.py": "e7c103d7ceb201313556c00558560527cb326d8e76a2aad40a6a884c481f57f4",
