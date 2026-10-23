@@ -729,7 +729,7 @@ production (enforced by 5.1); one scrubber used by logging and Sentry. Closes **
 **Done when:** a 500 body and its log line carry the same request id; a canary password sent through a normal
 and a failing-validation request appears in no log line.
 
-### 6.2 — Health in three rungs and data-plane checks 🔶 (rungs built; data-plane checks pending)
+### 6.2 — Health in three rungs and data-plane checks ✅
 *Rungs done 2026-10-24* (lead). `core/observability/health.py`:
 - **live** (`/api/health/live/`, alias `/api/health/`): no I/O, no identity.
 - **ready** (`/api/health/ready/`): `SELECT 1` under a statement timeout plus a cache set/get
@@ -742,10 +742,16 @@ and a failing-validation request appears in no log line.
   `HEALTH_PROBE_TIMEOUT_SECONDS`. A probe that raises or hangs is reported, never propagated; only
   a critical probe makes the install `down` (503); degraded is 200. Closes **DB-11**, **DB-27**.
 - **Callers moved to ready:** the compose healthcheck, `setup.sh`, the home page.
-- **Still open:** the data-plane check registry (OBSERVABILITY § 7: `ok | warn | fatal` with a
-  remedy) and probe `cache_seconds`. Both need `core/registry.py`, which 5.5 is editing; they land
-  right after it. The "broken check degrades to warn" done-when is proven for probes
-  (`test_a_probe_that_raises_is_reported_not_propagated`) and will be re-proven for data-plane checks.
+- **Data-plane checks (§ 7), done the same day:** `registry.dataplane` + `core/dataplane.py`.
+  A check returns `ok | warn | fatal` with a remedy; the evaluator never raises (a crash is
+  `warn: check crashed: <ExcType>`), a non-ok result always carries a remedy, results are cached
+  `DATAPLANE_CACHE_SECONDS`. Core registers `core.active_superuser` and `core.administrator_role`
+  (both fatal on an empty install, with the `bootstrap_admin` remedy). Components carries a
+  `dataplane` section; a fatal check makes the install `degraded`, never `down`.
+  `manage.py dataplane --fatal-only` is the pre-exec gate (exit 1). Done-when "a deliberately
+  broken check degrades to warn instead of raising": `test_evaluator_never_raises`.
+- **Not built:** probe `cache_seconds`, the metric series, the setup-wizard "not enforced before
+  first run" rule (no wizard yet), and wiring the gate into a web entrypoint (none exists yet).
 `/api/health/live` (no I/O), `/api/health/ready` (DB + cache, timeouts, no third parties, throttle-exempt),
 `/api/health/components` (permission-gated); a registry of data-plane checks for required rows. Closes **DB-11**.
 

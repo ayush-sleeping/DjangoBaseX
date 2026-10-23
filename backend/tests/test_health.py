@@ -116,7 +116,7 @@ def test_monitoring_principal_reads_components_and_nothing_else(monitor):
     response = monitor.get(COMPONENTS)
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "ok"
+    assert body["status"] == "degraded"  # an install with no superuser: reported, not gating
     assert body["release"]
     assert body["components"]["database"] == {
         "status": "ok",
@@ -125,6 +125,7 @@ def test_monitoring_principal_reads_components_and_nothing_else(monitor):
         "critical": True,
     }
     assert body["components"]["migrations"]["status"] == "ok"
+    assert {c["key"] for c in body["dataplane"]} >= {"core.active_superuser"}
     assert monitor.get("/api/auth/me/").status_code == 200  # signed in...
     assert monitor.get("/api/users/").status_code == 403  # ...and that is all it may do
 

@@ -29,6 +29,8 @@ def check_registry_seals(app_configs, **kwargs):
         ("permissions", registry.permissions.groups),
         ("navigation", registry.navigation.sections),
         ("health", registry.health.checks),
+        ("dataplane", registry.dataplane.checks),
+        ("encrypted_fields", registry.encrypted_fields.fields),
         ("api_routes", registry.api_routes.routes),
         ("public_routes", registry.public_routes.routes),
         ("settings", registry.settings.defs),

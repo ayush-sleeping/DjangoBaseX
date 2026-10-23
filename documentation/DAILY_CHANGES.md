@@ -80,8 +80,13 @@ past the anon throttle; probe that raises → degraded; probe that hangs → tim
 principal reads components and nothing else; degraded 200 / down 503; never 500). Full suite on
 the shared tree: 1169 passed, 1 failed (`test_setting_defaults_snapshot`, the junior's in-flight
 5.5 registrations, not this change). Frontend lint and typecheck clean.
+**Data-plane checks (§ 7), same day:** `registry.dataplane` and `core/dataplane.py`: `ok | warn |
+fatal` results with a remedy, an evaluator that never raises, per-process caching, core's
+`active_superuser` and `administrator_role` checks, a `dataplane` section on components and
+`manage.py dataplane --fatal-only` as the pre-exec gate. `registry.encrypted_fields` was added in
+the same `core/registry.py` edit for 6.3. Tests: `tests/test_dataplane.py` (10).
 **Notes:** the "database stopped" done-when is proven by patching the probe, not by stopping a
-container. The data-plane check registry (§ 7) waits for 5.5 to release `core/registry.py`.
+container.
 
 ### BUILD_ORDER 5.4: feature flags and guard modes
 **What** (junior `djangobasex-f6`, backend only):

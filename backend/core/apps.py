@@ -10,6 +10,7 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from . import checks  # noqa: F401 — registers the dbx.* system checks
+        from .dataplane import register_core_checks
         from .observability.health import HEALTH_GROUP
         from .permissions import SETTINGS_GROUP
         from .registry import registry
@@ -19,6 +20,7 @@ class CoreConfig(AppConfig):
             registry.public_routes.register(url_name, reason)
         registry.permissions.register(SETTINGS_GROUP)
         registry.permissions.register(HEALTH_GROUP)
+        register_core_checks()
         from .formatting import register_locale_settings
 
         register_locale_settings(registry)

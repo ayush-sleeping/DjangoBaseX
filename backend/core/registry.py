@@ -106,6 +106,28 @@ class HealthCheck:
 
 
 @dataclass(frozen=True)
+class DataPlaneCheck:
+    """A required-rows check (OBSERVABILITY § 7). fn returns core.dataplane.ok/warn/fatal."""
+
+    key: str  # "core.active_superuser": <owner>.<what>
+    description: str
+    fn: Callable[[], object]
+
+
+@dataclass(frozen=True)
+class EncryptedField:
+    """A column holding ciphertext from core.crypto, so rotation knows the complete set (§ 25)."""
+
+    model: str  # "users.MfaDevice"
+    field: str  # "totp_secret_ciphertext"
+    purpose: str  # "mfa_totp"
+
+    @property
+    def key(self) -> str:
+        return f"{self.model}.{self.field}"
+
+
+@dataclass(frozen=True)
 class ApiRoute:
     prefix: str  # "billing" → mounted at /api/billing/
     urlconf: str  # dotted module path
@@ -366,6 +388,81 @@ class HealthRegistry(_Catalog):
         """In registration order, which follows INSTALLED_APPS."""
         self.seal()
         return tuple(self._checks.values())
+
+
+# --- Data-plane checks --------------------------------------------------------------------------
+
+
+_DATAPLANE_KEY = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
+_MODEL_LABEL = re.compile(r"^[a-z][a-z0-9_]*\.[A-Z][A-Za-z0-9]*$")
+_PURPOSE = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+class DataPlaneRegistry(_Catalog):
+    """Required-rows checks, evaluated by core.dataplane. A fatal one means the product is
+    impossible; the evaluator never raises, so a broken check is never worse than its gap."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._checks: dict[str, DataPlaneCheck] = {}
+
+    def register(self, check: DataPlaneCheck) -> None:
+        owner = _caller_module()
+        with self._lock:
+            self._refuse_if_sealed(f"data-plane check {getattr(check, 'key', check)!r}")
+            if not isinstance(check, DataPlaneCheck):
+                raise RegistryError(f"expected a DataPlaneCheck, got {type(check).__name__}")
+            name = f"data-plane check {check.key!r}"
+            if not isinstance(check.key, str) or not _DATAPLANE_KEY.match(check.key):
+                raise RegistryError(f"{name}: key must be <owner>.<what>, lowercase")
+            _require_label(name, check.description)
+            if not callable(check.fn):
+                raise RegistryError(f"{name}: fn must be callable, got {check.fn!r}")
+            if check.key in self._checks:
+                raise RegistryError(f"{name} is already registered")
+            self._checks[check.key] = check
+            self._owner_of[check.key] = owner
+
+    def checks(self) -> tuple[DataPlaneCheck, ...]:
+        self.seal()
+        return tuple(self._checks.values())
+
+
+# --- Encrypted fields ---------------------------------------------------------------------------
+
+
+class EncryptedFieldRegistry(_Catalog):
+    """Every column holding core.crypto ciphertext, so rotate_encryption walks the complete set.
+    Purposes are validated against core.crypto's constants by a system check, not here: this
+    module stays standard-library only."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._fields: dict[str, EncryptedField] = {}
+
+    def register(self, spec: EncryptedField) -> None:
+        owner = _caller_module()
+        with self._lock:
+            self._refuse_if_sealed(f"encrypted field {getattr(spec, 'key', spec)!r}")
+            if not isinstance(spec, EncryptedField):
+                raise RegistryError(f"expected an EncryptedField, got {type(spec).__name__}")
+            name = f"encrypted field {spec.key!r}"
+            if not isinstance(spec.model, str) or not _MODEL_LABEL.match(spec.model):
+                raise RegistryError(f"{name}: model must be 'app_label.ModelName'")
+            if not isinstance(spec.field, str) or not spec.field.endswith("_ciphertext"):
+                raise RegistryError(f"{name}: field must be named *_ciphertext")
+            if not _PURPOSE.match(spec.field[: -len("_ciphertext")] or "-"):
+                raise RegistryError(f"{name}: field must be a lowercase identifier")
+            if not isinstance(spec.purpose, str) or not _PURPOSE.match(spec.purpose):
+                raise RegistryError(f"{name}: purpose must be lowercase letters, digits and _")
+            if spec.key in self._fields:
+                raise RegistryError(f"{name} is already registered")
+            self._fields[spec.key] = spec
+            self._owner_of[spec.key] = owner
+
+    def fields(self) -> tuple[EncryptedField, ...]:
+        self.seal()
+        return tuple(self._fields.values())
 
 
 # --- API routes ---------------------------------------------------------------------------------
@@ -800,6 +897,8 @@ class Registry:
         # Navigation checks its items against THIS registry's permissions, never another's.
         self.navigation = NavigationRegistry(self.permissions)
         self.health = HealthRegistry()
+        self.dataplane = DataPlaneRegistry()
+        self.encrypted_fields = EncryptedFieldRegistry()
         self.api_routes = ApiRouteRegistry()
         self.public_routes = PublicRouteRegistry()
         self.settings = SettingRegistry()

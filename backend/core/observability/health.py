@@ -220,7 +220,13 @@ def components() -> tuple[dict, int]:
         overall, code = DEGRADED, 200
     else:
         overall, code = OK, 200
-    body = {"status": overall, "release": read_release(), "components": report}
+    # Required rows (§ 7): reported here, never gating; a fatal one is a degraded install.
+    from core import dataplane
+
+    checks = [r.as_dict() for r in dataplane.evaluate()]
+    if code == 200 and overall == OK and dataplane.worst(dataplane.evaluate()) != dataplane.OK:
+        overall = DEGRADED
+    body = {"status": overall, "release": read_release(), "components": report, "dataplane": checks}
     return body, code
 
 

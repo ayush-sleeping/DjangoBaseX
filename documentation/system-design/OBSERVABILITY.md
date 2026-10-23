@@ -704,6 +704,12 @@ the probe, and only core may register `critical=True` (a registration-time check
 
 ## 7. Data-plane self-checks — **Tier 2 · Core**
 
+*Built 2026-10-24* (BUILD_ORDER 6.2): `registry.dataplane`, `core/dataplane.py` (the evaluator and
+core's two checks), the `dataplane` section of `/api/health/components/`, and
+`manage.py dataplane [--fatal-only] [--json]` as the pre-exec gate until the doctor umbrella (7.2)
+wraps it. Not built: the metric, `DATAPLANE_ENFORCE`'s setup-wizard half, the System Health page.
+Tests: `tests/test_dataplane.py`.
+
 **What.** A registry of checks that verify **required rows exist and make sense** — the seed and
 configuration data the product cannot function without — evaluated at boot, in the components
 health endpoint, as a metric, on the System Health page and by the doctor.
