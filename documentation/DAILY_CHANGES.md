@@ -26,6 +26,38 @@ Newest first.
 
 ## 2026-11-06
 
+### TECH_DEBT DB-51: the scrubber's bare-secret backstop, rebuilt on measurement
+**What** (Dev 1 `djangobasex-4e`, manager ruling on the design): the high-entropy detector in
+`core/observability/scrub.py` now covers base64, base64url, hex and base32 runs of 20+ characters and judges them by
+measured word-likeness instead of fixed character-class counts, in two bands:
+- **Band 1** (28+ chars, pure hex 32+, base32): **0 misses** over 50,000 seeded tokens per kind.
+- **Band 2** (20–27 chars): always caught after a secret word ("reset token …", `api_key=`, "password is …",
+  `Bearer`); otherwise ~0.005% residual, asserted at the measured count on a seed fixed before measuring.
+
+Hyphenated UUIDs, labelled git SHAs, filler and correlation ids **under their keys** (`request_id`, `task_id`, …;
+id-shaped values only) stay readable. The contract is now written down: secrets travel by key; prose detection is a backstop.
+**Why:** measured before the fix, the old rule missed 100% of 22-character tokens, lowercase hex and compact UUIDs,
+29% of 32-byte base64 and 0.5% of `token_urlsafe(32)`. Its test was flaky because it drew a fresh random token every
+run. This scrubber guards every product's logs, `core_job_run` errors and (ADR-0013) Sentry.
+**Files:** `backend/core/observability/scrub.py`, `backend/tests/{test_scrub,test_scrub_entropy,test_canary,canary,test_production_boot}.py`,
+`backend/tests/observability/test_request_id_and_logging.py`;
+`OBSERVABILITY.md` § 3, `BUG_CLASSES.md` BC-14, `TECH_DEBT.md`.
+**Verification:** Dev 1: SQLite 1517 passed, 5 skipped; PostgreSQL 16 1519 passed, 3 skipped. Linear time proven on
+1 MB lines of three adversarial shapes. Manager: the final tree on both databases: see the commit.
+**Notes:**
+- Manager ruling: "0 misses at every length" was withdrawn after measurement showed 20–27-char random tokens overlap
+  real CamelCase names (redacting ~17% of class names in every log would get the scrubber disabled).
+- A regression caught before shipping: the new hex rule would have redacted every `request_id` (uuid4 hex) and broken
+  log correlation; fixed by the key passthrough, which fails closed for non-id values.
+- Inventory of core-issued secrets: all land in band 1 or a key/JWT rule, except the MFA token nonce (only inside a
+  signed JWT), the dev bootstrap password (caught after "password") and **MFA recovery codes**, which are below
+  detection entirely (new DB-57, owner decision).
+- Leak tests now share one canary (`tests/canary.py`) that the backstop cannot detect **by construction**, so a canary
+  missing from the logs proves a key or path rule removed it. The old uuid-hex canary was eaten by the new backstop in
+  12.7% of draws (the positive control failed ~1 run in 8 on either database), and `test_production_boot`'s literal
+  canary was being redacted by the backstop rather than the refusal path. With undetectable canaries every leak test
+  still passes: no hole was covered only by the backstop.
+
 ### BUILD_ORDER 8.4a: generated frontend contracts (closes DB-4)
 **What** (Dev 2 `djangobasex-a9`, manager review; the first half of 8.4):
 - **`manage.py export_frontend_contracts`** (`core/contracts.py`, `--check`) writes `frontend/src/generated/`: the

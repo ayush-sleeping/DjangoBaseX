@@ -489,6 +489,9 @@ leaked everything", while the client-side scrubber missed URLs and request bodie
 the validation-failure path and a forced 500; assert the canary appears in no captured log record and no
 error-tracker event. OBSERVABILITY's single scrubber, tested; a scan banning `request.data`/`request.body` inside
 logging calls; Ruff `T20` outside an allowlist of commands; a `repr` test over models with secret fields.
+**Built (DB-51):** the scrubber's contract is *secrets travel by key*. Put a secret in a structured field, header or
+query parameter, never in a message string. Entropy detection in prose is a backstop: 0 measured misses for 28+
+characters, context-caught for 20–27, best effort otherwise (OBSERVABILITY § 3).
 
 **Review question.** *If this request failed, where would its body end up?*
 

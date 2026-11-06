@@ -7,7 +7,6 @@ log line.
 import io
 import json
 import logging
-import uuid
 
 import pytest
 from django.http import StreamingHttpResponse
@@ -17,6 +16,7 @@ from rest_framework.response import Response
 
 from core.api.views import BaseAPIView
 from core.observability.logging import ContextFilter, JsonFormatter, build_logging
+from tests.canary import canary
 from tests.factories import DEFAULT_PASSWORD, UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -130,12 +130,6 @@ def test_error_envelopes_and_drf_errors_carry_the_request_id(client):
 
 
 # --- Logs: what may never appear ----------------------------------------------------------------
-
-
-def canary() -> str:
-    # Lowercase hex: below the scrubber's high-entropy floor, so a canary that vanishes from the
-    # logs vanished because a KEY rule caught it, not because it merely looked random.
-    return f"canary-{uuid.uuid4().hex}"
 
 
 def test_a_canary_password_appears_in_no_log_line(json_logs):

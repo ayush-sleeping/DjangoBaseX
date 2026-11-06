@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.canary import canary as make_canary
+
 BACKEND = Path(__file__).resolve().parents[1]
 IGNORE = shutil.ignore_patterns(
     ".venv", "__pycache__", ".ruff_cache", ".pytest_cache", "db.sqlite3", ".env"
@@ -105,7 +107,8 @@ def test_development_with_the_example_values_boots(backend_copy):
 
 
 def test_no_secret_value_appears_in_the_refusal(backend_copy):
-    canary = "CANARYsecretValue0123456789abcdefghijklmnopqrstuvwxyz!@#"
+    # Not entropy-detectable (tests/canary.py): if it is absent below, a key rule removed it.
+    canary = make_canary()
     env = {**VALID_PRODUCTION, "DEBUG": "True", "SECRET_KEY": canary, "JWT_SIGNING_KEY": canary}
     result = import_settings(backend_copy, env)
     assert result.returncode != 0 and "cfg.E004" in result.stderr  # equal secrets

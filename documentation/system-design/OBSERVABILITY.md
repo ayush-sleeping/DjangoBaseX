@@ -297,6 +297,36 @@ allow-list is a constant; module fields are registry entries.
 ([`DATA_LIFECYCLE.md`](DATA_LIFECYCLE.md)). The rules are exported as JSON and **generated** into
 the frontend, where the Next scrubber for all three runtimes consumes them.
 
+> ✅ **The contract (TECH_DEBT DB-51, 2026-11-06).** **Secrets travel by key**: a structured
+> `extra` field, a header or a query parameter, where redaction is exact (the KEY rules). Finding a
+> bare secret inside prose is a **backstop**, with a stated guarantee per band, measured by
+> `tests/test_scrub_entropy.py` with seeded generators:
+>
+> | Band | What | Guarantee |
+> |---|---|---|
+> | 1 | runs of 28+ characters from the base64/base64url alphabet, pure hex of 32+, base32 secrets | **0 misses** over 50,000 tokens per kind (token_urlsafe(32/48), token_hex(16/32), uuid4().hex, base64 of 21 and 32 bytes, base32 TOTP secrets) |
+> | 2 | runs of 20–27 characters (token_urlsafe(16), base64 of 16–18 bytes) | **Caught after a secret word** ("reset token …", `api_key=…`, "password is …", bearer, session, csrf, jwt, signature, code, otp…). Without one: best effort, measured at 2–3 misses in 50,000 (≈ 0.005%) |
+>
+> Below 20 characters nothing is judged by entropy. A run is a secret unless it reads as words: a
+> mixed-case run is scored by the share of its letters and digits in English-like word segments
+> (thresholds 0.65 below 28 characters, 0.76 for 28–39 and 0.62 for 40+, each set above the
+> highest score any of millions of random tokens reached). A single-case run needs digits between
+> letters plus un-English letter pairs, or, at 28+ characters with no separator, digits or 15%+
+> rare pairs (base32). Pure hex of 32+ is a secret. Exemptions: hyphenated UUIDs (readable ids), a
+> 40-hex run labelled `commit`/`sha`/`rev` (git), runs with fewer than 8 distinct characters
+> (filler), and correlation ids (`request_id`, `task_id`, `trace_id`, …) **under their keys** when
+> their value is id-shaped. In prose a `uuid4().hex` request id is redacted like any token: ids,
+> like secrets, travel by key.
+>
+> **The cost, measured on real source** (identifier and string runs in Django, DRF and Celery,
+> tests excluded): 16 of 86 mixed-case runs of 28+ characters are redacted (18.6%; 6.7% across all
+> installed packages), mostly alphabet constants and C-API names such as
+> `GEOSWKBWriter_getIncludeSRID`; 22 of 509 runs of 20–27 characters (4.3%). Common class names
+> (`SessionAuthenticationMiddleware2`, `ArrayMaxLengthValidator`) are untouched.
+> The old rule missed every 22-character token, all lowercase hex of 32–47 characters, most standard
+> base64 and 0.5% of token_urlsafe(32). The thresholds, bigram table and word list are exported in
+> `rules_as_json()["high_entropy"]`, so a frontend port judges identically.
+
 **Why.** Two scrubbers disagree. A real incident: the browser's error-tracker scrubber was
 case-sensitive, never scrubbed the request URL or the POST body, and the server and edge runtimes
 had no scrubber at all — "so server-rendered errors leaked everything". Another: key matching was a

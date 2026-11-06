@@ -128,11 +128,98 @@ TEXT_KEY_WORDS = (
     "id_token",
 )
 
-# High-entropy runs: base64/base64url-alphabet runs of at least this length, holding at least this
-# many digits, upper- and lower-case letters. Random tokens pass easily; CamelCase identifiers and
-# lower-case words joined by '-' or '_' do not. '/' is left out of the alphabet: URL paths stay
-# legible.
-HIGH_ENTROPY = {"min_length": 32, "min_digits": 2, "min_upper": 2, "min_lower": 2}
+# High-entropy runs (TECH_DEBT DB-51). A candidate is a run of at least min_length characters from
+# the base64/base64url alphabet (A-Z a-z 0-9 _ - + /, optional '=' padding). It is a secret unless
+# it reads like words. Every threshold below was measured, not guessed, against seeded random
+# tokens and a corpus of real identifier and string runs (tests/test_scrub_entropy.py):
+#   1. Pure hex of 32+ characters holding a digit and a letter is a secret (token_hex, uuid4().hex,
+#      digests). Exception: a 40-hex run labelled commit/sha/rev(ision) stays: a git SHA.
+#   2. Hyphenated UUIDs are object ids people need to read; they are masked out before judging.
+#   3. A mixed-case run is judged by its word share: the share of its letters and digits that sit in
+#      English-like word segments (CamelCase/snake split; see _is_word). Real identifiers score
+#      near 0.9. Random base64 of 28+ characters never exceeded 0.571 in 2.4 million tokens; 20-27
+#      characters (22- and 24-character tokens) reached 0.783, hence the two thresholds.
+#   4. A single-case run (snake_case, kebab-case, CONSTANTS, paths) is a secret only when digits sit
+#      between letters AND 30%+ of its letter pairs are un-English: the ~1e-5 of random tokens with
+#      no upper- or no lower-case letter at all.
+# The old rule (32+ characters, 2 digits, 2 upper, 2 lower, '/' excluded) missed every 22-character
+# token, every lowercase hex token, most standard base64, and 0.5% of token_urlsafe(32).
+HIGH_ENTROPY = {
+    "min_length": 20,
+    "min_hex_length": 32,
+    "min_distinct": 8,
+    "guaranteed_from": 28,
+    "max_word_share_short": 0.65,
+    "max_word_share_mid": 0.76,
+    "long_from": 40,
+    "max_word_share_long": 0.62,
+    "single_case_min_digits": 2,
+    "separator_free_min_rare_share": 0.15,
+    "min_word_segment": 4,
+    "max_segment_rare_share": 0.25,
+    "min_segment_vowel_share": 0.2,
+    "max_consonant_run": 4,
+    "single_case_min_rare_share": 0.3,
+}
+# Band 2's context rule: a 20-27 character run (mixed case or holding digits) right after one of
+# these words is redacted whatever its word share. "reset token abc…", "api_key=…", "password is …".
+SECRET_CONTEXT_WORDS = (
+    "api_key|api-key|apikey|token|secret|key|password|passwd|pwd|authorization|auth|bearer|"
+    "signature|sig|session|cookie|credential|otp|code|csrf|jwt"
+)
+_SECRET_CONTEXT = re.compile(
+    r"(?<![a-z])(?:" + SECRET_CONTEXT_WORDS + r")s?(?:\s+is\s+|\s*[:=]\s*|\s+|\s*\(\s*)['\"]?$",
+    re.IGNORECASE,
+)
+CONTEXT_WINDOW = 40
+# Correlation ids are not secrets, and redacting them breaks every log join. A value under one of
+# these keys passes through verbatim, but only when it is shaped like an id (hex or UUID): anything
+# else under the key is scrubbed as usual, so the exemption cannot carry a secret.
+CORRELATION_KEYS = frozenset(
+    {"request_id", "x_request_id", "trace_id", "span_id", "correlation_id", "task_id", "run_id"}
+)
+_ID_SHAPED = re.compile(r"[0-9a-fA-F-]{8,64}")
+# Short pieces real identifiers are built from (CONFIGURATION/API names, Django, DRF, Celery): they
+# count as words even though they are under min_word_segment letters.
+SHORT_WORDS = frozenset(
+    (
+        "id ids db url uri api app max min get set add raw key sql sha md5 src dst ttl utc dir doc "
+        "env err log msg obj ref req res row tag tmp txt uid val var xml csv pdf png svg tls ssl "
+        "jwt web job run new old end all any bit buf cmd col ctx def del dev dns fmt fn gid hex "
+        "img int str len lib net num opt out pid pk qs rpc sig sub sum sys tab tz ui ux vm "
+        "is on in of "
+        "to by as at or and not for has can use via per mix tpl gis geo css html http https json "
+        "yaml rest form auth user list view test mfa csrf otp ip "
+    ).split()
+)
+# The 310 letter pairs that make up 98% of all letter pairs in English words (macOS
+# /usr/share/dict/words, 235k words). A pair outside this set is "rare". Fixed here, not read from
+# the OS at runtime, so every process and the frontend judge identically.
+COMMON_BIGRAMS = frozenset(
+    (
+        "ab ac ad ae af ag ah ai ak al am an ap ar as at au av aw ax ay az ba bb be bi bl bo br "
+        "bs bu ca cc ce ch ci ck cl co cr ct cu cy da dd de di dl dn do dr du dy ea eb ec ed ee "
+        "ef eg eh ei el em en eo ep er es et eu ev ew ex ey fa fe ff fi fl fo fr ft fu ga ge gg "
+        "gh gi gl gn go gr gu gy ha he hi hl hn ho hr ht hu hy ia ib ic id ie if ig ik il im in "
+        "io ip ir is it iu iv iz ja je ju ka ke ki kl la lc ld le li ll lm ln lo lp ls lt lu lv "
+        "ly ma mb me mi mm mn mo mp mu my na nb nc nd ne nf ng nh ni nk nl nm nn no np nr ns nt "
+        "nu nv nw ny oa ob oc od oe of og oh oi ok ol om on oo op or os ot ou ov ow ox pa pe ph "
+        "pi pl po pp pr ps pt pu py qu ra rb rc rd re rf rg rh ri rk rl rm rn ro rp rr rs rt ru "
+        "rv rw ry sa sc se sh si sk sl sm sn so sp sq ss st su sw sy ta tc te th ti tl to tr ts "
+        "tt tu tw ty ua ub uc ud ue ug ui ul um un uo up ur us ut va ve vi vo wa we wh wi wo xa "
+        "xi xt ya yc yd ye yg yi yl ym yn yo yp yr ys yt za ze zi zo"
+    ).split()
+)
+_WORD_SEGMENT = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+|[^A-Za-z0-9]")
+_HEX_RUN = re.compile(r"[0-9a-f]+|[0-9A-F]+")
+_UUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+_GIT_LABEL = re.compile(r"(?:commit|sha1?|rev|revision)[\s:=#]*$", re.IGNORECASE)
+_DIGIT_ISLAND = re.compile(r"[A-Za-z][0-9]+[A-Za-z]")
+_CONSONANT_RUN = re.compile(
+    r"[b-df-hj-np-tv-xz]{" + str(HIGH_ENTROPY["max_consonant_run"] + 1) + ",}", re.IGNORECASE
+)
+_VOWELS = frozenset("aeiouyAEIOUY")
+_SEPARATOR = re.compile(r"[_\-/+]")
 
 
 class ScrubRules:
@@ -195,10 +282,11 @@ class ScrubRules:
             ("jwt", r"\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]*", ""),
             ("long_hex", r"\b[0-9a-fA-F]{48,}\b", ""),
         )
+        # One character class, bounded by lookarounds: linear, no nested quantifiers to backtrack.
         self.high_entropy_pattern = (
-            r"(?<![A-Za-z0-9_\-+])[A-Za-z0-9_\-+]{"
+            r"(?<![A-Za-z0-9_\-+/])[A-Za-z0-9_\-+/]{"
             + str(HIGH_ENTROPY["min_length"])
-            + r",}={0,2}(?![A-Za-z0-9_\-+=])"
+            + r",}={0,2}(?![A-Za-z0-9_\-+/=])"
         )
         self._compiled = tuple(
             re.compile(pattern, re.IGNORECASE if "i" in flags else 0)
@@ -258,7 +346,12 @@ class ScrubRules:
                     self.text_patterns, self._compiled, strict=True
                 )
             ],
-            "high_entropy": {"pattern": self.high_entropy_pattern, **HIGH_ENTROPY},
+            "high_entropy": {
+                "pattern": self.high_entropy_pattern,
+                **HIGH_ENTROPY,
+                "common_bigrams": sorted(COMMON_BIGRAMS),
+                "short_words": sorted(SHORT_WORDS),
+            },
         }
 
 
@@ -269,16 +362,100 @@ def _keep_prefix(match: re.Match) -> str:
 
 def _high_entropy_replacement(match: re.Match) -> str:
     run = match.group(0)
-    digits = sum(c.isdigit() for c in run)
-    upper = sum(c.isupper() for c in run)
-    lower = sum(c.islower() for c in run)
     if (
-        digits >= HIGH_ENTROPY["min_digits"]
-        and upper >= HIGH_ENTROPY["min_upper"]
-        and lower >= HIGH_ENTROPY["min_lower"]
+        _HEX_RUN.fullmatch(run)
+        and len(run) == 40
+        and _GIT_LABEL.search(match.string[max(0, match.start() - 12) : match.start()])
     ):
+        return run  # a git commit SHA, labelled as one
+    if looks_secret(run):
         return REDACTED
+    if _after_secret_word(match) and (
+        any(c.isdigit() for c in run) or (run.lower() != run and run.upper() != run)
+    ):
+        return REDACTED  # band 2: context catches what word share cannot judge alone
     return run
+
+
+def _after_secret_word(match: re.Match) -> bool:
+    window = match.string[max(0, match.start() - CONTEXT_WINDOW) : match.start()]
+    return bool(_SECRET_CONTEXT.search(window))
+
+
+def looks_secret(run: str) -> bool:
+    """Does a base64/base64url/hex-alphabet run look like a credential rather than words?"""
+    core = run.rstrip("=")
+    if len(set(core)) < HIGH_ENTROPY["min_distinct"]:
+        return False  # "xxxx…", "----…": filler, never a credential
+    if len(core) >= HIGH_ENTROPY["min_hex_length"] and _HEX_RUN.fullmatch(core):
+        return any(c.isdigit() for c in core) and any(c.isalpha() for c in core)
+    for chunk in _UUID.split(core):  # hyphenated UUIDs are readable ids, not secrets
+        if len(chunk) < HIGH_ENTROPY["min_length"]:
+            continue
+        if any(c.isupper() for c in chunk) and any(c.islower() for c in chunk):
+            if _word_share(chunk) < _word_share_limit(len(chunk)):
+                return True
+        elif (
+            len(chunk) >= HIGH_ENTROPY["guaranteed_from"]
+            and not _SEPARATOR.search(chunk)
+            and (
+                sum(c.isdigit() for c in chunk) >= HIGH_ENTROPY["single_case_min_digits"]
+                or _rare_share(chunk) >= HIGH_ENTROPY["separator_free_min_rare_share"]
+            )
+        ):
+            return True  # base32 secrets (TOTP): one case, digits, no word separators
+        elif _DIGIT_ISLAND.search(chunk) and (
+            _rare_share(chunk) >= HIGH_ENTROPY["single_case_min_rare_share"]
+        ):
+            return True
+    return False
+
+
+def _word_share_limit(length: int) -> float:
+    """Below this word share a mixed-case run is a secret. Measured per band: random tokens
+    peaked at 0.783 (20-27 chars), 0.720 (28-39) and 0.550 (40+)."""
+    if length >= HIGH_ENTROPY["long_from"]:
+        return HIGH_ENTROPY["max_word_share_long"]
+    if length >= HIGH_ENTROPY["guaranteed_from"]:
+        return HIGH_ENTROPY["max_word_share_mid"]
+    return HIGH_ENTROPY["max_word_share_short"]
+
+
+def _rare_share(text: str) -> float:
+    """The share of adjacent letter pairs (case-folded) that are not common English pairs."""
+    pairs = [
+        (a + b).lower()
+        for segment in re.findall(r"[A-Za-z]+", text)
+        for a, b in zip(segment, segment[1:], strict=False)
+    ]
+    if not pairs:
+        return 1.0
+    return sum(pair not in COMMON_BIGRAMS for pair in pairs) / len(pairs)
+
+
+def _is_word(segment: str) -> bool:
+    """A CamelCase/snake segment that reads as a word: a known short identifier piece, or 4+
+    letters with English letter pairs, some vowels and no long consonant cluster."""
+    if not segment.isalpha():
+        return False
+    if segment.lower() in SHORT_WORDS:
+        return True
+    return (
+        len(segment) >= HIGH_ENTROPY["min_word_segment"]
+        and _rare_share(segment) <= HIGH_ENTROPY["max_segment_rare_share"]
+        and not _CONSONANT_RUN.search(segment)
+        and sum(c in _VOWELS for c in segment) / len(segment)
+        >= HIGH_ENTROPY["min_segment_vowel_share"]
+    )
+
+
+def _word_share(text: str) -> float:
+    """The share of letters and digits inside word segments. Separators are word boundaries in an
+    identifier, not content, so they are left out of the denominator."""
+    alnum = sum(c.isalnum() for c in text)
+    if not alnum:
+        return 0.0
+    return sum(len(seg) for seg in _WORD_SEGMENT.findall(text) if _is_word(seg)) / alnum
 
 
 @lru_cache(maxsize=1)
@@ -350,8 +527,18 @@ def _scrub_mapping(value: Mapping, rules: ScrubRules, depth: int, path: set[int]
         if index >= MAX_ITEMS:
             out[TRUNCATED] = len(value) - MAX_ITEMS
             break
-        out[key] = REDACTED if rules.is_sensitive_key(key) else _scrub(item, rules, depth + 1, path)
+        if rules.is_sensitive_key(key):
+            out[key] = REDACTED
+        elif _is_correlation_id(key, item):
+            out[key] = item
+        else:
+            out[key] = _scrub(item, rules, depth + 1, path)
     return out
+
+
+def _is_correlation_id(key: object, item: object) -> bool:
+    name = normalise_key(key).removeprefix("http_")
+    return name in CORRELATION_KEYS and isinstance(item, str) and bool(_ID_SHAPED.fullmatch(item))
 
 
 def _scrub_sequence(value, rules: ScrubRules, depth: int, path: set[int]):
