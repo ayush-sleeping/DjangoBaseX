@@ -407,11 +407,12 @@ application-side "wait until the schema is at head" gate was considered and reje
 
 > ✅ **As built (BUILD_ORDER 7.2):** `manage.py doctor` exists, with `--json`, `--only`/`--skip`,
 > `--strict`, `--fatal-only` and exit codes 0 clean · 1 failure · 2 a doctor crashed · 3 usage.
-> Today's doctors are `dataplane`, `queue` and `schedule`; `observability`, `settings`,
+> Today's doctors are `dataplane`, `queue`, `schedule` and `outbox` (7.3); `observability`, `settings`,
 > `migrations` and `connections` are not built yet. Until they are, the validate step (1) runs
 > `manage.py doctor --json --only dataplane,schedule`, and **verify** (10) adds
-> `manage.py doctor --json --only queue` once the workers are up. That catches stalled queues, queues
-> nobody consumes, unregistered task names waiting in Redis, and a beat schedule out of sync. Step 4
+> `manage.py doctor --json --only queue,outbox` once the workers are up. That catches stalled queues, queues
+> nobody consumes, unregistered task names waiting in Redis, a beat schedule out of sync, and an outbox that is
+> stuck, holding unsendable topics, leaving leases unrecovered or awaiting a human on `unknown` messages. Step 4
 > needs the `migrations` doctor and stays manual until it exists.
 
 **Rules — verify.**

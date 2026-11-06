@@ -284,6 +284,100 @@ plus `status`, `worker_seen_recently` and queues), `GET /api/core/jobs/runs/?job
 | Planted problems make `doctor --only queue|schedule` exit 1; a fresh install is clean; the Redis peek; the `jobs` health check | `tests/core/jobs/test_job_doctors.py` |
 | A test touching runs uses `tests/core/jobs/dbs.py::DATABASES` | (the alias differs by engine) |
 
+## As built — BUILD_ORDER 7.3
+
+Locks (§ 9), retry (§ 10), reconcilers (§ 11), the outbox (§ 12) and the findings queue
+([`DOMAIN_PRIMITIVES.md`](DOMAIN_PRIMITIVES.md) § 8). Like the sections above, this records reality.
+
+**Where it lives.**
+
+| Piece | File |
+|---|---|
+| `OutboxMessage` → `core_outbox`, `Finding` → `core_finding`, `JobState` → `core_job_state` (migration `core/0007`); `JobRun.Status.SKIPPED` | `backend/core/models.py` |
+| `single_flight`, `advisory_xact_lock`, `MemoryStore`/`RedisStore`, `MAX_LOCK_TTL_SECONDS` | `backend/core/locks.py` |
+| `RetryPolicy`, `is_retryable_status`, `OUTBOX_DEFAULT_RETRY` | `backend/core/jobs/retry.py` |
+| `Reconciler`, `Result`, `run_registered` | `backend/core/jobs/reconciler.py` |
+| `enqueue`, `claim`, `deliver`, `settle`, `drain`, `resolve_unknown` | `backend/core/outbox/service.py` |
+| `Outcome`, `Delivery`, `ProviderNotConfigured` | `backend/core/outbox/outcome.py` |
+| The stale-lease sweep `LeaseRecovery` | `backend/core/outbox/recovery.py` |
+| The `outbox` doctor; the core jobs, kinds and reconciler | `backend/core/outbox/{doctor,jobs}.py` |
+| `raise_or_touch`, `clear`, `resolve` | `backend/core/findings.py` |
+| `registry.finding_kinds`, `registry.outbox_topics`, `registry.reconcilers` | `backend/core/registry.py` |
+| `dbx.jobs.E020`, `dbx.jobs.E030` | `backend/core/checks.py` |
+
+**Locks.** `single_flight(key, ttl_ms, on_unavailable="skip")` yields a `Lease` or `None`. Redis
+`SET NX PX` with a random token; release and `extend` are Lua compare-on-token scripts. Keys are
+`<PRODUCT_SLUG>:lock:<key>`. The store is built lazily from `LOCKS_REDIS_URL` (default: the cache's
+Redis); with neither, an in-process store guards the one process a development box has. TTLs above
+`MAX_LOCK_TTL_SECONDS` (3 600) are refused. `advisory_xact_lock` raises outside `atomic()` and is a
+no-op (True, warned once) on SQLite.
+
+**`single_flight` is enforced.** Every generated task whose spec says `single_flight=True` (the
+default) runs inside `single_flight("job:<name>", (time_limit + 30) s)`. A held lock, or a lock
+store that is down, means the run is **skipped**: it returns 0 and the recorder writes status
+`skipped` with `error_message` `already_running`. A skipped run is terminal and never makes a job
+`failing`. `core.outbox_drain` declares `single_flight=False`: row claims are its concurrency control.
+
+**The outbox.**
+
+- `outbox.enqueue(topic, dedupe_key=, payload=, delay_seconds=0)` raises outside `atomic()`,
+  refuses an unregistered topic and non-primitive payload values, and inserts with
+  `bulk_create(ignore_conflicts=True)` (ON CONFLICT DO NOTHING on the unique `dedupe_key`). One
+  `on_commit` drain kick per topic per transaction; the 30 s drainer is the guarantee.
+- **The lease covers exactly one message.** `claim()` takes one due row (`FOR UPDATE SKIP LOCKED`),
+  sets `status=leased`, `leased_until = now + lease_seconds`, `locked_by = <host>:<pid>:<random>` (the
+  lease token), `attempts += 1`, and commits. The handler runs outside any transaction. Claiming a
+  batch at once would let the later rows' leases run out while the earlier ones send, and turn
+  never-attempted messages into `unknown`.
+- **The stamp is itself a compare-and-set** (`status in (pending, retry)`): a claimer that read a
+  row another claimer already stamped gets 0 rows and moves to the next one. On PostgreSQL
+  `SKIP LOCKED` already prevents that; on SQLite, which ignores `FOR UPDATE`, this CAS is what makes
+  two drainers safe.
+- **`lease_seconds` must exceed the handler's own timeouts** (its HTTP client's connect + read
+  timeout, at least). Nothing checks this: a handler still waiting when its lease runs out gets
+  recovered as `unknown` (or `retry`) while it may still send.
+- `settle()` writes by compare-and-set on `(id, locked_by, status=leased)`. A lost lease drops the
+  result, except a late `SENT` under the same token for a row recovery parked as `unknown`, `retry`
+  or `failed`: that settles it as `sent` and auto-clears its `outbox.unknown`/`outbox.failed`
+  findings in the same transaction.
+- Handler escapes: `ProviderNotConfigured` → `skipped` (`not_configured`); on `at_least_once`, a
+  transient error (`RetryPolicy.is_transient`, or the soft time limit) → `retry`, anything else →
+  `failed`; on `at_most_once`, any exception → `unknown`. A non-`Outcome` return is treated the
+  same way. Errors are stored as an exception-type code plus a scrubbed message of at most 1 000 characters.
+  `Outcome` evidence must be a flat dict of primitive values, checked when the handler builds
+  it; its strings are scrubbed before they reach the finding.
+- `retry` past the **row's** `max_attempts` (which counts every attempt) → `failed` + an
+  `outbox.failed` finding. Both `settle()` and recovery read the row's cap, not only the topic's
+  policy, so a deliberate resend gets exactly one more attempt.
+- `core.outbox_recover` (a `Reconciler`, every 120 s, single-flight) moves expired leases:
+  `at_most_once` (and any topic no longer registered) → `unknown` + `outbox.unknown`;
+  `at_least_once` → `retry` with backoff, or `failed` when spent. It keeps `locked_by`.
+- `resolve_unknown(id, "mark_sent" | "resend")` is a human's decision; `resend` allows exactly one
+  more attempt.
+
+**Reconcilers.** `ReconcilerSpec` registration also registers its `JobSpec` (func
+`core.jobs.reconciler.run_registered`, `idempotent=True`) and the kind `<name>.gave_up`. The base
+reads ids, then re-reads each through `queryset().select_for_update(skip_locked=True)` in its own
+transaction. A `DRIFT` result rolls that transaction back and opens a finding; `FIXED`/`UNCHANGED`
+clear the reconciler's `kinds`. On `SoftTimeLimitExceeded` it keeps what is done and returns; a full
+batch logs `core.reconciler.capped` with the remaining count. `resumable = True` keeps
+`{"after": pk}` in `core_job_state`.
+
+**Not built (deferred, TECH_DEBT):** per-topic settings (`outbox.<topic>.*`), the
+`outbox.drain_interval_seconds` and `jobs.max_lock_ttl_seconds` settings (constants today),
+per-topic metrics and the oldest-due gauge, the findings API and screen, and `dbx.jobs.E021`, which
+arrives with the first broker-scheduled retry policy (7.6). No production topic is registered yet.
+
+| Invariant | Test |
+|---|---|
+| **Acceptance:** a worker killed mid-send leaves the row `unknown` and never re-sends it; a rollback leaves no row and no kick; dedupe; stale lease by semantics; late `SENT`; provider errors scrubbed; not-configured is skipped; **two drainers never claim one row (PostgreSQL)** | `tests/core/outbox/test_outbox.py`, `test_enqueue_guard.py` |
+| Token-checked release and extend, TTL expiry, the store-down direction, the TTL cap, advisory locks (PostgreSQL exclusion) | `tests/core/test_locks.py` |
+| Single-flight skips are recorded and are not failing | `tests/core/jobs/test_single_flight.py` |
+| Growth, jitter, cap, `Retry-After`, `max_attempts` counts the first attempt, classification | `tests/core/jobs/test_retry.py` |
+| Banked progress, reported cap, drift mutates nothing, convergence clears, cursor | `tests/core/jobs/test_reconciler_base.py` |
+| One open finding per object, history, unregistered kind refused, clear | `tests/core/test_findings.py` |
+| No session advisory locks; no blanket auto-retry; every transient state has a reconciler | `tests/architecture/test_no_session_advisory_locks.py`, `test_no_blanket_autoretry.py`, `test_every_pending_state_has_a_reconciler.py` |
+
 ---
 
 # Part A — Background work

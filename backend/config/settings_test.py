@@ -24,6 +24,8 @@ _PINNED_ENV = {
     # In-memory SQLite unless CI points the suite at a real test database server on purpose.
     "DATABASE_URL": os.environ.get("TEST_DATABASE_URL", "sqlite://:memory:"),
     "CACHE_URL": "locmemcache://",
+    # Never a developer's Redis: single_flight uses its in-process store in tests.
+    "LOCKS_REDIS_URL": "",
     "TRUSTED_PROXY_COUNT": "0",
     "ADMIN_ENABLED": "True",
     "EMAIL_BACKEND": "django.core.mail.backends.locmem.EmailBackend",

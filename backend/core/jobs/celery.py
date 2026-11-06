@@ -10,8 +10,10 @@ config/settings.py.
 
 from django.db import close_old_connections, connections
 
+from core.locks import job_lock_ttl_ms, single_flight
 from core.registry import registry
 
+from .recorder import note_skip
 from .runner import execute
 from .spec import JobContext, JobSpec
 from .topology import declared_queues, routes
@@ -56,7 +58,16 @@ def register_task(app, spec: JobSpec):
             idempotency_key=idempotency_key,
             params=params,
         )
-        return execute(spec, ctx)
+        if not spec.single_flight:
+            return execute(spec, ctx)
+        # § 9: one run at a time, fleet-wide. The lock lives for the hard limit plus a margin, so a
+        # worker killed mid-run blocks the next run for minutes, not a day. A store that is down
+        # skips (fail closed): a periodic job loses one cycle, it never runs twice at once.
+        with single_flight(f"job:{spec.name}", job_lock_ttl_ms(spec.time_limit)) as lease:
+            if not lease:
+                note_skip(ctx.run_id, "already_running")
+                return 0
+            return execute(spec, ctx)
 
     run.__name__ = run.__qualname__ = spec.name.replace(".", "__")
     run.__doc__ = spec.description

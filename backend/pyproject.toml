@@ -25,6 +25,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "factory-boy>=3.3",
+    "fakeredis[lua]>=2.40.0",
     "pytest>=8",
     "pytest-cov>=6",
     "pytest-django>=4.9",

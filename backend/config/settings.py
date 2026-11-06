@@ -75,6 +75,7 @@ env = environ.Env(
     CELERY_RESULT_BACKEND=(str, ""),
     CELERY_VISIBILITY_TIMEOUT=(int, 3600),
     CELERY_TIMEZONE=(str, "UTC"),
+    LOCKS_REDIS_URL=(str, ""),  # unset = the cache's Redis (JOBS_AND_INTEGRATIONS § 9)
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -203,6 +204,16 @@ if "redis" in CACHES["default"]["BACKEND"].lower():
     CACHES["default"].setdefault("OPTIONS", {})
     for option in ("socket_timeout", "socket_connect_timeout"):
         CACHES["default"]["OPTIONS"].setdefault(option, env("CACHE_SOCKET_TIMEOUT_SECONDS"))
+
+# Locks (JOBS_AND_INTEGRATIONS § 9): single_flight's Redis. Unset = the cache's Redis. With neither,
+# core.locks uses an in-process store that guards one process: development and tests only, and
+# dbx.E005 already refuses a per-process cache in production.
+_cache_location = CACHES["default"].get("LOCATION", "")
+if isinstance(_cache_location, (list, tuple)):
+    _cache_location = _cache_location[0] if _cache_location else ""
+LOCKS_REDIS_URL = env("LOCKS_REDIS_URL") or (
+    _cache_location if "redis" in CACHES["default"]["BACKEND"].lower() else ""
+)
 
 # Health (OBSERVABILITY § 6): the budget each components probe gets before it is reported down.
 HEALTH_PROBE_TIMEOUT_SECONDS = env("HEALTH_PROBE_TIMEOUT_SECONDS")

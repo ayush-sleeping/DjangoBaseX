@@ -641,6 +641,13 @@ per-kind action buttons registered by the owning module.
 **Enforced by.** `test_findings.py`: two detections → one open row with `occurrences=2`; resolve then
 detect → a second row; unregistered kind refused; clear on recovery.
 
+> ✅ **As built (BUILD_ORDER 7.3):** `core_finding` (migration `core/0007`) with
+> `core_finding_open_uq`; `registry.finding_kinds` (`FindingKind`: kind, label, severity, owner module,
+> resolutions, runbook); `core/findings.py` with `raise_or_touch`, `clear` and `resolve`, which run
+> in the caller's transaction. Kinds today: `outbox.unknown`, `outbox.failed`, and `<reconciler>.gave_up`
+> for each registered reconciler. **Not built yet:** `tenant_id`, the permission per kind, notify on
+> open, metrics, retention, the API and the screen. Tests: `backend/tests/core/test_findings.py`.
+
 **Configurable, not hard-coded.** Kinds via registry; the "still open after N hours" re-notify threshold
 per kind; resolved-finding retention via `DATA_LIFECYCLE.md` § 6.
 

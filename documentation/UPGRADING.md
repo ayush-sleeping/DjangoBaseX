@@ -157,6 +157,11 @@ You stay on the shared history, and the next update still merges.
 *Until `CHANGELOG.md` exists (BUILD_ORDER 9.6), each core change that alters a setting default, a contract or a
 required process records its note here, newest first.*
 
+- **2026-11-06, BUILD_ORDER 7.3:** a new queue, `outbox`: add it to every worker's `-Q`
+  (`default,bulk,outbox`), or `core.outbox_drain` and `core.outbox_recover` never run. Migration `core/0007` adds
+  `core_outbox`, `core_finding` and `core_job_state`. Jobs declared `single_flight=True` (the default) now take a
+  Redis lock per run: `LOCKS_REDIS_URL`, by default the cache's Redis. A run that finds the lock held is recorded as
+  `skipped`, not run; if the lock store is down, the run is skipped (fail closed).
 - **2026-11-06, BUILD_ORDER 7.2:** two new settings, `operations.queue.stall_threshold_minutes` (15) and
   `operations.queue.worker_seen_window_minutes` (15). Neither changes existing behaviour; they tune when the job
   monitor reports a stalled queue or an unseen worker. `DATABASES["monitor"]` is new: every process that publishes

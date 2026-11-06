@@ -26,6 +26,61 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 7.3: the outbox, reconcilers, locks and the findings queue
+**What** (Dev 1, manager review):
+- **Outbox** (`core_outbox`, core 0007): `outbox.enqueue()` only inside the business transaction, with a unique
+  `dedupe_key` (ON CONFLICT DO NOTHING) and an id-only payload. `core.outbox_drain` (queue `outbox`, every 30 s, plus
+  an on-commit kick) claims **one** row at a time with `FOR UPDATE SKIP LOCKED`, commits the lease, sends outside any
+  transaction, and writes the result by compare-and-set on the lease token. The stamp is itself a
+  compare-and-set, so the claim is safe on SQLite too. Each topic declares `at_least_once` or
+  `at_most_once`; handlers return `Outcome.SENT/RETRY/FAILED/SKIPPED/UNKNOWN` and never raise.
+- **Stale-lease recovery** is its own job, `core.outbox_recover` (a `Reconciler`, every 120 s): an expired lease
+  becomes `unknown` plus an `outbox.unknown` finding (at_most_once, or an unregistered topic), or `retry` with
+  backoff (at_least_once). A late `SENT` under the same token settles a row parked as `unknown`, `retry` or `failed`
+  and clears its findings. Exhaustion always reads the row's own `max_attempts`, so a resend is exactly one attempt.
+- **Locks** (`core/locks.py`): `single_flight` (Redis `SET NX PX`, Lua compare-on-token release and extend, TTL capped
+  at 3 600 s, `LOCKS_REDIS_URL` defaulting to the cache's Redis) and `advisory_xact_lock`. `JobSpec.single_flight` is
+  now **enforced**: a held lock or a store that is down skips the run (fail closed), recorded as `JobRun` `skipped`.
+- **Retry** (`core/jobs/retry.py`): `RetryPolicy`, where `max_attempts` counts the first attempt, with full jitter, a
+  cap, `Retry-After`, and classification (5xx and 408/425/429 are retryable).
+- **Reconciler base** (`core/jobs/reconciler.py`), with `registry.reconcilers` generating the job: per-row commit,
+  re-check under `SKIP LOCKED`, drift rolls back and opens a finding, convergence clears, the cap is logged, the
+  cursor lives in `core_job_state`.
+- **Findings** (`core_finding`, `core/findings.py`, `registry.finding_kinds`): one open row per (kind, object), the
+  partial unique `core_finding_open_uq`, `raise_or_touch`/`clear`/`resolve`.
+- **Checks and doctor:** `dbx.jobs.E020` (lock TTL cap) and `dbx.jobs.E030` (topic semantics, handler import); a new
+  `outbox` doctor (stuck, unregistered topic, unrecovered leases, unknown/failed awaiting a human).
+**Why:** a side effect decided in a transaction and run outside it either runs after a rollback or is lost when the
+process dies. Hand-rolled outboxes disagree on what an expired lease means, so some send duplicates and some drop
+messages. Here the topic decides that, explicitly. Recorded as mechanisms: a worker that relies on graceful shutdown
+still leaves "pending but already sent" rows under SIGKILL, hence leases plus `unknown`. A retry counter that did not
+count the first attempt never reached its last backoff step, hence `max_attempts` counts every attempt. A lock released
+with a plain DEL frees its successor's lock.
+**Files:** `backend/core/{locks,findings,models,registry,checks,apps}.py`, `backend/core/jobs/{retry,reconciler,celery,
+recorder,runner}.py`, `backend/core/outbox/`, `backend/core/migrations/0007_outbox_findings_job_state.py`,
+`backend/config/{settings,settings_test}.py`, `backend/{pyproject.toml,uv.lock,.env.example}` (`fakeredis[lua]`
+dev dependency, `LOCKS_REDIS_URL`), `docker-compose.yml` (worker `-Q default,bulk,outbox`),
+`backend/tests/core/{outbox/,test_locks.py,test_findings.py}`, `backend/tests/core/jobs/{test_retry,
+test_reconciler_base,test_single_flight,test_schedule_sync}.py`, `backend/tests/architecture/{test_no_session_advisory_
+locks,test_no_blanket_autoretry,test_every_pending_state_has_a_reconciler,test_every_queue_has_a_worker}.py`;
+`JOBS_AND_INTEGRATIONS.md` (As built 7.3), `DOMAIN_PRIMITIVES.md` § 8, `DEPLOYMENT.md`, `OPERATIONS.md`,
+`UPGRADING.md`, `BUILD_ORDER.md`.
+**Verification:** after the review fixes, every step exited 0. ruff check and format, `manage.py check`,
+`makemigrations --check` and the scripts/examples ruff are clean. pytest on SQLite: 1642 passed, 7 skipped. On
+**PostgreSQL 16**: 1646 passed, 3 skipped, and that run includes `test_two_drainers_never_claim_the_same_row` and the
+advisory-lock exclusion test. With the notes plugin: SQLite 1649 passed, 5 skipped; PostgreSQL 1653 passed,
+1 skipped. The frontend was not touched, so its gate was not run.
+**Notes:**
+- Manager review fixes: the row's `max_attempts` bounds `settle()` and recovery (a resend had kept retrying to the
+  policy cap); the claim stamp became a compare-and-set (on SQLite two claimers could both stamp and send); a late
+  `SENT` also settles a row recovery dead-lettered; `Outcome` evidence is checked to be flat primitives and is
+  scrubbed. Each fix's test was shown to fail with that fix reverted.
+- The lock contract tests run on the in-process store and on Redis's Lua path through `fakeredis`.
+- New queue `outbox`: every deployment's workers must consume it (`UPGRADING.md`).
+- Deferred to TECH_DEBT: per-topic outbox settings, `outbox.drain_interval_seconds` and `jobs.max_lock_ttl_seconds`
+  as settings, per-topic metrics and the oldest-due gauge, the findings API/screen/notifications/retention, and
+  `dbx.jobs.E021`. Nothing checks that a topic's `lease_seconds` exceeds its handler's timeouts (documented).
+
 ### BUILD_ORDER 8.4c: the translation layer, the catalogue and the extraction
 **What** (Dev 2 `djangobasex-bc`; manager review and gate):
 - **next-intl, client-side, no plugin:** `src/core/lib/i18n/` is the only importer. `I18nProvider`

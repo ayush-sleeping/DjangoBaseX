@@ -83,8 +83,8 @@ def test_the_check_fails_when_a_queue_has_no_worker(tmp_path):
     compose.write_text(
         "services:\n  worker:\n    command: celery -A config worker -Q default\n", encoding="utf-8"
     )
-    assert "bulk" in declared_queues()
-    assert declared_queues() - consumed_queues((compose,)) == {"bulk"}
+    assert {"bulk", "outbox"} <= declared_queues()
+    assert declared_queues() - consumed_queues((compose,)) == {"bulk", "outbox"}
 
 
 def test_no_topology_file_fails_rather_than_skips(tmp_path):

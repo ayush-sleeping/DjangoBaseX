@@ -1128,6 +1128,243 @@ class JobRegistry(_Catalog):
         return tuple(self._specs[k] for k in sorted(self._specs))
 
 
+# --- Findings, outbox topics, reconcilers (BUILD_ORDER 7.3) -------------------------------------
+
+
+FINDING_KIND_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
+FINDING_SEVERITIES = ("info", "warning", "critical")
+# Every kind may be auto-cleared by its detector (DOMAIN_PRIMITIVES.md § 8).
+AUTO_CLEARED = "auto_cleared"
+
+
+@dataclass(frozen=True)
+class FindingKind:
+    """One kind of problem a machine noticed and a human must decide (DOMAIN_PRIMITIVES.md § 8)."""
+
+    kind: str  # "<owner>.<problem>": "outbox.unknown"
+    label: str
+    severity: str  # FINDING_SEVERITIES
+    owner_module: str
+    resolutions: tuple[str, ...]  # what a human may resolve it as; auto_cleared is always allowed
+    runbook: str = ""  # a doc path or URL: what to check, how to fix
+
+
+class FindingKindRegistry(_Catalog):
+    """Registered finding kinds. A finding of an unregistered kind is refused at write."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._kinds: dict[str, FindingKind] = {}
+
+    def register(self, kind: FindingKind) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(kind, FindingKind):
+                raise RegistryError(f"expected a FindingKind, got {type(kind).__name__}")
+            name = f"finding kind {kind.kind!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(kind.kind, str) or not FINDING_KIND_PATTERN.match(kind.kind):
+                raise RegistryError(f"{name}: not <owner>.<problem> (lowercase, digits, _, dots)")
+            if kind.severity not in FINDING_SEVERITIES:
+                raise RegistryError(f"{name}: severity must be one of {FINDING_SEVERITIES}")
+            for field_name in ("label", "owner_module"):
+                value = getattr(kind, field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            if not isinstance(kind.resolutions, tuple) or not kind.resolutions:
+                raise RegistryError(f"{name}: resolutions must be a non-empty tuple")
+            if kind.kind in self._kinds:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[kind.kind]}; "
+                    f"registered again by {owner}"
+                )
+            self._kinds[kind.kind] = kind
+            self._owner_of[kind.kind] = owner
+
+    def __contains__(self, kind: str) -> bool:
+        self.seal()
+        return kind in self._kinds
+
+    def get(self, kind: str) -> FindingKind:
+        self.seal()
+        return self._kinds[kind]
+
+    def kinds(self) -> tuple[FindingKind, ...]:
+        self.seal()
+        return tuple(self._kinds[k] for k in sorted(self._kinds))
+
+
+AT_LEAST_ONCE, AT_MOST_ONCE = "at_least_once", "at_most_once"
+OUTBOX_SEMANTICS = (AT_LEAST_ONCE, AT_MOST_ONCE)
+OUTBOX_TOPIC_PATTERN = FINDING_KIND_PATTERN
+
+
+@dataclass(frozen=True)
+class OutboxTopic:
+    """
+    One kind of outbound message (JOBS_AND_INTEGRATIONS.md § 12). `handler` is a dotted path to
+    `def deliver(delivery) -> Outcome`. `semantics` decides what an expired lease means:
+    at_least_once → retry (the receiver dedupes); at_most_once → unknown (a human decides).
+    `retry` is a core.jobs.retry.RetryPolicy (None: the outbox default); typed loosely because
+    this module stays standard library only.
+    """
+
+    topic: str
+    handler: str
+    semantics: str
+    owner_module: str
+    description: str
+    retry: object = None
+    lease_seconds: int = 60  # the most one send may take; the lease covers exactly one message
+    batch_size: int = 50  # messages per drain run
+
+
+class OutboxTopicRegistry(_Catalog):
+    """Registered outbox topics. dbx.jobs.E030 (missing semantics) is refused here; a handler that
+    does not import is refused by the system check of the same id."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._topics: dict[str, OutboxTopic] = {}
+
+    def register(self, topic: OutboxTopic) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(topic, OutboxTopic):
+                raise RegistryError(f"expected an OutboxTopic, got {type(topic).__name__}")
+            name = f"outbox topic {topic.topic!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(topic.topic, str) or not OUTBOX_TOPIC_PATTERN.match(topic.topic):
+                raise RegistryError(f"{name}: not <owner>.<topic> (lowercase, digits, _, dots)")
+            if topic.semantics not in OUTBOX_SEMANTICS:
+                raise RegistryError(
+                    f"{name} (dbx.jobs.E030): semantics must be one of {OUTBOX_SEMANTICS}; "
+                    "say what an expired lease means, silence is not a choice"
+                )
+            if not isinstance(topic.handler, str) or not _DOTTED_PATTERN.match(topic.handler):
+                raise RegistryError(f"{name}: handler must be a dotted path")
+            for field_name in ("owner_module", "description"):
+                value = getattr(topic, field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            for field_name in ("lease_seconds", "batch_size"):
+                value = getattr(topic, field_name)
+                if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                    raise RegistryError(f"{name}: {field_name} must be a positive int")
+            if topic.topic in self._topics:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[topic.topic]}; "
+                    f"registered again by {owner}"
+                )
+            self._topics[topic.topic] = topic
+            self._owner_of[topic.topic] = owner
+
+    def __contains__(self, topic: str) -> bool:
+        self.seal()
+        return topic in self._topics
+
+    def get(self, topic: str) -> OutboxTopic:
+        self.seal()
+        return self._topics[topic]
+
+    def topics(self) -> tuple[OutboxTopic, ...]:
+        self.seal()
+        return tuple(self._topics[k] for k in sorted(self._topics))
+
+
+RECONCILER_RUNNER = "core.jobs.reconciler.run_registered"
+
+
+@dataclass(frozen=True)
+class ReconcilerSpec:
+    """
+    A reconciler, declared next to the states it covers (JOBS_AND_INTEGRATIONS.md § 11).
+    Registering it registers the JobSpec that runs it and its "<name>.gave_up" finding kind, so a
+    reconciler is never a job someone forgot to schedule.
+    """
+
+    name: str  # also the job name: "<owner>.<job>"
+    reconciler: str  # dotted path to a core.jobs.reconciler.Reconciler subclass
+    model: str  # "app_label.ModelName"
+    states: tuple[str, ...]  # the transient status values it covers
+    owner_module: str
+    description: str
+    schedule: Interval | Cron | None = None
+    queue: str = "default"
+    time_limit: int = 300
+    soft_time_limit: int = 270
+    single_flight: bool = True
+
+
+class ReconcilerRegistry(_Catalog):
+    """Registered reconcilers. Each registers its job into `jobs` and its give-up kind into
+    `finding_kinds`, the same Registry's catalogs."""
+
+    def __init__(self, jobs: JobRegistry, finding_kinds: FindingKindRegistry) -> None:
+        super().__init__()
+        self._jobs = jobs
+        self._finding_kinds = finding_kinds
+        self._specs: dict[str, ReconcilerSpec] = {}
+
+    def register(self, spec: ReconcilerSpec) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(spec, ReconcilerSpec):
+                raise RegistryError(f"expected a ReconcilerSpec, got {type(spec).__name__}")
+            name = f"reconciler {spec.name!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(spec.reconciler, str) or not _DOTTED_PATTERN.match(spec.reconciler):
+                raise RegistryError(f"{name}: reconciler must be a dotted path")
+            if not isinstance(spec.model, str) or spec.model.count(".") != 1:
+                raise RegistryError(f"{name}: model must be 'app_label.ModelName'")
+            if not isinstance(spec.states, tuple) or not spec.states:
+                raise RegistryError(f"{name}: states must be a non-empty tuple")
+            if spec.name in self._specs:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[spec.name]}; "
+                    f"registered again by {owner}"
+                )
+            # The job and the kind validate themselves; a refusal there leaves nothing half-done
+            # here, because this catalog records the spec last.
+            self._jobs.register(
+                JobSpec(
+                    name=spec.name,
+                    func=RECONCILER_RUNNER,
+                    owner_module=spec.owner_module,
+                    description=spec.description,
+                    queue=spec.queue,
+                    schedule=spec.schedule,
+                    idempotent=True,  # a reconciler re-reads state; a second pass finds less
+                    time_limit=spec.time_limit,
+                    soft_time_limit=spec.soft_time_limit,
+                    single_flight=spec.single_flight,
+                )
+            )
+            self._finding_kinds.register(
+                FindingKind(
+                    kind=f"{spec.name}.gave_up",
+                    label=f"{spec.name} gave up on a row",
+                    severity="warning",
+                    owner_module=spec.owner_module,
+                    resolutions=("fixed_by_hand", "dismissed"),
+                )
+            )
+            self._specs[spec.name] = spec
+            self._owner_of[spec.name] = owner
+
+    def __contains__(self, name: str) -> bool:
+        self.seal()
+        return name in self._specs
+
+    def get(self, name: str) -> ReconcilerSpec:
+        self.seal()
+        return self._specs[name]
+
+    def specs(self) -> tuple[ReconcilerSpec, ...]:
+        self.seal()
+        return tuple(self._specs[k] for k in sorted(self._specs))
+
+
 # --- Doctors (OBSERVABILITY.md § 12) ------------------------------------------------------------
 
 
@@ -1240,6 +1477,10 @@ class Registry:
         self.guards = GuardRegistry()
         self.jobs = JobRegistry()
         self.doctors = DoctorRegistry()
+        self.finding_kinds = FindingKindRegistry()
+        self.outbox_topics = OutboxTopicRegistry()
+        # A reconciler registers its job and its give-up kind into THIS registry's catalogs.
+        self.reconcilers = ReconcilerRegistry(self.jobs, self.finding_kinds)
 
 
 # The process-wide instance. Tests build their own and never touch this one.

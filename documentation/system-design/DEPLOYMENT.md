@@ -88,8 +88,8 @@ Sketch, for when the topology is decided:
 4. Serve via **Gunicorn or Uvicorn**, never `runserver`
 5. Reverse proxy (Nginx/Caddy) terminating TLS and serving `STATIC_ROOT`
 6. **Background jobs are required, not optional** (BUILD_ORDER 7.1, ADR-0012). Run:
-   - **Workers that together consume every declared queue**: today `default,bulk`
-     (`celery -A config worker -Q default,bulk`). A queue nobody consumes is work that never runs,
+   - **Workers that together consume every declared queue**: today `default,bulk,outbox`
+     (`celery -A config worker -Q default,bulk,outbox`). A queue nobody consumes is work that never runs,
      and nothing raises. `tests/architecture/test_every_queue_has_a_worker.py` checks the shipped
      compose file; keep any other topology in line with it. Give each worker a stop grace period
      longer than the longest soft time limit it runs (840 s today).

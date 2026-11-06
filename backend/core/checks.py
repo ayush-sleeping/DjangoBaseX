@@ -41,6 +41,9 @@ def check_registry_seals(app_configs, **kwargs):
         ("guards", registry.guards.defs),
         ("jobs", registry.jobs.specs),
         ("doctors", registry.doctors.doctors),
+        ("finding_kinds", registry.finding_kinds.kinds),
+        ("outbox_topics", registry.outbox_topics.topics),
+        ("reconcilers", registry.reconcilers.specs),
     ):
         try:
             read()
@@ -287,6 +290,54 @@ def check_job_callables(app_configs, **kwargs):
                         id="dbx.jobs.E003",
                     )
                 )
+    return errors
+
+
+@register()
+def check_job_locks(app_configs, **kwargs):
+    """dbx.jobs.E020: a single-flight job whose lock would outlive the cap (§ 9). Its lock lives
+    for time_limit + the margin, so a holder killed mid-run blocks the next run for that long."""
+    from .locks import JOB_LOCK_MARGIN_SECONDS, MAX_LOCK_TTL_SECONDS
+    from .registry import registry
+
+    return [
+        Error(
+            f"job {spec.name}: its single-flight lock would live "
+            f"{spec.time_limit + JOB_LOCK_MARGIN_SECONDS}s, above the {MAX_LOCK_TTL_SECONDS}s cap",
+            hint="Lower time_limit and process in resumable batches (§ 9, § 11).",
+            id="dbx.jobs.E020",
+        )
+        for spec in registry.jobs.specs()
+        if spec.single_flight and spec.time_limit + JOB_LOCK_MARGIN_SECONDS > MAX_LOCK_TTL_SECONDS
+    ]
+
+
+@register()
+def check_outbox_topics(app_configs, **kwargs):
+    """dbx.jobs.E030: every outbox topic's handler imports and is callable (missing semantics is
+    refused at register())."""
+    from .jobs.runner import resolve_path
+    from .registry import registry
+
+    errors = []
+    for spec in registry.outbox_topics.topics():
+        try:
+            handler = resolve_path(spec.handler)
+        except (ImportError, AttributeError) as exc:
+            errors.append(
+                Error(
+                    f"outbox topic {spec.topic}: handler {spec.handler} does not import: {exc}",
+                    id="dbx.jobs.E030",
+                )
+            )
+            continue
+        if not callable(handler):
+            errors.append(
+                Error(
+                    f"outbox topic {spec.topic}: handler {spec.handler} is not callable",
+                    id="dbx.jobs.E030",
+                )
+            )
     return errors
 
 

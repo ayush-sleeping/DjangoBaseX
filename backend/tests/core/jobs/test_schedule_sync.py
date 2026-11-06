@@ -135,6 +135,8 @@ def test_the_command_prints_the_diff():
     call_command("sync_schedules", stdout=out)
     call_command("sync_schedules", stdout=out)
     assert out.getvalue().splitlines() == [
+        "created core.outbox_drain",
+        "created core.outbox_recover",
         "created users.auth_cleanup",
         "schedules already match the registry",
     ]

@@ -28,6 +28,9 @@ class CoreConfig(AppConfig):
         register_locale_settings(registry)
         register_core_actions(registry)
         _register_jobs_monitoring(registry)
+        from .outbox.jobs import register as register_outbox
+
+        register_outbox(registry)
         from .crypto import self_test
 
         # A process that cannot encrypt must refuse to start, not store plaintext (§ 25). An empty

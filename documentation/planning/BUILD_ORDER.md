@@ -850,7 +850,7 @@ registered doctor with `--json` and exit codes.
 **Done when:** stopping the worker turns the monitor red within three intervals while the failed-jobs count stays
 zero; `doctor` exits non-zero on a planted problem.
 
-### 7.3 — Outbox, reconcilers and locks ⬜
+### 7.3 — Outbox, reconcilers and locks ✅
 Transactional outbox (unique dedupe key, `SKIP LOCKED` leases, stale-lease recovery, `unknown` state); a
 `Reconciler` base; single-flight locks with short TTLs; the open-findings queue.
 

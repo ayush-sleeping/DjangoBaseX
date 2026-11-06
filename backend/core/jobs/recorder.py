@@ -30,6 +30,8 @@ MAX_ERROR_LENGTH = 2000
 _TRIGGERS = {"schedule": "schedule", "on_demand": "on_demand", "manual": "manual"}
 # Duration is measured here, in the worker, never from row timestamps (§ 7): task id → start.
 _STARTED: dict[str, float] = {}
+# task id → why the run was skipped (single-flight, § 9), for on_success to record "skipped".
+_SKIPPED: dict[str, str] = {}
 
 
 def _alias() -> str:
@@ -93,6 +95,12 @@ def _upsert(task_id: str, **values) -> None:
             runs.filter(task_id=task_id).update(**values)
 
 
+def note_skip(task_id: str, reason: str) -> None:
+    """The runner declined to run (single-flight). on_success records the run as skipped."""
+    if task_id:
+        _SKIPPED[task_id] = reason[:200]
+
+
 # --- Handlers -----------------------------------------------------------------------------------
 
 
@@ -148,6 +156,19 @@ def on_prerun(sender=None, task_id=None, task=None, kwargs=None, **_):
 def on_success(sender=None, result=None, **_):
     task_id = getattr(getattr(sender, "request", None), "id", None)
     if not task_id or not _recorded(getattr(sender, "name", None)):
+        return
+    skipped = _SKIPPED.pop(task_id, None)
+    if skipped is not None:
+        # Not a failure, and no error: the reason sits where the monitor shows the last message.
+        _upsert(
+            task_id,
+            job_name=sender.name,
+            status="skipped",
+            finished_at=timezone.now(),
+            count=0,
+            error_type="",
+            error_message=skipped,
+        )
         return
     count = result if isinstance(result, int) and not isinstance(result, bool) else None
     _upsert(

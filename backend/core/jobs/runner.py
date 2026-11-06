@@ -12,10 +12,15 @@ from importlib import import_module
 from .spec import JobContext, JobSpec
 
 
+def resolve_path(dotted: str):
+    """The object a dotted path names. ImportError/AttributeError when it names nothing."""
+    module_path, _, attr = dotted.rpartition(".")
+    return getattr(import_module(module_path), attr)
+
+
 def resolve(spec: JobSpec) -> Callable[[JobContext], int]:
     """The spec's callable. ImportError/AttributeError when `func` names nothing (dbx.jobs.E004)."""
-    module_path, _, attr = spec.func.rpartition(".")
-    return getattr(import_module(module_path), attr)
+    return resolve_path(spec.func)
 
 
 def signature_problem(func: object) -> str | None:

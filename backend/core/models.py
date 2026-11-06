@@ -313,8 +313,9 @@ class JobRun(models.Model):
         RETRYING = "retrying"
         REVOKED = "revoked"
         DEAD = "dead"  # an unknown or unregistered task name: it can only fail
+        SKIPPED = "skipped"  # single-flight: another run held the lock (§ 9); not a failure
 
-    TERMINAL = ("succeeded", "failed", "revoked", "dead")
+    TERMINAL = ("succeeded", "failed", "revoked", "dead", "skipped")
 
     task_id = models.CharField(max_length=64, unique=True)
     job_name = models.CharField(max_length=150, db_index=True)
@@ -347,3 +348,132 @@ class JobRun(models.Model):
 
     def __str__(self):
         return f"{self.job_name} {self.status} #{self.pk}"
+
+
+class JobState(models.Model):
+    """
+    A resumable job's cursor (JOBS_AND_INTEGRATIONS.md § 11): a database row, never the cache,
+    which a deploy clears. Shared by reconcilers and, later, digests.
+    """
+
+    name = models.CharField(max_length=150, unique=True)
+    cursor = models.JSONField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_job_state"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class FindingQuerySet(models.QuerySet):
+    def open(self):
+        return self.filter(resolved_at__isnull=True)
+
+    def of(self, kind: str, object_type: str, object_id: str):
+        return self.filter(kind=kind, object_type=object_type, object_id=object_id)
+
+
+class Finding(models.Model):
+    """
+    Something a machine noticed and a human must decide (DOMAIN_PRIMITIVES.md § 8). One OPEN row
+    per (kind, object): a re-detection touches it. Resolved rows are history; a recurrence opens a
+    new row. Written only through core.findings. object_type/object_id are snapshots, as in the
+    audit log, never foreign keys: the finding outlives what it is about.
+    """
+
+    kind = models.CharField(max_length=100)
+    object_type = models.CharField(max_length=100)
+    object_id = models.CharField(max_length=64)
+    title = models.CharField(max_length=255)
+    details = models.JSONField(default=dict, blank=True)
+    severity = models.CharField(max_length=16)
+    first_seen_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField()
+    occurrences = models.PositiveIntegerField(default=1)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    resolution = models.CharField(max_length=32, blank=True, default="")
+    resolution_note = models.TextField(blank=True, default="")
+
+    objects = FindingQuerySet.as_manager()
+
+    class Meta:
+        db_table = "core_finding"
+        ordering = ["-last_seen_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["kind", "object_type", "object_id"],
+                condition=models.Q(resolved_at__isnull=True),
+                name="core_finding_open_uq",
+            )
+        ]
+        indexes = [models.Index(fields=["kind", "resolved_at"], name="core_finding_kind_open")]
+
+    def __str__(self):
+        return f"{self.kind} {self.object_type}:{self.object_id}"
+
+
+class OutboxQuerySet(models.QuerySet):
+    def due(self, now):
+        return self.filter(
+            status__in=(OutboxMessage.Status.PENDING, OutboxMessage.Status.RETRY),
+            next_attempt_at__lte=now,
+        )
+
+    def stale_leases(self, now):
+        return self.filter(status=OutboxMessage.Status.LEASED, leased_until__lt=now)
+
+
+class OutboxMessage(models.Model):
+    """
+    "We owe the world this message", committed with the change that decided it
+    (JOBS_AND_INTEGRATIONS.md § 12). Written by core.outbox.enqueue; moved only by the drainer
+    and the lease-recovery sweep, each by compare-and-set on (status, locked_by).
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending"
+        LEASED = "leased"  # claimed by a drainer; recovered by core.outbox_recover when stale
+        RETRY = "retry"
+        SENT = "sent"
+        SKIPPED = "skipped"  # intentionally not sent (re-validated, or not configured)
+        FAILED = "failed"  # the dead letter
+        UNKNOWN = "unknown"  # may or may not have been sent: terminal and human-owned
+
+    # Covered by a reconciler (tests/architecture/test_every_pending_state_has_a_reconciler.py).
+    TRANSIENT_STATES = ("leased",)
+
+    topic = models.CharField(max_length=100, db_index=True)
+    dedupe_key = models.CharField(max_length=255, unique=True)
+    payload = models.JSONField(default=dict)  # ids and scalars only
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)  # every attempt, the first included
+    max_attempts = models.PositiveSmallIntegerField()
+    next_attempt_at = models.DateTimeField()
+    leased_until = models.DateTimeField(null=True, blank=True)
+    # The lease token: "<host>:<pid>:<random>". A result is written only while it still matches.
+    locked_by = models.CharField(max_length=100, blank=True, default="")
+    last_error_code = models.CharField(max_length=100, blank=True, default="")
+    last_error_message = models.TextField(blank=True, default="")  # ≤ 1 000 characters, scrubbed
+    result_ref = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    objects = OutboxQuerySet.as_manager()
+
+    class Meta:
+        db_table = "core_outbox"
+        ordering = ["id"]
+        indexes = [
+            models.Index(fields=["status", "next_attempt_at"], name="core_outbox_due"),
+            models.Index(fields=["status", "leased_until"], name="core_outbox_lease"),
+        ]
+
+    def __str__(self):
+        return f"{self.topic} {self.status} #{self.pk}"
