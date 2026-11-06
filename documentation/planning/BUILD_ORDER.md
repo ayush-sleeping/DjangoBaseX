@@ -925,7 +925,12 @@ load-state contract.
 **Done when:** an AST ratchet test fails on a new `useEffect` + `setLoading` fetch in a page; a failed list fetch
 renders an error, never an empty state.
 
-### 8.2 — Bootstrap, permissions, navigation and the session marker ⬜
+### 8.2 — Bootstrap, permissions, navigation and the session marker ✅
+*Done 2026-11-06* (Dev 2 `djangobasex-a9`, manager review). `GET /api/me/bootstrap/` from essential and decorative
+contributors; one `effective_permissions()` behind `/me` and bootstrap; the fail-closed `PermissionProvider`;
+`NavItem.href` + `hidden`/`public`/`exact`, core's own screens registered, and `resolveRoute()` as the default-deny
+route gate; `src/proxy.ts` on the `Path=/` marker. As built: [`FRONTEND_PLATFORM.md`](../system-design/FRONTEND_PLATFORM.md)
+§ 7/§ 9/§ 10. Deferred: `X-Permissions-Version` (**DB-50**); the bootstrap contributor tuple moves into the registry in **9.1**.
 `/api/me/bootstrap`; a fail-closed permission provider on *effective* permissions; server-built navigation that is
 also the route gate (default-deny); the `Path=/` session marker cookie. Closes **DB-20**.
 
@@ -963,7 +968,8 @@ measured ratio and a passing suggestion.
 
 ### 9.1 — The full registry catalogue and plugin lifecycle ⬜
 Every registry in `EXTENSIBILITY.md` with the uniform contribution shape; the soft-disable contract; the versioned
-SDK facade; service contracts. Needs Phase 3. Closes **DB-18**, **DB-22**.
+SDK facade; service contracts. Needs Phase 3. Closes **DB-18**, **DB-22**. Includes moving the bootstrap contributor
+tuple (`core/bootstrap.py`, 8.2) into the registry, keeping its `(key, build, essential)` shape.
 
 **Done when:** disabling a plugin hides its nav, routes, jobs, search sources and help pages without touching its
 data; `manage.py check` passes with every plugin removed from `INSTALLED_APPS`.

@@ -26,6 +26,58 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 8.2: bootstrap, fail-closed permissions, navigation as the route gate, the session marker
+**What** (Dev 2 `djangobasex-a9`, manager review; closes DB-37 and the frontend half of DB-20):
+- **`GET /api/me/bootstrap/`**, the shell's one call after sign-in. `core/bootstrap.py` holds the
+  engine, a `Contributor(key, build, essential)` tuple and core's sections (`permissions`,
+  `server_time`, `nav`, `flags`, `build`); `users/bootstrap.py` adds `user` and `session`. An
+  essential contributor that raises fails the response (500); a decorative one is left out and
+  listed in `degraded`. One `effective_permissions()` now backs both `/me` and bootstrap (a
+  superuser gets the full catalogue). The tuple moves into the registry in 9.1.
+- **Navigation is the route gate.** `NavItem.path` → `href`, plus `hidden`, `public` and `exact`; a
+  public item with a permission is refused. Core's own screens are registered; `/` is public. The
+  committed `frontend/src/generated/nav-manifest.json` is checked by `tests/test_navigation.py`
+  (regenerate with `DBX_WRITE_NAV_MANIFEST=1`). Frontend: `resolveRoute()` (deepest prefix,
+  default deny) and `RouteGate` in the `(core)` and `(plugins)` layouts; the menu comes from
+  bootstrap `nav`.
+- **Fail-closed permission provider** (`src/core/lib/permissions.tsx`): loading, a fetch error and
+  a missing provider all deny; `<Can>` shows a visible denied card. It replaces the per-mount `/me`
+  hook; the users and roles screens and the notes example are migrated.
+- **Session marker, frontend half:** `src/proxy.ts` renders a page when the `Path=/` marker is
+  present and otherwise 307s to `/login?next=` through `safeNext()`; it never reads a credential
+  cookie. Sign-in and sign-out hard-navigate.
+**Why:** an expired 10-minute access token bounced signed-in users to sign-in on their next page
+navigation, because neither credential cookie is sent on a page request. A page with no navigation
+entry was reachable by URL. A provider that falls back to a broad set on error shows controls
+nobody holds.
+**Files:** `backend/core/{bootstrap,navigation,registry}.py`,
+`backend/users/{bootstrap,navigation,serializers,views,urls,apps}.py`,
+`backend/rbac/{navigation,apps}.py`, `backend/tests/{test_bootstrap,test_navigation,test_registry,test_plugins_script}.py`,
+`backend/tests/architecture/plugin_rules.py`, `backend/users/tests/test_session_marker.py`,
+`scripts/plugin_template/__package__/wiring.py.tmpl`, `examples/plugins/notes/`,
+`frontend/src/{proxy.ts,proxy.test.ts,generated/nav-manifest.json}`,
+`frontend/src/core/lib/{bootstrap.ts,permissions.tsx,session/}`, `frontend/src/core/shell/`,
+`frontend/src/app/(core)/` and `(plugins)/` layouts, the users, roles and login screens,
+`frontend/tests/architecture/route-manifest.test.ts`; `FRONTEND_PLATFORM.md`, `AUTH_BLUEPRINT.md`,
+`NEXTJS_STANDARDS.md`, `EXTENSIBILITY.md`, `ENGINEERING_PRACTICES.md`, `README.md`,
+`BUILD_ORDER.md`, `TECH_DEBT.md`.
+**Verification:** Dev 2: backend 1289 passed, 4 skipped (SQLite); with the notes plugin linked,
+1296 passed, 2 skipped; frontend lint, typecheck and vitest (84 passed) with and without the
+plugin. Manager on PostgreSQL 16: 1290 passed, 3 skipped. **Combined with 7.1** (manager, one
+tree): SQLite 1391 passed, 4 skipped; PostgreSQL 16 1392 passed, 3 skipped; frontend lint,
+typecheck and vitest 84 passed. Final run on this commit: in the commit. `npm run build` not run.
+**Notes:**
+- Acceptance (a): `route-manifest.test.ts` walks `app/**/page.tsx`, asserts the manifest is not
+  empty, and has a fixture proving a page with no entry fails. (b): `proxy.test.ts` plus
+  `client.refresh.test.ts` (401 → one refresh → replay → 200).
+- Plugin pages are gated at runtime only; the build-time walker skips the single catch-all.
+- `NEXT_PUBLIC_AUTH_COOKIE_PREFIX` must equal the backend's cookie prefix, or the proxy never sees
+  the marker and signed-in users loop to `/login` (`NEXTJS_STANDARDS.md` § 6).
+- Deferred: `X-Permissions-Version` (DB-50), `session.warn_seconds` and the SessionGuard, roles,
+  scope, localization and environment in bootstrap, the generated `PermissionCode` union (8.4).
+- The installed Next 16.3.4 exports `unstable_doesMiddlewareMatch`, not the
+  `unstable_doesProxyMatch` its bundled `proxy.md` names.
+
 ### BUILD_ORDER 7.1: Celery, the job registry and queue invariants
 **What** (Dev 1 `djangobasex-4e`, manager review; closes DB-16):
 - **Celery 5.6 + `django-celery-beat` 2.9** ([ADR-0012](adr/0012-celery-from-day-one.md)). Jobs are

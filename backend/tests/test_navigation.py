@@ -3,10 +3,16 @@ GET /api/me/navigation/: the server-built menu (FRONTEND_PLATFORM.md § 8, BUILD
 A user lacking an item's permission never receives it; a superuser receives every item.
 """
 
+import json
+import os
+from pathlib import Path
+
 import pytest
+from django.conf import settings
 from django.test import Client
 
 from core import navigation
+from core.plugins import discover
 from core.registry import NavItem, NavSection, PermissionGroupSpec, PermissionSpec, Registry
 from rbac import services as rbac
 from tests.factories import DEFAULT_PASSWORD, UserFactory
@@ -49,7 +55,10 @@ def menu(monkeypatch):
             label="Home",
             module="core",
             order=0,
-            items=(NavItem("home", "Home", "/"),),
+            items=(
+                NavItem("home", "Home", "/", exact=True),
+                NavItem("login", "Sign in", "/login", hidden=True, public=True),
+            ),
         )
     )
     reg.navigation.register(
@@ -89,10 +98,11 @@ def test_items_are_filtered_by_effective_permissions_and_empty_sections_dropped(
     response = signed_in("users.users.view").get(NAV)
 
     assert response.status_code == 200
-    assert tree(response) == {"home": ["home"], "people": ["list"]}  # no export, no exports section
+    # no export item, no exports section
+    assert tree(response) == {"home": ["home", "login"], "people": ["list"]}
 
 
-def test_sections_arrive_in_registry_order_with_labels_and_paths(menu):
+def test_sections_arrive_in_registry_order_with_labels_and_hrefs(menu):
     sections = signed_in("users.users.view").get(NAV).json()["sections"]
 
     assert [s["key"] for s in sections] == ["home", "people"]
@@ -100,17 +110,27 @@ def test_sections_arrive_in_registry_order_with_labels_and_paths(menu):
         "key": "people",
         "label": "People",
         "module": "users",
-        "items": [{"key": "list", "label": "Users", "path": "/users"}],
+        "items": [
+            {
+                "key": "list",
+                "label": "Users",
+                "href": "/users",
+                "permission": "users.users.view",
+                "hidden": False,
+                "public": False,
+                "exact": False,
+            }
+        ],
     }
 
 
 def test_a_user_with_no_permissions_sees_only_ungated_items(menu):
-    assert tree(signed_in().get(NAV)) == {"home": ["home"]}
+    assert tree(signed_in().get(NAV)) == {"home": ["home", "login"]}
 
 
 def test_a_superuser_sees_every_item(menu):
     assert tree(signed_in(superuser=True).get(NAV)) == {
-        "home": ["home"],
+        "home": ["home", "login"],
         "people": ["list", "export"],
         "exports": ["all"],
     }
@@ -118,3 +138,42 @@ def test_a_superuser_sees_every_item(menu):
 
 def test_anonymous_callers_are_refused(menu):
     assert Client().get(NAV).status_code == 401
+
+
+def test_hidden_and_public_items_reach_the_client_so_the_route_gate_can_match_them(menu):
+    home = signed_in().get(NAV).json()["sections"][0]["items"]
+    assert [(i["href"], i["hidden"], i["public"], i["exact"]) for i in home] == [
+        ("/", False, False, True),
+        ("/login", True, True, False),
+    ]
+
+
+# --- The committed manifest the frontend's route checks read (FRONTEND_PLATFORM § 10) ----------
+
+MANIFEST = Path(__file__).resolve().parents[2] / navigation.MANIFEST_PATH
+
+
+def test_the_committed_nav_manifest_matches_the_registry():
+    """frontend/src/generated/nav-manifest.json is the input to the route-manifest test that walks
+    every page. It is generated from the live registry; regenerate it with
+    DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py (BUILD_ORDER 8.4 folds this
+    into export_frontend_contracts)."""
+    plugins = frozenset(p.label for p in discover(settings.BASE_DIR / "plugins"))
+    live = navigation.full_manifest(exclude_modules=plugins)
+    assert live["sections"], "no navigation is registered: every page would be denied"
+    rendered = json.dumps(live, indent=2, ensure_ascii=False) + "\n"
+    if os.environ.get("DBX_WRITE_NAV_MANIFEST") == "1":
+        MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+        MANIFEST.write_text(rendered, encoding="utf-8")
+    committed = MANIFEST.read_text(encoding="utf-8") if MANIFEST.exists() else ""
+    assert rendered == committed, (
+        f"{navigation.MANIFEST_PATH} is stale: regenerate it with "
+        "DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py and commit it"
+    )
+
+
+def test_every_gated_item_names_a_declared_permission():
+    codes = set(navigation.registry.permissions.codes())
+    for section in navigation.full_manifest()["sections"]:
+        for item in section["items"]:
+            assert item["permission"] is None or item["permission"] in codes, item

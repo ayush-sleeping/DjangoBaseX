@@ -14,9 +14,8 @@ import {
   signOut,
 } from "@/core/lib/auth";
 import { MFA_ENROLMENT_PATH } from "@/core/lib/mfa";
-import { can } from "@/core/lib/permissions";
-import { ROLE_CODES } from "@/core/lib/rbac";
-import { USER_CODES } from "@/core/lib/users";
+import { hardNavigate } from "@/core/lib/session/navigate";
+import { safeNext } from "@/core/lib/session/safe-next";
 
 type PanelState =
   | { status: "loading" }
@@ -24,7 +23,8 @@ type PanelState =
   | { status: "mfa"; mfaToken: string; error?: string }
   | { status: "signed-in"; me: Me };
 
-export function LoginPanel() {
+/** `next`: where the proxy was sending the user before it asked them to sign in (unchecked). */
+export function LoginPanel({ next }: { next?: string }) {
   const [state, setState] = useState<PanelState>({ status: "loading" });
   const [pending, setPending] = useState(false);
 
@@ -44,13 +44,15 @@ export function LoginPanel() {
 
   async function showSignedIn() {
     const me = await fetchMe();
-    setState(
-      me
-        ? { status: "signed-in", me }
-        : // Signed in, yet the next request was anonymous: the cookies did not come back.
-          // Usually the frontend and API are on different sites (AUTH_BLUEPRINT § 17.1).
-          { status: "signed-out", error: "Signed in, but the session cookie was not kept." },
-    );
+    if (!me) {
+      // Signed in, yet the next request was anonymous: the cookies did not come back.
+      // Usually the frontend and API are on different sites (AUTH_BLUEPRINT § 17.1).
+      setState({ status: "signed-out", error: "Signed in, but the session cookie was not kept." });
+      return;
+    }
+    // An identity change: a HARD navigation, so no cache from before sign-in (the provider's
+    // signed-out bootstrap among them) survives into the session (FRONTEND_PLATFORM § 8.4).
+    hardNavigate(safeNext(next));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -98,8 +100,8 @@ export function LoginPanel() {
     try {
       await signOut();
     } finally {
-      setPending(false);
-      setState({ status: "signed-out" });
+      // Hard navigation: the signed-in user's cached bootstrap and data must not outlive them.
+      hardNavigate("/login");
     }
   }
 
@@ -126,19 +128,12 @@ export function LoginPanel() {
             Your role requires two-factor authentication. Set it up before you continue.
           </p>
         ) : null}
-        <Link className="mt-3 block text-sm underline" href={MFA_ENROLMENT_PATH}>
+        <Link className="mt-3 block text-sm underline" href={safeNext(next)}>
+          Continue
+        </Link>
+        <Link className="mt-1 block text-sm underline" href={MFA_ENROLMENT_PATH}>
           Account security
         </Link>
-        {can(me, USER_CODES.view) ? (
-          <Link className="mt-1 block text-sm underline" href="/users">
-            Users
-          </Link>
-        ) : null}
-        {can(me, ROLE_CODES.view) ? (
-          <Link className="mt-1 block text-sm underline" href="/settings/roles">
-            Roles
-          </Link>
-        ) : null}
         <button
           type="button"
           onClick={handleSignOut}

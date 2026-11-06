@@ -12,7 +12,7 @@
  * origin), not the relative "/api" § 2 prefers for same-origin deployments; server components use
  * INTERNAL_API_URL. Both come from env (NEXTJS_STANDARDS § 2).
  */
-import { SHIPPED_COOKIE_PREFIX } from "@/core/lib/identity-defaults";
+import { authCookieNames } from "@/core/lib/session/cookies";
 import { transport } from "@/core/lib/config/defaults";
 
 import { ApiError, decodeError, networkError } from "./errors";
@@ -21,7 +21,6 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
 const BASE_URL =
   typeof window === "undefined" ? (process.env.INTERNAL_API_URL ?? API_URL) : API_URL;
 
-const COOKIE_PREFIX = process.env.NEXT_PUBLIC_AUTH_COOKIE_PREFIX || SHIPPED_COOKIE_PREFIX;
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 /** A 401 from these means "not signed in", not "access token expired": never refresh for them. */
 const NO_REFRESH = new Set(["/api/auth/login/", "/api/auth/refresh/", "/api/auth/mfa/verify/"]);
@@ -52,7 +51,7 @@ export function registerHeaderContributor(fn: HeaderContributor): () => void {
 }
 
 function readCsrfCookie(): string | undefined {
-  const names = new Set([`${COOKIE_PREFIX}_csrf`, `__Host-${COOKIE_PREFIX}_csrf`]);
+  const names = authCookieNames("csrf");
   for (const part of document.cookie.split("; ")) {
     const separator = part.indexOf("=");
     if (separator > 0 && names.has(part.slice(0, separator))) {

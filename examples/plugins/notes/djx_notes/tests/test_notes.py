@@ -83,6 +83,14 @@ def test_the_nav_entry_appears_only_with_the_view_code():
         return {s["key"]: s["items"] for s in client.get(NAV).json()["sections"]}
 
     assert sections(session("notes.notes.view"))["notes"] == [
-        {"key": "home", "label": "Notes", "path": "/notes"}
+        {
+            "key": "home",
+            "label": "Notes",
+            "href": "/notes",
+            "permission": "notes.notes.view",
+            "hidden": False,
+            "public": False,
+            "exact": False,
+        }
     ]
     assert "notes" not in sections(session())

@@ -22,7 +22,7 @@ SECTION = NavSection(
     key="notes",
     label="Notes",
     module="notes",
-    items=(NavItem(key="home", label="Notes", path="/notes", permission=VIEW.code),),
+    items=(NavItem(key="home", label="Notes", href="/notes", permission=VIEW.code),),
 )
 
 

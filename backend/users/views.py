@@ -18,8 +18,9 @@ from rest_framework.response import Response
 from core.api.errors import error_response, from_exception, invalid_response
 from core.api.views import BaseAPIView
 from core.api.viewsets import BaseViewSet
+from core.bootstrap import assemble
 
-from . import mfa, tokens
+from . import bootstrap, mfa, tokens
 from .cookies import clear_auth_cookies, cookie_names, set_auth_cookies
 from .models import Invitation, User
 from .reauth import requires_recent_auth
@@ -150,6 +151,16 @@ class MeView(BaseAPIView):
 
     def get(self, request):
         return Response(MeSerializer(request.user).data)
+
+
+class BootstrapView(BaseAPIView):
+    """GET /api/me/bootstrap/: the shell's one call after sign-in (FRONTEND_PLATFORM § 7).
+    /api/auth/me/ stays as the identity endpoint. no-store comes from the cache middleware."""
+
+    required_permissions = []  # any signed-in user; the body is the user's own
+
+    def get(self, request):
+        return Response(assemble(request, bootstrap.CONTRIBUTORS))
 
 
 class ForgotPasswordView(BaseAPIView):

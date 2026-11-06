@@ -107,7 +107,7 @@ def test_the_values_substituted(capsys, dirs):
     assert 'verbose_name = "Credit Notes"' in apps
     wiring = (root / "djx_credit_notes" / "wiring.py").read_text()
     assert 'prefix="credit-notes"' in wiring and 'urlconf="djx_credit_notes.urls"' in wiring
-    assert 'path="/credit-notes"' in wiring and 'code="credit_notes.home.view"' in wiring
+    assert 'href="/credit-notes"' in wiring and 'code="credit_notes.home.view"' in wiring
     views = (root / "djx_credit_notes" / "views.py").read_text()
     assert 'required_permissions = ["credit_notes.home.view"]' in views
 

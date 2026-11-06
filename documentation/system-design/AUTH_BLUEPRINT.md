@@ -665,9 +665,9 @@ frontend/src/
 ├── lib/
 │   ├── api.ts                         the ONLY place fetch() is called (AGENTS § 3)
 │   ├── auth.ts                        login(), logout(), refresh-on-401 interceptor
-│   └── permissions.ts                 can(code), canAny(codes), isSuperuser()
-├── hooks/
-│   └── use-permissions.ts             usePermissions() → { can, canAny, isSuperuser }
+│   ├── bootstrap.ts                   GET /api/me/bootstrap/ — one cached query for the shell
+│   └── permissions.tsx                PermissionProvider, usePermissions() → { status,
+│                                      permissionsError, user, can, canAny, canAll }, <Can>
 ├── components/auth/
 │   ├── RequirePermission.tsx          renders children only when can(code)
 │   └── SessionExpiryWarning.tsx       the idle warning, ~120s before expiry
@@ -1476,8 +1476,10 @@ def deactivate(*, actor, user, reason) -> None:
      `{"detail": ...}`.
 7. **Deactivation cascade (§ 8.5)** waits for `users.services.deactivate` (1.5).
 8. **Frontend:**
-   - `src/core/lib/permissions.ts`: `can` / `canAny` / `isSuperuser` are pure over `/me`, plus
-     `usePermissions()`; they hide UI and never decide;
+   - `src/core/lib/permissions.ts`: `can` / `canAny` / `isSuperuser` were pure over `/me`, plus
+     `usePermissions()`; they hide UI and never decide. *Superseded in 8.2* by the fail-closed
+     provider in `src/core/lib/permissions.tsx`, fed by `/api/me/bootstrap/`
+     ([`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md) § 9);
    - `src/core/lib/rbac.ts` maps each control to exactly its endpoint's code (affordance parity);
    - `/settings/roles` and `/settings/roles/[publicId]`: system roles show a lock badge, with
      rename, delete and grants disabled; `is_elevated` is editable by superusers only; `PATCH`
@@ -1823,18 +1825,18 @@ courtesy, not a control.* Every one of these codes is re-checked server-side on 
 //  · normalises the { error: { code, message, fields } } shape into a typed error
 ```
 
-```ts
-// src/core/lib/permissions.ts
-export function can(code: string): boolean
-export function canAny(codes: string[]): boolean
-export function isSuperuser(): boolean
+```tsx
+// src/core/lib/permissions.tsx (as built, 8.2 — FRONTEND_PLATFORM § 9)
+// <PermissionProvider> is mounted once in Providers.tsx and reads /api/me/bootstrap/.
+// Fail closed: loading, a fetch error and a missing provider all deny every code.
+const { can, permissionsError } = usePermissions();
+{can("users.users.create") && <CreateUserButton />}
+<Can perm="users.users.export"><ExportPanel /></Can>   // denied → a visible card, never empty
 ```
 
-```tsx
-// usage
-const { can } = usePermissions();
-{can("users.users.create") && <CreateUserButton />}
-```
+The superuser bypass is already folded into `permissions` by the backend
+(`core.bootstrap.effective_permissions`, the same function `/api/auth/me/` uses), so there is no
+`isSuperuser()` gate on the frontend.
 
 **The affordance-parity rule.** The bug it prevents: row actions all gated on one blunt
 "can manage" flag, so an add-only operator is shown Edit and Delete buttons that can only 403, while
@@ -2282,9 +2284,12 @@ manage.py bootstrap_admin --email <address>       # password prompted, never an 
 
 ### 19.2 Retention — four tables that grow forever
 
-§ 3.3 says login attempts are "deleted by a scheduled job" and there is no scheduler; Celery is
-Phase 2 and this is needed in Phase 1. So it is a management command, run by cron, and the
-scheduler question stays open without blocking anything.
+§ 3.3 says login attempts are "deleted by a scheduled job". As first built (1.7) there was no
+scheduler, so it shipped as a management command run by cron. **Since BUILD_ORDER 7.1 it is a
+scheduled job:** `users.auth_cleanup`, run by Celery beat daily at **03:17 UTC** on the **`bulk`**
+queue. No cron entry is needed, and none should be added: a deployment needs **a worker and exactly
+one beat** — how to run them is in [`DEPLOYMENT.md`](DEPLOYMENT.md) and
+[`OPERATIONS.md`](OPERATIONS.md). The management command remains for a manual or dry run:
 
 ```
 manage.py auth_cleanup [--dry-run]

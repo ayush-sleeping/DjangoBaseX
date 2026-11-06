@@ -173,9 +173,9 @@ def registration_problems(plugin: Plugin, reg) -> list[str]:
                 f"{plugin.name}: nav section {section.key!r} declares module {section.module!r}"
             )
         for item in section.items:
-            if item.path != f"/{frontend}" and not item.path.startswith(f"/{frontend}/"):
+            if item.href != f"/{frontend}" and not item.href.startswith(f"/{frontend}/"):
                 problems.append(
-                    f"{plugin.name}: nav item {section.key}/{item.key} links {item.path!r}, "
+                    f"{plugin.name}: nav item {section.key}/{item.key} links {item.href!r}, "
                     f"outside /{frontend}/"
                 )
     for url_name in reg.public_routes.routes():

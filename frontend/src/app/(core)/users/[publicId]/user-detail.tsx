@@ -7,7 +7,7 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import { fieldErrors, isMfaEnrollmentRequired } from "@/core/lib/api";
 import { MFA_ENROLMENT_PATH } from "@/core/lib/mfa";
-import { isSuperuser, type Permissions, usePermissions } from "@/core/lib/permissions";
+import { type Permissions, usePermissions } from "@/core/lib/permissions";
 import {
   assignableBy,
   assignRole,
@@ -176,7 +176,7 @@ function RolesSection({
   perms: Permissions;
   onChanged: (user: User) => void;
 }) {
-  const superuser = isSuperuser(perms.me);
+  const superuser = perms.user?.is_superuser === true;
   // Assigning needs the right to assign AND to list roles to pick from.
   const canAssign = perms.can(ROLE_CODES.assign) && perms.can(ROLE_CODES.view);
   const [catalog, setCatalog] = useState<Role[] | null>(null);

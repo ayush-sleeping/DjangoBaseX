@@ -354,7 +354,7 @@ def test_the_same_item_key_in_two_sections_is_fine(seam):
 
 @pytest.mark.parametrize("path", ["billing", "", "https://example.com/", "//example.com/x"])
 def test_an_item_path_must_be_a_site_path(seam, path):
-    with pytest.raises(RegistryError, match=f"path {path!r} must be a site path"):
+    with pytest.raises(RegistryError, match=f"href {path!r} must be a site path"):
         seam.navigation.register(nav(items=(NavItem("x", "X", path),)))
 
 
@@ -367,6 +367,10 @@ def test_an_item_path_must_be_a_site_path(seam, path):
         (lambda: nav(items=(NavItem("X", "X", "/x"),)), "item 'X': key must be lowercase"),
         (lambda: nav(module="Billing"), "module 'Billing'"),
         (lambda: nav(items=(NavItem("x", "X", "/x", "nope"),)), "permission 'nope' is not"),
+        (
+            lambda: nav(items=(NavItem("x", "X", "/x", "billing.invoices.view", public=True),)),
+            "a public item is reachable signed out",
+        ),
         (lambda: nav(items=(("x", "X", "/x"),)), "which is not a NavItem"),
         (lambda: {"key": "billing"}, "expected a NavSection"),
     ],

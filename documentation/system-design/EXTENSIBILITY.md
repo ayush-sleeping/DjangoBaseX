@@ -489,7 +489,7 @@ plain registrations (`key` + `owner` + the listed fields).
 | Registry | A contributor registers | Unknown key → | Tier | Owner doc |
 |---|---|---|---|---|
 | `nav_sections` *(shape)* | `NavSection(label, icon_key, collapsible)`, order in gaps of 10 | an item targeting it is **DROP**ped with `dbx.W103` | 1 | § 10 |
-| `nav_items` *(shape)* | `NavItem(section, label, route, icon_key, badge=None)` | — | 1 | § 10 · FRONTEND_PLATFORM |
+| `nav_items` *(shape)* | `NavItem(section, label, href, icon_key, badge=None)` — *as built (8.2): `NavItem(key, label, href, permission, hidden, public, exact)` inside a `NavSection`; every page needs one (navigation is the route gate)* | — | 1 | § 10 · FRONTEND_PLATFORM |
 | `nav_badges` *(shape)* | `NavBadge(provider(ctx) -> int \| None, cache_seconds)` | no badge (never `0`) | 1 | § 10 |
 | `dashboard_sections` *(shape)* | `DashboardSection(label, hint, loader(ctx))` — `hint` says what the section discloses, shown on the roles screen | **404**; a withheld section is *absent*, not empty | 2 | FRONTEND_PLATFORM |
 | `widgets` *(shape)* | dashboard widget + grid geometry (`w`, `h`, `min_w`) | **DROP** from saved layouts; layout re-validated on save | 2 | FRONTEND_PLATFORM |
@@ -713,7 +713,7 @@ def register(r):
     r.nav_sections.register(NavSection(key="project.main", label="Project", order=15,
                                        icon_key="folder", permission=ANY_AUTHENTICATED))
     r.nav_items.register(NavItem(key="project.getting_started", section="project.main",
-                                 label="Getting started", route="/project/getting-started",
+                                 label="Getting started", href="/project/getting-started",
                                  icon_key="sparkles", order=10, permission=ANY_AUTHENTICATED))
 ```
 

@@ -523,6 +523,32 @@ contributor yields `degraded` and a 200; a raising essential one yields a 500.
 **Configurable, not hard-coded.** Contributors are a registry; `SESSION_EXPIRY_WARN_SECONDS`
 server-side; nothing in core names a plugin's section.
 
+**As built (BUILD_ORDER 8.2).**
+- **The response today:** `user` (`/me`'s identity fields, without `permissions` or `flags` — each
+  fact has one place), `permissions` (the effective set), `session` (`expires_at`,
+  `idle_expires_at`), `server_time`, `nav` (§ 10), `flags` (a list of the keys that are on, as `/me`
+  returns them), `build`, and `degraded`.
+- **Not yet in it:** `roles`, `scope`, `capabilities`, `nav_preferences`, `localization`,
+  `environment`, `impersonation`, `plugins`, `limits`, `session.warn_seconds`, and
+  `permissions_version` — with no `X-Permissions-Version` header, because the counter it reads
+  does not exist yet (TECH_DEBT). Each arrives with the task that owns it.
+- **Essential:** `user`, `session`, `permissions` and `server_time`. **Decorative:** `nav`, `flags`
+  and `build`.
+- **Contributors are a tuple, not yet a registry.** `core/bootstrap.py` holds the engine
+  (`Contributor(key, build, essential)`, `assemble()`), `effective_permissions()` and core's own
+  sections (`CORE_CONTRIBUTORS`). `users/bootstrap.py` adds `user` and `session` and composes the
+  full tuple, because core never imports users. The view is `users.views.BootstrapView`. The tuple
+  moves into `core.registry` with the rest of the registry catalogue (BUILD_ORDER 9.1), keeping the
+  same shape.
+- **One permission function.** `/api/auth/me/` and bootstrap both call
+  `core.bootstrap.effective_permissions`: a superuser gets the whole catalogue, anyone else gets
+  `user.get_all_permissions()`. `test_bootstrap.py` asserts parity with `has_perm()` code by code,
+  for a plain user, a granted user and a superuser.
+- **Frontend:** `src/core/lib/bootstrap.ts` — `useBootstrap()` is one cached query (`staleTime:
+  Infinity`, no refetch on focus or reconnect) shared by the provider, the menu and the route gate.
+  An identity change (sign-in, sign-out) is a hard navigation through
+  `src/core/lib/session/navigate.ts`, so no bootstrap survives it.
+
 ---
 
 ## 8. Session UX and the session marker cookie — **Tier 1 · Core**
@@ -691,6 +717,21 @@ status metadata, error codes, the full nav manifest — § 10).
 
 **Configurable, not hard-coded.** The catalogue is the backend's; the denied-card copy is i18n.
 
+**As built (BUILD_ORDER 8.2).**
+- **Where it lives:** `src/core/lib/permissions.tsx`: `PermissionProvider` (mounted once in
+  `src/core/providers/Providers.tsx`), `usePermissions()` (throws outside a provider),
+  `useOptionalPermissions()` (all-deny), `<Can perm fallback>`, and `DeniedCard`.
+- **The context:** `{status, permissionsError, signedOut, user, can, canAny, canAll, retry}`.
+  `signedOut` separates "a 401 the refresh could not recover" from "the server failed". `user` is
+  bootstrap's user. `canAll([])` is false.
+- **Not built yet:** `PermissionCode` is still `string` until the generated union lands (8.4).
+- **Still reading `user.is_superuser`:** the existing role and invitation screens use it for the
+  elevated-role affordances only, which the backend enforces too. The `no-superuser-gating` guard is
+  not built yet.
+- **Tests:** `permissions.test.tsx` — a 500 or an unrecovered 401 denies everything and sets
+  `permissionsError`; loading denies; outside a provider, `usePermissions` throws and
+  `useOptionalPermissions` denies; `<Can>` shows a visible card when denied.
+
 ---
 
 ## 10. Server-built navigation that is also the route gate — **Tier 1 · Core**
@@ -750,6 +791,58 @@ the one deepest-prefix function, shared by the gate and the test), `src/core/ico
 
 **Configurable, not hard-coded.** Nav is registry data; per-role preferences are rows;
 `NAV_BADGE_CACHE_SECONDS` (90) server-side, `navBadges.pollMs` client-side.
+
+**As built (BUILD_ORDER 8.2).**
+- **`NavItem` today:** `NavItem(key, label, href, permission=None, hidden=False, public=False,
+  exact=False)` in `core/registry.py`. A `public` item may not carry a permission; registration
+  refuses it.
+  - Not yet built: icons, badges, flags, capabilities, `requires_tenant`, any-of permissions and
+    `children`.
+  - The pages each app owns are registered from its `AppConfig.ready()` (`users/navigation.py`,
+    `rbac/navigation.py`). `/` is **public**: it is the status page, and the sign-in page links
+    back to it.
+- **The manifest:** `core.navigation.full_manifest()` is committed as
+  `frontend/src/generated/nav-manifest.json`, and `backend/tests/test_navigation.py` fails when it
+  is stale. Regenerate it with `DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py`
+  (8.4 folds this into `export_frontend_contracts`). The committed file leaves out linked
+  plugins' sections, so it is identical with or without a plugin installed.
+- **The gate:** `resolveRoute()` is in `src/core/shell/nav/resolve-route.ts` (deepest prefix;
+  `exact` matches only its own href). The gate itself is `src/core/shell/nav/route-gate.tsx`
+  (`decide()`, `useRouteGate()`, `RouteGate`), mounted by `src/app/(core)/layout.tsx` and
+  `src/app/(plugins)/layout.tsx`.
+  - It resolves against the committed manifest **plus** the user's bootstrap `nav`. The manifest
+    comes first, so a filtered-out deep entry (`/users/new`) never falls back to a shallower one the
+    user holds (`/users`).
+  - A public entry renders while signed out. No entry → denied. Lacking the entry's permission → the
+    denied card.
+- **The menu:** `src/core/shell/nav-menu.tsx` draws bootstrap's `nav` minus `hidden` entries
+  (`use-nav.ts`). A degraded `nav` shows an error, never an empty menu.
+- **⚠️ Blind spot: plugin pages are gated at runtime only.** The page walker in
+  `tests/architecture/route-manifest.test.ts` skips the one `(plugins)/[plugin]/[[...slug]]`
+  catch-all, because plugin entries reach the frontend per user in bootstrap, not in the committed
+  manifest. At runtime the gate still refuses a plugin page with no entry.
+- **Tests:**
+  - `route-manifest.test.ts`: every core page resolves; the manifest is non-empty; a fixture proves
+    that an un-entried page fails; it is two-way (no dead hrefs).
+  - `route-gate.test.ts` and `resolve-route.test.ts`.
+  - Backend `test_navigation.py`: filtering, the snapshot, every gated item names a declared code.
+
+**As built — the session marker (§ 8.2, BUILD_ORDER 8.2).**
+- **Cookie names:** `src/core/lib/session/cookies.ts` is the one place the frontend spells them
+  (`NEXT_PUBLIC_AUTH_COOKIE_PREFIX`, else the shipped default; plain and `__Host-` both accepted).
+  The frontend prefix **must equal** the backend's `AUTH_COOKIE_PREFIX`: on a mismatch the proxy
+  never finds the marker, and signed-in users are sent to sign-in.
+- **The proxy:** `src/proxy.ts` lets public manifest pages through, then any request carrying the
+  marker, and redirects the rest with a 307 to `/login?next=` via `safeNext()`
+  (`src/core/lib/session/safe-next.ts`). The sign-in page hard-navigates to that `next`.
+- **Tests:**
+  - `proxy.test.ts`: marker without an access cookie → rendered; no marker → 307.
+  - `client.refresh.test.ts`: 401 → one refresh → replay.
+  - Backend `users/tests/test_session_marker.py`: set on login, refresh and invitation accept;
+    cleared on logout, reuse detection and a revoked session.
+- **Next 16.3.4 note:** the bundled `proxy.md` documents
+  `next/experimental/testing/server`'s `unstable_doesProxyMatch`, but the installed version exports
+  only `unstable_doesMiddlewareMatch`. `proxy.test.ts` uses the latter.
 
 ---
 

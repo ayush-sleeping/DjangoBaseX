@@ -15,7 +15,7 @@ import {
   STATUS_LABELS,
 } from "@/core/lib/invitations";
 import { MFA_ENROLMENT_PATH } from "@/core/lib/mfa";
-import { isSuperuser, usePermissions } from "@/core/lib/permissions";
+import { usePermissions } from "@/core/lib/permissions";
 import { assignableBy, listAllRoles, type Role, ROLE_CODES, rbacErrorMessage } from "@/core/lib/rbac";
 import { formatDateTime } from "@/core/lib/users";
 
@@ -73,7 +73,7 @@ export function InvitationsPanel() {
           <div className="flex w-full flex-col items-center gap-6">
             <SendForm
               canListRoles={perms.can(ROLE_CODES.view)}
-              superuser={isSuperuser(perms.me)}
+              superuser={perms.user?.is_superuser === true}
               onSent={() => {
                 setPage(1);
                 setVersion((v) => v + 1);

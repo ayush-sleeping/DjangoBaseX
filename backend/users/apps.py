@@ -32,3 +32,7 @@ class UsersConfig(AppConfig):
         from .jobs import AUTH_CLEANUP
 
         registry.jobs.register(AUTH_CLEANUP)
+        # Navigation is also the route gate (FRONTEND_PLATFORM § 10): every page needs an entry.
+        from .navigation import register as register_navigation
+
+        register_navigation()

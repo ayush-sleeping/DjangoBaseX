@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import type { Me } from "@/core/lib/auth";
+import type { BootstrapUser } from "@/core/lib/bootstrap";
 import type { Permissions } from "@/core/lib/permissions";
 
 /** The class names every users screen shares, so the screens stay one family. */
@@ -33,17 +33,17 @@ export function Gate({
   code: string;
   /** "view users", "invite people": finishes "You don't have permission to …". */
   what: string;
-  children: (me: Me) => ReactNode;
+  children: (user: BootstrapUser) => ReactNode;
 }) {
-  if (perms.loading) return <p className="text-sm text-zinc-500">Checking your session…</p>;
-  if (perms.failed) {
+  if (perms.status === "loading") return <p className="text-sm text-zinc-500">Checking your session…</p>;
+  if (perms.permissionsError && !perms.signedOut) {
     return (
       <p role="alert" className={ui.error}>
         Could not reach the server. Reload the page to try again.
       </p>
     );
   }
-  if (!perms.me) {
+  if (!perms.user) {
     return (
       <section className={ui.card}>
         <p className="text-sm">Sign in to continue.</p>
@@ -56,7 +56,7 @@ export function Gate({
   if (!perms.can(code)) {
     return <p className="text-sm">You don&apos;t have permission to {what}.</p>;
   }
-  return <>{children(perms.me)}</>;
+  return <>{children(perms.user)}</>;
 }
 
 /** Active / Deactivated, superuser and two-factor markers. */

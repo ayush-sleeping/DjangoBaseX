@@ -7,7 +7,7 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import { fieldErrors, isMfaEnrollmentRequired } from "@/core/lib/api";
 import { MFA_ENROLMENT_PATH } from "@/core/lib/mfa";
-import { isSuperuser, type Permissions, usePermissions } from "@/core/lib/permissions";
+import { type Permissions, usePermissions } from "@/core/lib/permissions";
 import {
   deleteRole,
   getRole,
@@ -68,15 +68,15 @@ export function RoleEditor({ publicId }: { publicId: string }) {
     };
   }, [allowed, canSeeCatalog, publicId, router]);
 
-  if (perms.loading) return <p className="text-sm text-zinc-500">Checking your session…</p>;
-  if (perms.failed) {
+  if (perms.status === "loading") return <p className="text-sm text-zinc-500">Checking your session…</p>;
+  if (perms.permissionsError && !perms.signedOut) {
     return (
       <p role="alert" className="text-sm text-red-600">
         Could not reach the server. Reload the page to try again.
       </p>
     );
   }
-  if (!perms.me) {
+  if (!perms.user) {
     return (
       <section className={card}>
         <p className="text-sm">Sign in to manage roles.</p>
@@ -100,7 +100,7 @@ export function RoleEditor({ publicId }: { publicId: string }) {
   const { role, catalog } = state;
   // Every write answers with the new role; keep the catalog, which a write never changes.
   const replaceRole = (next: Role) => setState({ role: next, catalog });
-  const elevatedLock = role.is_elevated && !isSuperuser(perms.me);
+  const elevatedLock = role.is_elevated && !perms.user?.is_superuser === true;
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
@@ -166,7 +166,7 @@ function DetailsForm({
   locked: boolean;
   onSaved: (role: Role) => void;
 }) {
-  const superuser = isSuperuser(perms.me);
+  const superuser = perms.user?.is_superuser === true;
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string }>();
   const [fields, setFields] = useState<Record<string, string[]>>({});

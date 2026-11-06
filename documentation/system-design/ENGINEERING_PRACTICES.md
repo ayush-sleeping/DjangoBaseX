@@ -620,7 +620,9 @@ single-sign-on only and no test authentication path was ever built.
 
 **Rules.**
 
-- **Page list from `/api/me/navigation` per seeded role**, so a new nav entry joins every sweep automatically.
+- **Page list from the navigation per seeded role** (bootstrap's `nav`, or `/api/me/navigation/`, `hidden`
+  entries included — navigation is the route gate, so every page has one), so a new nav entry joins every sweep
+  automatically.
 - **Assert a page-specific selector**, not a word: each nav entry declares a `page_key`; the page renders
   `data-page="<page_key>"`; the check requires it. Also assert the final URL (a redirect to sign-in means a lost
   session), zero console errors, zero failed requests, and a minimum rendered-text floor (a hydration crash leaves an

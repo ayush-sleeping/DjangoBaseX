@@ -7,7 +7,7 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import { fieldErrors, isMfaEnrollmentRequired, type Page } from "@/core/lib/api";
 import { MFA_ENROLMENT_PATH } from "@/core/lib/mfa";
-import { isSuperuser, usePermissions } from "@/core/lib/permissions";
+import { usePermissions } from "@/core/lib/permissions";
 import {
   createRole,
   listRoles,
@@ -51,15 +51,15 @@ export function RolesPanel() {
     };
   }, [allowed, page, router]);
 
-  if (perms.loading) return <p className="text-sm text-zinc-500">Checking your session…</p>;
-  if (perms.failed) {
+  if (perms.status === "loading") return <p className="text-sm text-zinc-500">Checking your session…</p>;
+  if (perms.permissionsError && !perms.signedOut) {
     return (
       <p role="alert" className="text-sm text-red-600">
         Could not reach the server. Reload the page to try again.
       </p>
     );
   }
-  if (!perms.me) {
+  if (!perms.user) {
     return (
       <section className={card}>
         <p className="text-sm">Sign in to manage roles.</p>
@@ -143,7 +143,7 @@ export function RolesPanel() {
 
       {perms.can(ROLE_CODES.create) ? (
         <CreateRoleForm
-          showElevated={isSuperuser(perms.me)}
+          showElevated={perms.user?.is_superuser === true}
           onCreated={(role) =>
             router.push(`/settings/roles/${encodeURIComponent(role.public_id)}`)
           }

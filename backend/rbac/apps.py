@@ -12,6 +12,9 @@ class RbacConfig(AppConfig):
         from .permissions import GROUP
 
         registry.permissions.register(GROUP)
+        from .navigation import register as register_navigation
+
+        register_navigation()
         from users.signals import invitation_accepted
 
         invitation_accepted.connect(_assign_invited_role, dispatch_uid="rbac.assign_invited_role")

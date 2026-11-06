@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   title: "Sign in",
 };
 
-export default async function LoginPage() {
-  const { product_name, tagline } = await getIdentity();
+export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+  const [{ product_name, tagline }, { next }] = await Promise.all([getIdentity(), searchParams]);
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 font-sans">
       <div className="text-center">
@@ -18,7 +18,7 @@ export default async function LoginPage() {
         <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
         {tagline && <p className="mt-1 text-xs text-zinc-500">{tagline}</p>}
       </div>
-      <LoginPanel />
+      <LoginPanel next={typeof next === "string" ? next : undefined} />
       <Link className="text-xs text-zinc-500 underline" href="/">
         Back to the status page
       </Link>

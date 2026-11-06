@@ -56,8 +56,8 @@ export default function NotesPage() {
   }
 
   let content;
-  if (perms.loading) content = <p className="text-sm text-zinc-500">Checking your session…</p>;
-  else if (!perms.me)
+  if (perms.status === "loading") content = <p className="text-sm text-zinc-500">Checking your session…</p>;
+  else if (!perms.user)
     content = (
       <Link className="text-sm underline" href="/login">
         Sign in to see your notes

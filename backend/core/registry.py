@@ -84,8 +84,15 @@ class PermissionGroupSpec:
 class NavItem:
     key: str  # unique within its section
     label: str
-    path: str  # frontend path, starts with "/"
+    href: str  # frontend path, starts with "/"
     permission: str | None = None  # None = any signed-in user
+    # FRONTEND_PLATFORM § 10: navigation is also the route gate (deepest-prefix match, default
+    # deny), so every page needs an entry. hidden = a gate entry not drawn in the menu (URL-only
+    # pages); public = reachable signed out (never with a permission); exact = matches only its own
+    # href, not the paths below it ("/" would otherwise match every page).
+    hidden: bool = False
+    public: bool = False
+    exact: bool = False
 
 
 @dataclass(frozen=True)
@@ -280,7 +287,8 @@ class NavigationRegistry(_Catalog):
         return tuple(sorted(self._sections.values(), key=lambda s: (s.order, s.key)))
 
     def visible_to(self, codes: frozenset[str], is_superuser: bool) -> tuple[NavSection, ...]:
-        """Items the user may follow (a superuser, all of them); sections left empty are dropped.
+        """Items the user may follow (a superuser, all of them; public and ungated items, anyone);
+        sections left empty are dropped.
         This only shapes a menu: every endpoint still decides for itself."""
         visible = []
         for section in self.sections():
@@ -341,11 +349,16 @@ class NavigationRegistry(_Catalog):
             _require_label(where, item.label)
             # "//host" is protocol-relative: a link that leaves the site.
             if (
-                not isinstance(item.path, str)
-                or not item.path.startswith("/")
-                or item.path.startswith("//")
+                not isinstance(item.href, str)
+                or not item.href.startswith("/")
+                or item.href.startswith("//")
             ):
-                raise RegistryError(f"{where}: path {item.path!r} must be a site path starting /")
+                raise RegistryError(f"{where}: href {item.href!r} must be a site path starting /")
+            if item.public and item.permission is not None:
+                raise RegistryError(
+                    f"{where}: a public item is reachable signed out, so it cannot need "
+                    f"{item.permission!r}"
+                )
             if item.permission is not None and (
                 not isinstance(item.permission, str) or not CODE_PATTERN.match(item.permission)
             ):

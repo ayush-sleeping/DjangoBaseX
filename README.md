@@ -308,7 +308,7 @@ Stated plainly, because assuming otherwise wastes time.
 **❌ Not built yet**
 - **Domain models** — the platform holds identity and RBAC only; no organisation model ([ADR-0011](documentation/adr/0011-no-organisation-in-core.md))
 - **Frontend tests** — the backend has a pytest suite; the frontend has lint and typecheck only. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
-- **The app shell** — a server-built menu exists (`/api/me/navigation/`), but no sidebar, route gate or design system yet (`BUILD_ORDER` Phase 8)
+- **The app shell** — the bootstrap call (`/api/me/bootstrap/`), the fail-closed permission provider, a server-built menu that is also the default-deny route gate, and the session-marker proxy exist (`BUILD_ORDER` 8.2); no sidebar or design system yet (`BUILD_ORDER` 8.3)
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
 **✅ Both foundational decisions are settled:** custom `User` model ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md))

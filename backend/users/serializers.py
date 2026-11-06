@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
+from core.bootstrap import effective_permissions
 from core.flags import flags_for
-from core.registry import registry
 
 from .models import User
 
@@ -56,10 +56,8 @@ class MeSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_permissions(self, user) -> list[str]:
-        # The effective codes, for the frontend's can(). A superuser holds the whole catalog.
-        if user.is_superuser:
-            return sorted(registry.permissions.codes())
-        return sorted(user.get_all_permissions())
+        # The effective codes, for the frontend's can(): the same function bootstrap uses.
+        return effective_permissions(user)
 
     def get_mfa_enabled(self, user) -> bool:
         return user.mfa_devices.filter(confirmed_at__isnull=False).exists()
@@ -148,3 +146,20 @@ class AcceptInvitationSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=128)
     password = serializers.CharField(max_length=4096, trim_whitespace=False)
     full_name = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class BootstrapUserSerializer(MeSerializer):
+    """Bootstrap's `user` section: /me's identity without the lists bootstrap carries at the top
+    level (permissions, flags), so each fact has one place in the response."""
+
+    class Meta(MeSerializer.Meta):
+        fields = [
+            "public_id",
+            "email",
+            "full_name",
+            "is_staff",
+            "is_superuser",
+            "mfa_enabled",
+            "mfa_enforced",
+        ]
+        read_only_fields = fields

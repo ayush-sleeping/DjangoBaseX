@@ -40,6 +40,9 @@ next `next dev`. Commit it with your work to keep the tree clean. **Frontend rul
 | `src/app/` | Routes only. A folder with `page.tsx` is a route |
 | `src/core/lib/` | Everything that is not a route or a component — API client, helpers, types |
 | `src/core/lib/api.ts` | **The only module that makes HTTP calls** |
+| `src/core/shell/` | The shell: the menu and the route gate (`nav/resolve-route.ts` is the one deepest-prefix function) |
+| `src/generated/` | Files generated from the backend (`nav-manifest.json`); never hand-edited |
+| `src/proxy.ts` | The page-navigation guard (session marker → render; none → `/login?next=`) |
 | `public/` | Static assets, served from `/` |
 
 🔜 A `src/components/` directory is not yet present; add it when the second component appears, not
@@ -130,6 +133,29 @@ refuses to build if they do.
 
 ---
 
+## 3a. Pages, navigation and permissions (BUILD_ORDER 8.2)
+
+The full contract is [`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md) § 7–§ 10. The rules a page
+author meets:
+
+- **Every page needs a navigation entry.** Navigation is the route gate, and the gate is
+  default-deny: a `page.tsx` with no entry renders the denied card for everyone. Register the
+  page's `NavItem` from its app's `AppConfig.ready()` — `hidden=True` for a URL-only page,
+  `public=True` for a signed-out page — then regenerate `src/generated/nav-manifest.json`
+  (`DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py`). If you skip that,
+  `tests/architecture/route-manifest.test.ts` fails.
+- **Permissions only through the provider.** Use `usePermissions()` or `<Can>` from
+  `src/core/lib/permissions.tsx`, which bootstrap feeds. Never fetch `/me` to decide what to show,
+  never compute a superuser bypass, and render `permissionsError` as a retry path. A shared
+  component that may render outside the shell uses `useOptionalPermissions()`, which denies
+  everything.
+- **Leave the app with a hard navigation only on an identity change** (sign-in, sign-out), through
+  `hardNavigate()` in `src/core/lib/session/navigate.ts`. Everything else uses the router.
+- **`src/proxy.ts` decides page navigations on the session marker cookie alone.** Never make it read
+  the access or refresh cookie, and never make it call the API.
+
+---
+
 ## 4. TypeScript
 
 - **`strict` is on.** Keep it on
@@ -165,6 +191,10 @@ bundler decides what to ship to the browser.
 
 `NEXT_PUBLIC_API_URL` is the backend base, `http://localhost:8000` by default. Add any new key to
 `frontend/.env.example` with a placeholder, in the same change.
+
+`NEXT_PUBLIC_AUTH_COOKIE_PREFIX` must equal the backend's `AUTH_COOKIE_PREFIX`. The CSRF echo and
+the proxy's session-marker check both read the cookies by that name; on a mismatch, writes are
+refused and signed-in users are sent to sign-in.
 
 ---
 
