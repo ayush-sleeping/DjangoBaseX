@@ -28,8 +28,8 @@ export type Invitation = {
 
 const INVITATIONS = "/api/users/invitations/";
 
-export async function listInvitations(page = 1): Promise<Page<Invitation>> {
-  return api<Page<Invitation>>(`${INVITATIONS}?page=${page}`, { cache: "no-store" });
+export async function listInvitations(page = 1, signal?: AbortSignal): Promise<Page<Invitation>> {
+  return api<Page<Invitation>>(`${INVITATIONS}?page=${page}`, { cache: "no-store", signal });
 }
 
 export async function sendInvitation(email: string, rolePublicId: string): Promise<Invitation> {

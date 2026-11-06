@@ -40,6 +40,8 @@ next `next dev`. Commit it with your work to keep the tree clean. **Frontend rul
 | `src/app/` | Routes only. A folder with `page.tsx` is a route |
 | `src/core/lib/` | Everything that is not a route or a component — API client, helpers, types |
 | `src/core/lib/api.ts` | **The only module that makes HTTP calls** |
+| `src/core/shells/` | `ResourceIndex` / `ResourceForm` / `ResourceShow`: every module screen composes one of these, never its own layout |
+| `src/core/modules/<name>/` | A core module (`users` is the reference): `Index/Form/Show.tsx`, `columns.tsx`, `fields.ts`, `actions.ts`, `keys.ts` |
 | `src/core/components/` | The mandatory primitives (§ 5): Button, Modal, confirm/toast, Select family, FormField, StatusPill, … |
 | `src/core/styles/tokens.css` | Every colour, both themes; the only place a colour value is written |
 | `src/core/shell/` | The shell: the menu and the route gate (`nav/resolve-route.ts` is the one deepest-prefix function) |
@@ -185,6 +187,15 @@ author meets:
     `src/core/styles/` and `src/core/lib/status-tone.ts`.
   - Pair every fill with its own `-foreground`.
   - Spell a status's classes whole through `status-tone.ts` / `StatusPill`, never `bg-${tone}-tint`.
+- **A module screen composes a shell** ([`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md) § 11):
+  - An index is `ResourceIndex` with `DataTableColumn`s in the fixed order (identifier → status →
+    data → updated → actions); a form is `ResourceForm`; a record is `ResourceShow`.
+  - A route file is a thin wrapper: metadata, `<Suspense>` when the view reads the URL, and one
+    module component.
+  - Lists go through `useListState` + `useApiList`, mutations through `useApiMutation`.
+  - A shape the shell lacks is added to the shell, for every module.
+  - A deliberate deviation says `ui-contract-deviation: <reason>` where it happens.
+  - `module-contract.test.ts` enforces this.
 - **Use the primitives** (§ 13 of the same doc), each enforced by ESLint:
   - `Button`/`IconButton`;
   - `Modal`, never a `fixed inset-0` overlay;

@@ -1,28 +1,16 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
 
-import { pageFromSearchParams } from "@/core/lib/users";
+import { UsersIndex } from "@/core/modules/users/Index";
 
-import { UsersPanel } from "./users-panel";
+export const metadata: Metadata = { title: "Users", robots: { index: false, follow: false } };
 
-export const metadata: Metadata = {
-  title: "Users",
-  robots: { index: false, follow: false },
-};
-
-// The query string seeds the list (shareable links, Back); the data itself is fetched from the
-// browser, because it is authenticated (NEXTJS_STANDARDS § 3). searchParams is async in Next 16.
-export default async function UsersPage({ searchParams }: PageProps<"/users">) {
-  const query = await searchParams;
-  const search = Array.isArray(query.search) ? query.search[0] : query.search;
-
+// The list state lives in the query string, read on the client (useSearchParams): Suspense keeps the
+// rest of the route prerenderable (Next 16). The data is authenticated, so it is fetched client-side.
+export default function UsersPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
-      <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-      <UsersPanel initialPage={pageFromSearchParams(query.page)} initialSearch={search ?? ""} />
-      <Link className="text-xs text-muted-foreground underline" href="/login">
-        Back to your account
-      </Link>
-    </main>
+    <Suspense>
+      <UsersIndex />
+    </Suspense>
   );
 }

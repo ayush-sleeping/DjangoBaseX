@@ -3,6 +3,13 @@
  * message helpers; they never shape a request or read an error body themselves.
  */
 import { api, ApiError, type Page } from "./api";
+import { defineKeys } from "./query/keys";
+
+/** Query keys for roles (FRONTEND_PLATFORM § 4). Invalidate "rbac.roles" after any role write. */
+export const roleKeys = defineKeys("rbac.roles", {
+  list: (page: number) => ["list", { page }],
+  all: () => ["all"],
+});
 
 /** The code each endpoint enforces. Gate every control on exactly one of these (affordance parity). */
 export const ROLE_CODES = {
@@ -64,8 +71,8 @@ export async function listPermissionGroups(): Promise<PermissionGroup[]> {
   return api<PermissionGroup[]>("/api/rbac/permissions/", { cache: "no-store" });
 }
 
-export async function listRoles(page = 1): Promise<Page<Role>> {
-  return api<Page<Role>>(`${ROLES}?page=${page}`, { cache: "no-store" });
+export async function listRoles(page = 1, signal?: AbortSignal): Promise<Page<Role>> {
+  return api<Page<Role>>(`${ROLES}?page=${page}`, { cache: "no-store", signal });
 }
 
 export async function getRole(publicId: string): Promise<Role> {
@@ -99,10 +106,10 @@ export async function replaceRolePermissions(
  * Every role, following the pages. For pickers: a role list is short, but it is still paginated,
  * and a picker that silently shows page one hides the rest. Stops at `maxPages` as a backstop.
  */
-export async function listAllRoles(maxPages = 20): Promise<Role[]> {
+export async function listAllRoles(maxPages = 20, signal?: AbortSignal): Promise<Role[]> {
   const roles: Role[] = [];
   for (let page = 1; page <= maxPages; page++) {
-    const batch = await listRoles(page);
+    const batch = await listRoles(page, signal);
     roles.push(...batch.results);
     if (!batch.next) break;
   }

@@ -945,13 +945,14 @@ also the route gate (default-deny); the `Path=/` session marker cookie. Closes *
 **Done when:** a page with no navigation entry is refused and a test walking `app/**/page.tsx` fails on it; a
 signed-in user whose access token has expired is refreshed, not bounced.
 
-### 8.3 — Design system and the module contract ⬜
+### 8.3 — Design system and the module contract ✅
 *Split 2026-11-06 into 8.3a and 8.3b.* **8.3a ✅ (2026-11-06, Dev 2 `djangobasex-a9`, manager review):** OKLCH
 semantic tokens with foreground pairs in light and dark, the pre-paint theme, the mandatory primitives, the UI lint
 bans with positive controls, and every raw palette class migrated. Acceptance part 1 is `tokens.test.ts`, run in both
-themes. Owner picks: TanStack Table **v9**, react-hook-form + zod, Headless UI, lucide-react. **8.3b ⬜:** DataTable,
-URL list state, the Index · Form · Show shells, the Users module on the shells (acceptance part 2), and removing the
-temporary `<table>` lint exemption.
+themes. Owner picks: TanStack Table **v9**, react-hook-form + zod, Headless UI, lucide-react. **8.3b ✅ (2026-11-06,
+same team):** the server-driven DataTable on TanStack Table v9 (the engine importable only inside
+`src/core/components/data-table/`, enforced by a test), URL list state, the Index · Form · Show shells, and the Users
+module rebuilt on them (acceptance part 2: `module-contract.test.ts`). The temporary `<table>` exemption is removed.
 Semantic tokens with foreground pairs, dark mode, the Index · Form · Show shells, the standard DataTable and the
 mandatory primitives — built against the Users module of 1.5 as the reference.
 

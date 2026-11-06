@@ -38,14 +38,14 @@ export type User = {
 const USERS = "/api/users/";
 const userUrl = (publicId: string) => `${USERS}${encodeURIComponent(publicId)}/`;
 
-export async function listUsers(page = 1, search = ""): Promise<Page<User>> {
+export async function listUsers(page = 1, search = "", signal?: AbortSignal): Promise<Page<User>> {
   const query = new URLSearchParams({ page: String(page) });
   if (search.trim()) query.set("search", search.trim());
-  return api<Page<User>>(`${USERS}?${query}`, { cache: "no-store" });
+  return api<Page<User>>(`${USERS}?${query}`, { cache: "no-store", signal });
 }
 
-export async function getUser(publicId: string): Promise<User> {
-  return api<User>(userUrl(publicId), { cache: "no-store" });
+export async function getUser(publicId: string, signal?: AbortSignal): Promise<User> {
+  return api<User>(userUrl(publicId), { cache: "no-store", signal });
 }
 
 /** The account starts active with no usable password; the API emails a set-your-password link. */
@@ -82,22 +82,6 @@ export async function revokeUserSessions(publicId: string): Promise<number> {
     body: "{}",
   });
   return body.revoked;
-}
-
-/** The URL of the users list, for history.replaceState: shareable, and Back works. */
-export function usersListHref(page: number, search: string): string {
-  const query = new URLSearchParams();
-  if (page > 1) query.set("page", String(page));
-  if (search.trim()) query.set("search", search.trim());
-  const qs = query.toString();
-  return qs ? `/users?${qs}` : "/users";
-}
-
-/** A positive integer from a query-string value, or 1. */
-export function pageFromSearchParams(value: string | string[] | undefined): number {
-  const raw = Array.isArray(value) ? value[0] : value;
-  const page = Number.parseInt(raw ?? "", 10);
-  return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
 /** "11 Oct 2026, 20:41" in the viewer's locale and time zone; "—" for null. */

@@ -5,21 +5,45 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
-import { fieldErrors, isMfaEnrollmentRequired, type Page } from "@/core/lib/api";
+import { DataTable, type DataTableColumn, Pager } from "@/core/components/data-table";
+import { EmptyState } from "@/core/components/EmptyState";
+import { ListLoadError } from "@/core/components/ListLoadError";
+import { fieldErrors, isMfaEnrollmentRequired } from "@/core/lib/api";
 import { MFA_ENROLMENT_PATH } from "@/core/lib/mfa";
 import { usePermissions } from "@/core/lib/permissions";
+import { useApiList } from "@/core/lib/query";
 import {
   createRole,
   listRoles,
   type Role,
   ROLE_CODES,
   rbacErrorMessage,
+  roleKeys,
   suggestSlug,
 } from "@/core/lib/rbac";
 
 import { RoleBadges } from "./role-badges";
 
-type Listing = { page: number; roles?: Page<Role>; error?: string };
+// ui-contract-deviation: the roles screens are not yet a module on the shells (follow-up after
+// BUILD_ORDER 8.3b); their list already renders through the DataTable.
+const ROLE_COLUMNS: DataTableColumn<Role>[] = [
+  {
+    id: "role",
+    kind: "identifier",
+    header: "Role",
+    cell: (role) => (
+      <div className="min-w-0">
+        <Link className="font-medium underline-offset-4 hover:underline" href={`/settings/roles/${encodeURIComponent(role.public_id)}`}>
+          {role.name}
+        </Link>{" "}
+        <RoleBadges role={role} />
+        <span className="block font-mono text-xs text-muted-foreground">{role.slug}</span>
+      </div>
+    ),
+  },
+  { id: "permissions", kind: "data", header: "Permissions", align: "right", cell: (role) => role.permissions.length },
+  { id: "users", kind: "data", header: "Users", align: "right", cell: (role) => role.user_count },
+];
 
 const card = "w-full max-w-3xl space-y-4 rounded-xl border border-border p-6";
 const input =
@@ -32,24 +56,17 @@ export function RolesPanel() {
   const perms = usePermissions();
   const allowed = perms.can(ROLE_CODES.view);
   const [page, setPage] = useState(1);
-  const [listing, setListing] = useState<Listing | null>(null);
+  // The role editor still writes through plain functions (not useApiMutation), so nothing
+  // invalidates this list after an edit: refetch on every visit until the roles screens become a
+  // module (follow-up after BUILD_ORDER 8.3b).
+  const roles = useApiList<Role>(roleKeys.list(page), (signal) => listRoles(page, signal), {
+    enabled: allowed,
+    refetchOnMount: "always",
+  });
 
   useEffect(() => {
-    if (!allowed) return;
-    let active = true;
-    listRoles(page)
-      .then((roles) => {
-        if (active) setListing({ page, roles });
-      })
-      .catch((error) => {
-        if (!active) return;
-        if (isMfaEnrollmentRequired(error)) router.push(MFA_ENROLMENT_PATH);
-        setListing({ page, error: rbacErrorMessage(error) });
-      });
-    return () => {
-      active = false;
-    };
-  }, [allowed, page, router]);
+    if (isMfaEnrollmentRequired(roles.error)) router.push(MFA_ENROLMENT_PATH);
+  }, [roles.error, router]);
 
   if (perms.status === "loading") return <p className="text-sm text-muted-foreground">Checking your session…</p>;
   if (perms.permissionsError && !perms.signedOut) {
@@ -73,72 +90,29 @@ export function RolesPanel() {
     return <p className="text-sm">You don&apos;t have permission to view roles.</p>;
   }
 
-  const loading = !listing || listing.page !== page;
-  const roles = listing?.roles;
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
       <section className={card}>
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading roles…</p>
-        ) : listing.error ? (
-          <p role="alert" className="text-sm text-destructive">
-            {listing.error}
-          </p>
-        ) : roles && roles.results.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="pb-2 font-medium">Role</th>
-                <th className="pb-2 font-medium">Permissions</th>
-                <th className="pb-2 text-right font-medium">Users</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {roles.results.map((role) => (
-                <tr key={role.public_id}>
-                  <td className="py-2 pr-3">
-                    <Link
-                      className="font-medium underline"
-                      href={`/settings/roles/${encodeURIComponent(role.public_id)}`}
-                    >
-                      {role.name}
-                    </Link>{" "}
-                    <RoleBadges role={role} />
-                    <span className="block font-mono text-xs text-muted-foreground">{role.slug}</span>
-                  </td>
-                  <td className="py-2 pr-3">{role.permissions.length}</td>
-                  <td className="py-2 text-right">{role.user_count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {roles.showError ? (
+          <ListLoadError {...roles.listErrorProps} resource="roles" />
         ) : (
-          <p className="text-sm text-muted-foreground">No roles yet.</p>
+          <>
+            <DataTable<Role>
+              caption="Roles"
+              columns={ROLE_COLUMNS}
+              rows={roles.items}
+              getRowId={(role) => role.public_id}
+              getRowLabel={(role) => role.name}
+              loading={roles.isLoading}
+              fetching={roles.isFetching}
+              empty={roles.isEmpty ? <EmptyState variant="none" title="No roles yet" /> : null}
+            />
+            {roles.count > 0 ? (
+              <Pager page={page} count={roles.count} onPage={setPage} noun="roles" disabled={roles.isFetching} />
+            ) : null}
+          </>
         )}
-        {roles && (roles.previous || roles.next) ? (
-          <nav className="flex items-center justify-between text-sm">
-            <button
-              type="button"
-              className="underline disabled:no-underline disabled:opacity-40"
-              disabled={!roles.previous || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </button>
-            <span className="text-muted-foreground">
-              Page {page} · {roles.count} roles
-            </span>
-            <button
-              type="button"
-              className="underline disabled:no-underline disabled:opacity-40"
-              disabled={!roles.next || loading}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </button>
-          </nav>
-        ) : null}
       </section>
 
       {perms.can(ROLE_CODES.create) ? (

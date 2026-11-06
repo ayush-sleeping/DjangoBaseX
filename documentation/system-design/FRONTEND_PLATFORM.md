@@ -461,6 +461,18 @@ empty; replace not push; invalid values fall back). ESLint bans `useSearchParams
 **Configurable, not hard-coded.** `list.searchDebounceMs`, `list.searchMinChars`,
 `list.pageSizeOptions` (capped by the server), per-surface defaults in the schema.
 
+**As built (BUILD_ORDER 8.3b).** `src/core/lib/list-state.ts`:
+- `useListState({ filterKeys })` keeps `page`, `search`, `ordering` and the declared filters in the
+  query string, through `router.replace(…, { scroll: false })`.
+- Any change except paging resets to page 1. An `ordering` that is not a plain field name is
+  dropped, never forwarded. Defaults are omitted from the URL, and filters are sorted, so the
+  canonical URL is the shortest.
+- `isFiltered` tells the index whether an empty result is "filtered" or "none yet".
+- It reads `useSearchParams()`, so the route renders the view under `<Suspense>` (Next 16).
+- The search debounce (300 ms) and minimum length (2) live in `SearchInput`; the page size (20, the
+  server's) lives in `config/defaults.ts` `list.pageSize` until bootstrap carries `limits`.
+- Not yet built: a page-size selector, schema-driven filters, the staged filter drawer.
+
 ---
 
 ## 7. The bootstrap endpoint — **Tier 1 · Core**
@@ -900,6 +912,55 @@ aesthetic).
 **Configurable, not hard-coded.** Column visibility per user is a preference; nothing about a
 module's shape is.
 
+**As built (BUILD_ORDER 8.3b).**
+- **The shells:** `src/core/shells/`. Each renders `data-page`, and none knows a domain: an ERP
+  ledger, a CRM pipeline and a shop's orders compose the same three.
+  - `ResourceIndex` (title row → toolbar → selection bar → DataTable → pager) renders the states
+    in order: failed is `ListLoadError`; first load is skeleton rows; empty is `none` (with the
+    caller's create action) or `filtered` (with Clear filters); then rows. Modals the index opens
+    are its children, so filters and scroll survive.
+  - `ResourceForm` has `FormSection` and `FormGrid`. It is one form with two modes (a `record` →
+    "Edit {name}"), as a page or a modal.
+    - Save is dirty-gated and pending-aware.
+    - `applyServerErrors` puts a field path on its field; an unknown path becomes the form-level
+      error at `root.server`, never dropped. Focus goes to the first errored field.
+    - The footer counts field errors and shows form-level ones, left of the actions.
+    - `dirtyValues` gives a PATCH only the changed fields.
+    - A dirty modal confirms before discarding; a dirty page warns on unload. The App Router has no
+      route-change interception, so an in-app link away is not caught yet.
+  - `ResourceShow` has a 2:1 grid with a `self-start` sticky sidebar, plus `InfoCard` and `MetaCard`
+    (a missing value renders "—"). Loading and failure are the shell's (`PanelError`).
+  - `useEnrolmentRedirect`: both list and record shells send a `403 mfa_enrollment_required` to
+    `/account/security`, so no module re-implements it.
+- **The reference module** is `src/core/modules/users/`:
+  - views: `Index.tsx`, `InvitationsIndex.tsx`, `Form.tsx` (create/edit and `UserCreatePage`),
+    `InvitationForm.tsx`, `DeactivateForm.tsx`, `Show.tsx` with `show-sections.tsx`;
+  - data: `columns.tsx`, `fields.ts` (zod), `actions.ts` (`{permission, endpoint}`) and `keys.ts`.
+  - Data goes through `useApiList`/`useApiQuery`/`useApiMutation` (each mutation names what it
+    invalidates). Confirmations use `confirm()` and outcomes use `toast()`.
+  - "New user" opens a modal from the index, and `/users/new` stays as the deep link.
+  - The `src/app/(core)/users/**` route files are thin wrappers (metadata, `Suspense`, one module
+    component).
+  - There is no barrel `index.ts`: on a case-insensitive filesystem it collides with `Index.tsx`, so
+    routes import the module files directly.
+- **`tests/architecture/module-contract.test.ts`** (BUILD_ORDER 8.3 acceptance part 2) checks, by
+  AST:
+  - `*Index/Form/Show.tsx` render their shell, or say `ui-contract-deviation: <reason>`;
+  - module files render no `<main>`/`<table>`;
+  - `columns.tsx` arrays follow identifier → status → data → updated → actions;
+  - the 400-line budget (ratchet; one allow-listed file, `role-editor.tsx`);
+  - every Users route is a thin wrapper that renders no markup of its own.
+- **Roles screens:** not yet a module. Their list now renders through the DataTable and
+  `useApiList` (refetching on mount, because the role editor's writes do not invalidate yet), and is
+  marked `ui-contract-deviation`. A follow-up moves them onto the shells.
+- **Not yet built:**
+  - `StatTiles`;
+  - `?highlight=` deep links (they need the API to return the page holding the row);
+  - per-user column visibility;
+  - bulk results with skipped rows: no endpoint is bulk yet, and Users does not switch selection on;
+  - `AuditCard` (the users module records no target-filtered activity view yet);
+  - portal `scope` props (§ 21).
+
 ---
 
 ## 12. The DataTable standard — **Tier 1 · Core**
@@ -954,6 +1015,35 @@ allow-list exported by the backend — two-way ratchet); ESLint bans `<table>` o
 
 **Configurable, not hard-coded.** Page sizes from bootstrap `limits`; filter descriptors from the API;
 density from the user preference (§ 16).
+
+**As built (BUILD_ORDER 8.3b).** `src/core/components/data-table/`:
+- **Files:** `DataTable`, `Pager`, `BulkBar`, `selection.ts`, `ordering.ts` and `types.ts`.
+- **The engine** is TanStack Table **v9**, core features only (§ 12 above). `DataTable.tsx` is its
+  only importer: modules declare `DataTableColumn<T>`
+  (`{id, kind, header, cell, sortKey?, sortable?, hideBelow?, sticky?, align?, width?,
+  headerTooltip?}`), so the engine can change behind the contract. `kind` encodes the fixed order.
+- **Server-driven:** it renders what the API returned.
+  - The arrow comes from the **echoed** `ordering` (`aria-sort`); a click cycles asc → desc →
+    default. Only a column with a `sortKey` is clickable.
+  - Skeleton rows equal `pageSize`; a background refetch marks the table `aria-busy`.
+- **Selection** is opt-in and checkbox-only, with labels from `getRowLabel`.
+  - Shift-click selects a range; the header checkbox is indeterminate when partly selected.
+  - The `BulkBar` offers "Select all N matching", which switches to `{mode: "query", excludeIds}`;
+    `bulkTarget()` builds the payload.
+  - A change of `queryIdentity` clears the selection.
+- **Layout:**
+  - Identifier and actions are sticky by default, with `bg-inherit` and an inset seam;
+    `hideBelow` uses literal class maps.
+  - The table scrolls inside a `min-h-0` container with a sticky header.
+- **The Pager** holds the row count and a truncated page list; it renders top and bottom when there
+  is more than one page.
+- **A sortable column without a `sortKey`** warns in development.
+  `tests/architecture/sortable-has-key.test.ts` fails it by AST. The "∈ the endpoint's allow-list"
+  half waits for 8.4's contract export.
+- **`data-table.test.tsx`** covers shift-range, escalation to query mode, clearing on query change,
+  the arrow following the echoed ordering, the dev warning, skeleton count and page truncation.
+- **Not yet built:** the filter drawer and chips (no filter descriptors yet), a rows-per-page
+  selector, `InlineEditableCell` (Tier 2), and density from preferences.
 
 ---
 
@@ -1032,8 +1122,8 @@ a positive-control fixture per rule that must make ESLint fail (§ 26).
   role statuses) until 8.4 exports the backend's per-choice status metadata.
 - **The ESLint bans** (`eslint.config.mjs` → `UI_BANS`) form one `no-restricted-syntax` list, each
   with its home:
-  - `<table>` (home `data-table/`; ⚠️ the three existing lists are a **temporary** home until 8.3b
-    replaces them);
+  - `<table>` (home `data-table/`; the temporary 8.3a exemption for three lists was removed in
+    8.3b);
   - `<select>`, and `window.confirm/alert/prompt` / `alert()` / `prompt()` (no home);
   - `dangerouslySetInnerHTML` (home `src/core/theme/ThemeScript.tsx`);
   - `fixed inset-0` (home `Modal.tsx`);
@@ -1143,13 +1233,15 @@ across a retried submission); ESLint bans importing `react-hook-form` outside
 
 **Configurable, not hard-coded.** Field kinds are a registry; the zod generator is a pending decision.
 
-**As built (BUILD_ORDER 8.3a — dependencies only; `ResourceForm` arrives in 8.3b).**
+**As built (BUILD_ORDER 8.3a/8.3b).**
 - **Installed:** `react-hook-form` 7.90.0, `zod` 4.6.7, and `@hookform/resolvers` **5.9.2**.
 - **`@hookform/resolvers` 6.0.0 was skipped.** Its own optional peers conflict: it wants `effect`
   `^4` directly and `^3` through `@typeschema/main`, so `npm install` fails with ERESOLVE. We do not
   install with `--force` or `--legacy-peer-deps`, because every later `npm ci` would then need the
   flag. **The next upgrade should check for a fixed 6.x/7.x.**
 - **Available now:** `FormField` (§ 13) binds to react-hook-form.
+- **8.3b:** `ResourceForm` (§ 11) wraps react-hook-form with `zodResolver`. Schemas are written by
+  hand per module (`fields.ts`) until 8.4 generates them.
 
 ---
 

@@ -1,22 +1,15 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Suspense } from "react";
 
-import { InvitationsPanel } from "./invitations-panel";
+import { InvitationsIndex } from "@/core/modules/users/InvitationsIndex";
 
-export const metadata: Metadata = {
-  title: "Invitations",
-  robots: { index: false, follow: false },
-};
+export const metadata: Metadata = { title: "Invitations", robots: { index: false, follow: false } };
 
 // A static segment, so /users/invitations wins over /users/[publicId].
 export default function InvitationsPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
-      <h1 className="text-2xl font-bold tracking-tight">Invitations</h1>
-      <InvitationsPanel />
-      <Link className="text-xs text-muted-foreground underline" href="/users">
-        All users
-      </Link>
-    </main>
+    <Suspense>
+      <InvitationsIndex />
+    </Suspense>
   );
 }

@@ -59,14 +59,7 @@ const PALETTE =
 const UI_BANS = [
   {
     key: "table",
-    home: [
-      "src/core/components/data-table/**",
-      // TEMPORARY (BUILD_ORDER 8.3a → 8.3b): the three lists that move onto the DataTable in 8.3b.
-      // 8.3b deletes these lines; nothing may be added here.
-      "src/app/(core)/users/users-panel.tsx",
-      "src/app/(core)/users/invitations/invitations-panel.tsx",
-      "src/app/(core)/settings/roles/roles-panel.tsx",
-    ],
+    home: ["src/core/components/data-table/**"],
     message: "Lists render through the DataTable (src/core/components/data-table/), never a hand-written <table> (FRONTEND_PLATFORM § 12).",
     selectors: ["JSXOpeningElement[name.name='table']"],
   },

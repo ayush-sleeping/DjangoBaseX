@@ -1,21 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { NewUserForm } from "./new-user-form";
+import { UserCreatePage } from "@/core/modules/users/Form";
 
-export const metadata: Metadata = {
-  title: "New user",
-  robots: { index: false, follow: false },
-};
+export const metadata: Metadata = { title: "New user", robots: { index: false, follow: false } };
 
+// The deep-linkable twin of the index's "New user" modal (FRONTEND_PLATFORM § 11).
 export default function NewUserPage() {
-  return (
-    <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
-      <h1 className="text-2xl font-bold tracking-tight">New user</h1>
-      <NewUserForm />
-      <Link className="text-xs text-muted-foreground underline" href="/users">
-        All users
-      </Link>
-    </main>
-  );
+  return <UserCreatePage />;
 }

@@ -21,3 +21,11 @@ export const query = {
 export const poll = {
   transitionalIntervalMs: 3000,
 } as const;
+
+export const list = {
+  /**
+   * The server's page size (DRF PAGE_SIZE). The table draws this many skeleton rows and the pager
+   * computes ranges from it, until bootstrap carries `limits` (FRONTEND_PLATFORM § 7).
+   */
+  pageSize: 20,
+} as const;

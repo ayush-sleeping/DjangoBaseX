@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { readThemeChoice, resolveTheme, THEME_COOKIE, themeScript } from "./theme";
+import { readThemeChoice, resolveTheme, scriptStringLiteral, THEME_COOKIE, themeScript } from "./theme";
 
 afterEach(() => {
   document.documentElement.removeAttribute("data-theme");
@@ -37,5 +37,30 @@ describe("theme", () => {
     if (stored) document.cookie = `${THEME_COOKIE}=${stored}; Path=/`;
     new Function(themeScript())();
     expect(document.documentElement.getAttribute("data-theme")).toBe(expected);
+  });
+});
+
+describe("the pre-paint script is safe with a hostile cookie prefix", () => {
+  const hostile = 'x</script><script>alert(1)</script><!--" ';
+
+  it("never contains a closing script tag or a raw line separator", () => {
+    const body = themeScript(hostile);
+    expect(body.toLowerCase()).not.toContain("</script");
+    expect(body).not.toContain("<");
+    expect(body).not.toContain(" ");
+  });
+
+  it("still reads the cookie under that exact name", () => {
+    const body = themeScript(hostile);
+    vi.spyOn(window, "matchMedia").mockImplementation((q) => ({ matches: false, media: q }) as MediaQueryList);
+    vi.spyOn(document, "cookie", "get").mockReturnValue(`${hostile}=dark`);
+    new Function(body)();
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+  });
+
+  it("round-trips any string through scriptStringLiteral", () => {
+    for (const value of [hostile, "plain_theme", "a\"b\\c", " "]) {
+      expect(JSON.parse(scriptStringLiteral(value))).toBe(value);
+    }
   });
 });

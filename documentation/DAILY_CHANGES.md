@@ -26,6 +26,41 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 8.3b: the DataTable, the shells and the Users reference module (8.3 complete)
+**What** (Dev 2 `djangobasex-a9`, manager review; the second half of 8.3):
+- **DataTable** (`src/core/components/data-table/`): a server-driven list on TanStack Table v9. Modules declare our own
+  `DataTableColumn<T>` (its `kind` fixes the column order); the sort arrow follows the ordering the API echoed;
+  selection is checkbox-only with shift-range and escalates to `{mode: "query", excludeIds}`; skeleton rows equal
+  the page size; identifier and actions columns are sticky.
+- **URL list state** (`src/core/lib/list-state.ts`): page, search, ordering and filters live in the query string;
+  any change but paging resets to page 1.
+- **Shells** (`src/core/shells/`), all domain-free: `ResourceIndex` (failed → skeleton → none/filtered → rows),
+  `ResourceForm` (one form, page or modal; dirty-gated Save; server errors mapped to fields, unknown paths
+  form-level; PATCH sends only changed fields), and `ResourceShow` (2:1 grid, sticky sidebar).
+- **Users module** (`src/core/modules/users/`), the reference: index, invitations, create/edit, deactivate and record,
+  on the shells with `useApiList`/`useApiMutation`, `confirm()`/`toast()` and zod. Its route files are thin wrappers,
+  and the old hand-built screens are deleted. The roles list now renders through the DataTable.
+- The temporary `<table>` lint exemption is removed. The theme script now escapes `<` and U+2028/2029 in the inlined
+  cookie name (tested with a hostile prefix).
+**Why:** a list that pages, sorts, selects or fails its own way breaks a different way on each screen. A contract
+shaped around shells is what an ERP table, a CRM pipeline and a shop's order list can all inherit.
+**Files:** `frontend/src/core/{components/data-table,shells,modules/users}/`,
+`frontend/src/core/lib/{list-state,users,invitations,rbac}.ts`, `frontend/src/core/config/defaults.ts`,
+`frontend/src/core/theme/theme.ts`, the users route files (4 rewritten, 5 deleted),
+`frontend/src/app/(core)/settings/roles/roles-panel.tsx`, `frontend/eslint.config.mjs`, frontend tests (`data-table`,
+`list-state`, `shells`, `users`, `theme`, `module-contract`, `sortable-has-key`, `table-engine-boundary`);
+`FRONTEND_PLATFORM.md` § 6/§ 11/§ 12/§ 13/§ 15, `NEXTJS_STANDARDS.md` § 1/§ 5, `BUILD_ORDER.md`, `TECH_DEBT.md`.
+**Verification:** Dev 2: lint clean, typecheck ✓, vitest 187 passed (24 files), with and without the notes plugin
+linked. Manager: same gate re-run, then on the final tree (with the boundary fix and its test): see the commit.
+Backend unchanged. `npm run build` not run.
+**Notes:**
+- Manager review: `ResourceIndex` imported `RowData` from the engine, breaking the stated boundary. The type is now
+  re-exported by the data-table module, and `table-engine-boundary.test.ts` fails on any engine import outside it.
+- No barrel `index.ts` in `modules/users/`: on a case-insensitive filesystem it collides with `Index.tsx` (TS1149).
+- Deferred: filter drawer and chips (no filter descriptors), rows-per-page and bootstrap `limits`, StatTiles,
+  `?highlight`, column visibility, bulk results (no bulk endpoint), AuditCard, the sortKey allow-list half (8.4),
+  generated zod (8.4). New debt: DB-54 (roles as a module), DB-55 (in-app navigation from a dirty form).
+
 ### BUILD_ORDER 7.2: the job-run monitor and the doctor umbrella
 **What** (Dev 1 `djangobasex-4e`, manager review):
 - **Run record:** every Celery run is recorded in `core_job_run` (core 0006) from Celery's signals (publish → queued

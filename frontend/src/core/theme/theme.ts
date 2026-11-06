@@ -40,9 +40,18 @@ export function readThemeChoice(cookieHeader: string): ThemeChoice {
 /**
  * The body of the pre-paint script. Self-contained (no imports at runtime): it is inlined as a
  * string and runs before React. Any failure leaves the light theme, never a broken page.
+ *
+ * The cookie name comes from operator configuration and is inlined into an HTML <script>, so it goes
+ * through scriptStringLiteral(): JSON.stringify alone would let "</script>" in a prefix end the
+ * script element and inject markup.
  */
+/** A JS string literal that is also safe inside an HTML <script>: "<" can never open "</script>". */
+export function scriptStringLiteral(value: string): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+}
+
 export function themeScript(cookieName: string = THEME_COOKIE): string {
-  return `(function(){try{var n=${JSON.stringify(cookieName)},c="system";document.cookie.split(/;\\s*/).forEach(function(p){var i=p.indexOf("=");if(i>0&&p.slice(0,i)===n){c=decodeURIComponent(p.slice(i+1));}});if(c!=="light"&&c!=="dark"){c=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",c);}catch(e){}})();`;
+  return `(function(){try{var n=${scriptStringLiteral(cookieName)},c="system";document.cookie.split(/;\\s*/).forEach(function(p){var i=p.indexOf("=");if(i>0&&p.slice(0,i)===n){c=decodeURIComponent(p.slice(i+1));}});if(c!=="light"&&c!=="dark"){c=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",c);}catch(e){}})();`;
 }
 
 // --- The client store: the cookie is the state; these are its only writers ---------------------
