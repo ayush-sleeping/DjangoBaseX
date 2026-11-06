@@ -35,8 +35,8 @@ export const USER_COLUMNS: DataTableColumn<User>[] = [
     header: "Status",
     cell: (user) => (
       <span className="inline-flex flex-wrap gap-1">
-        <StatusPill status={user.is_active ? "user.active" : "user.deactivated"} />
-        {user.is_superuser ? <StatusPill status="user.superuser" title="Bypasses every permission check." /> : null}
+        <StatusPill status={user.is_active ? "users.user.active" : "users.user.deactivated"} />
+        {user.is_superuser ? <StatusPill status="users.user.superuser" title="Bypasses every permission check." /> : null}
       </span>
     ),
   },
@@ -52,7 +52,7 @@ export const USER_COLUMNS: DataTableColumn<User>[] = [
     kind: "data",
     header: "Two-factor",
     hideBelow: "lg",
-    cell: (user) => (user.mfa_enabled ? <StatusPill status="user.mfa_on" /> : <span className="text-xs text-muted-foreground">Off</span>),
+    cell: (user) => (user.mfa_enabled ? <StatusPill status="users.user.mfa_on" /> : <span className="text-xs text-muted-foreground">Off</span>),
   },
   {
     id: "last_login",
@@ -104,7 +104,7 @@ export function invitationColumns({ onRevoke, revoking }: { onRevoke?: (i: Invit
       header: "Status",
       cell: (i) => (
         <div>
-          <StatusPill status={`invitation.${i.status}`} />
+          <StatusPill status={`users.invitation.${i.status}`} />
           <span className="mt-0.5 block text-xs text-muted-foreground">{INVITATION_DETAIL[i.status](i)}</span>
         </div>
       ),

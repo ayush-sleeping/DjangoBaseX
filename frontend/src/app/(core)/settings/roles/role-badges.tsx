@@ -7,16 +7,16 @@ export function RoleBadges({ role }: { role: Role }) {
     <span className="inline-flex flex-wrap gap-1 align-middle">
       {role.is_system ? (
         <StatusPill
-          status="role.system"
+          status="rbac.role.system"
           title="Created by the system. It cannot be renamed, deleted, or have its grants changed."
         />
       ) : null}
       {role.is_elevated ? (
-        <StatusPill status="role.elevated" title="Only a superuser can change or assign this role." />
+        <StatusPill status="rbac.role.elevated" title="Only a superuser can change or assign this role." />
       ) : null}
       {role.mfa_required ? (
         <StatusPill
-          status="role.mfa_required"
+          status="rbac.role.mfa_required"
           title="Everyone holding this role must use two-factor authentication."
         />
       ) : null}

@@ -4,10 +4,13 @@
  * Recipes are LITERAL class strings: Tailwind emits only class names it finds whole in source, so
  * `bg-${tone}-tint` would compile to nothing and render a transparent chip with no error.
  *
- * STATUSES is local until BUILD_ORDER 8.4 exports the backend's per-choice status metadata; then a
- * plugin declares the tone of its own statuses and this table becomes that export.
+ * Which tone a status HAS is backend data (registry.statuses → src/generated/statuses.ts and
+ * bootstrap's `statuses`), read through useStatus() in ./statuses.tsx. This file only says what each
+ * tone LOOKS like.
  */
-export type Tone = "ok" | "warn" | "err" | "info" | "neutral";
+import type { Tone } from "@/generated/statuses";
+
+export type { StatusMeta, Tone } from "@/generated/statuses";
 
 export const TONE_PILL: Record<Tone, string> = {
   ok: "bg-ok-tint text-ok-text ring-ok-dot/30",
@@ -35,20 +38,3 @@ export const TONE_SOLID: Record<Tone, string> = {
 
 /** Not set: dashed, no hue — distinct from any real status. */
 export const TONE_EMPTY = "border border-dashed border-border text-muted-foreground";
-
-export type StatusMeta = { tone: Tone; label: string; transitional?: boolean };
-
-/** status key → how it looks. A decision such as "suspended is warn, not err" is made here once. */
-export const STATUSES: Record<string, StatusMeta> = {
-  "user.active": { tone: "ok", label: "Active" },
-  "user.deactivated": { tone: "err", label: "Deactivated" },
-  "user.superuser": { tone: "warn", label: "Superuser" },
-  "user.mfa_on": { tone: "info", label: "Two-factor on" },
-  "invitation.pending": { tone: "info", label: "Pending", transitional: true },
-  "invitation.accepted": { tone: "ok", label: "Accepted" },
-  "invitation.revoked": { tone: "neutral", label: "Revoked" },
-  "invitation.expired": { tone: "warn", label: "Expired" },
-  "role.system": { tone: "neutral", label: "System" },
-  "role.elevated": { tone: "warn", label: "Elevated" },
-  "role.mfa_required": { tone: "info", label: "Two-factor required" },
-};

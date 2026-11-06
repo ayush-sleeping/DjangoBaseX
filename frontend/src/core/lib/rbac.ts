@@ -2,6 +2,8 @@
  * Roles and their grants (AUTH_BLUEPRINT Ch. 8, § 10.3; BUILD_ORDER 1.4). Pages call these and the
  * message helpers; they never shape a request or read an error body themselves.
  */
+import type { components } from "@/generated/api";
+
 import { api, ApiError, type Page } from "./api";
 import { defineKeys } from "./query/keys";
 
@@ -37,20 +39,8 @@ export type PermissionGroup = {
   permissions: CatalogPermission[];
 };
 
-export type Role = {
-  public_id: string;
-  name: string;
-  slug: string;
-  description: string;
-  is_system: boolean;
-  is_elevated: boolean;
-  mfa_required: boolean;
-  /** Granted codes, sorted. */
-  permissions: string[];
-  user_count: number;
-  created_at: string;
-  updated_at: string;
-};
+/** The API's Role (generated from the OpenAPI contract, DB-4). `permissions` is sorted codes. */
+export type Role = components["schemas"]["Role"];
 
 export type NewRole = {
   name: string;
@@ -62,7 +52,9 @@ export type NewRole = {
 };
 
 /** The slug is fixed at creation: PATCH accepts none. */
-export type RoleChanges = Partial<Pick<Role, "name" | "description" | "is_elevated" | "mfa_required">>;
+/** The fields a PATCH may change: the response type's, without its read-only markers. */
+type Writable<T> = { -readonly [K in keyof T]: T[K] };
+export type RoleChanges = Partial<Writable<Pick<Role, "name" | "description" | "is_elevated" | "mfa_required">>>;
 
 const ROLES = "/api/rbac/roles/";
 const roleUrl = (publicId: string) => `${ROLES}${encodeURIComponent(publicId)}/`;

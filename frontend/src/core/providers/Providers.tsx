@@ -14,12 +14,15 @@ import { ConfirmHost } from "@/core/components/confirm";
 import { Toaster } from "@/core/components/toast";
 import { PermissionProvider } from "@/core/lib/permissions";
 import { makeQueryClient } from "@/core/lib/query/client";
+import { StatusProvider } from "@/core/lib/statuses";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(makeQueryClient);
   return (
     <QueryClientProvider client={client}>
-      <PermissionProvider>{children}</PermissionProvider>
+      <PermissionProvider>
+        <StatusProvider>{children}</StatusProvider>
+      </PermissionProvider>
       <ConfirmHost />
       <Toaster />
     </QueryClientProvider>

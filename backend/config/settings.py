@@ -390,6 +390,9 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": f"REST API for {PRODUCT_NAME}.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Separate request and response components (UserRequest vs User), so a read-only field is not
+    # required in a request body: the frontend's generated types are right in both directions.
+    "COMPONENT_SPLIT_REQUEST": True,
 }
 
 # Logging (OBSERVABILITY § 2): JSON in production (the audit refuses anything else), console in dev.

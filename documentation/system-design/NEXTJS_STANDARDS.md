@@ -145,9 +145,15 @@ author meets:
 - **Every page needs a navigation entry.** Navigation is the route gate, and the gate is
   default-deny: a `page.tsx` with no entry renders the denied card for everyone. Register the
   page's `NavItem` from its app's `AppConfig.ready()` — `hidden=True` for a URL-only page,
-  `public=True` for a signed-out page — then regenerate `src/generated/nav-manifest.json`
-  (`DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py`). If you skip that,
-  `tests/architecture/route-manifest.test.ts` fails.
+  `public=True` for a signed-out page — then regenerate the contracts (`src/generated/`, see
+  below). If you skip that, `tests/architecture/route-manifest.test.ts` fails.
+- **`src/generated/` is never hand-edited.** After changing a serializer, a permission, a status, a
+  nav item, a list's `ordering_fields` or a public route, run `DJANGO_SETTINGS_MODULE=config.settings_test uv run python manage.py export_frontend_contracts` in `backend/`, then
+  `npm run contracts` in `frontend/`, and commit the result. CI fails otherwise (backend
+  `test_contracts_export.py`, frontend `contracts.test.ts`). API response types are aliases of
+  `components["schemas"][…]` from `@/generated/api`, never hand-written (see
+  `hand-typed-contracts.test.ts`). A plugin adds its permission codes to the typed
+  `PermissionCode` by augmenting `@/generated/permissions` from its frontend package.
 - **Permissions only through the provider.** Use `usePermissions()` or `<Can>` from
   `src/core/lib/permissions.tsx`, which bootstrap feeds. Never fetch `/me` to decide what to show,
   never compute a superuser bypass, and render `permissionsError` as a retry path. A shared

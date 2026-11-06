@@ -16,7 +16,11 @@
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 
 import { isApiError } from "./api";
+import type { PermissionCode } from "@/generated/permissions";
+
 import { type BootstrapUser, useBootstrap } from "./bootstrap";
+
+export type { PermissionCode } from "@/generated/permissions";
 
 export type PermissionStatus = "loading" | "ready" | "error";
 
@@ -28,9 +32,10 @@ export type Permissions = {
   signedOut: boolean;
   /** Who is signed in; null unless status is "ready". */
   user: BootstrapUser | null;
-  can: (code: string) => boolean;
-  canAny: (codes: readonly string[]) => boolean;
-  canAll: (codes: readonly string[]) => boolean;
+  /** Typed: `can("users.user.delete")` (a code no app declares) is a compile error. */
+  can: (code: PermissionCode) => boolean;
+  canAny: (codes: readonly PermissionCode[]) => boolean;
+  canAll: (codes: readonly PermissionCode[]) => boolean;
   /** Fetch bootstrap again (the retry path). */
   retry: () => Promise<void>;
 };
@@ -51,14 +56,15 @@ export const DENY_ALL: Permissions = {
 
 const Ctx = createContext<Permissions | null>(null);
 
+/** From the effective codes the server sent (plain strings on the wire). */
 export function permissionsFrom(codes: readonly string[]) {
-  const held = new Set(codes);
-  const can = (code: string) => held.has(code);
+  const held = new Set<string>(codes);
+  const can = (code: PermissionCode) => held.has(code);
   return {
     can,
-    canAny: (list: readonly string[]) => list.some(can),
+    canAny: (list: readonly PermissionCode[]) => list.some(can),
     // An empty list grants nothing: "all of none" must not open a gate by accident.
-    canAll: (list: readonly string[]) => list.length > 0 && list.every(can),
+    canAll: (list: readonly PermissionCode[]) => list.length > 0 && list.every(can),
   };
 }
 
@@ -105,7 +111,7 @@ export function useOptionalPermissions(): Permissions {
  * Renders `children` only when `perm` is held. Loading renders nothing; denied renders a VISIBLE
  * card (or `fallback`), so denied never looks like empty or like loading.
  */
-export function Can({ perm, fallback, children }: { perm: string; fallback?: ReactNode; children: ReactNode }) {
+export function Can({ perm, fallback, children }: { perm: PermissionCode; fallback?: ReactNode; children: ReactNode }) {
   const perms = useOptionalPermissions();
   if (perms.status === "loading") return null;
   if (perms.can(perm)) return <>{children}</>;

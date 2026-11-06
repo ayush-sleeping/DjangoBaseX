@@ -51,9 +51,9 @@ export function UserShow({ publicId }: { publicId: string }) {
       badges={
         user ? (
           <>
-            <StatusPill status={user.is_active ? "user.active" : "user.deactivated"} />
-            {user.is_superuser ? <StatusPill status="user.superuser" title="Bypasses every permission check." /> : null}
-            {user.mfa_enabled ? <StatusPill status="user.mfa_on" /> : null}
+            <StatusPill status={user.is_active ? "users.user.active" : "users.user.deactivated"} />
+            {user.is_superuser ? <StatusPill status="users.user.superuser" title="Bypasses every permission check." /> : null}
+            {user.mfa_enabled ? <StatusPill status="users.user.mfa_on" /> : null}
           </>
         ) : null
       }

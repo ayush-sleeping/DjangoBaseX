@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from core.bootstrap import effective_permissions
@@ -98,6 +99,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_mfa_enabled(self, user) -> bool:
         return any(d.confirmed_at for d in user.mfa_devices.all())
 
+    @extend_schema_field(RoleSummarySerializer(many=True))  # the contract names the shape (8.4a)
     def get_roles(self, user) -> list[dict]:
         return RoleSummarySerializer([ur.role for ur in user.user_roles.all()], many=True).data
 
@@ -121,12 +123,17 @@ class DeactivateSerializer(serializers.Serializer):
     reason = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
 
 
+# Invitation.status, computed from the timestamps. Declared as choices so the OpenAPI contract (and
+# the frontend's generated types) carry the four values, not "any string" (BUILD_ORDER 8.4a).
+INVITATION_STATUSES = ("pending", "accepted", "revoked", "expired")
+
+
 class InvitationSerializer(serializers.Serializer):
     public_id = serializers.UUIDField()
     email = serializers.EmailField()
     role = RoleSummarySerializer()
     invited_by = serializers.SerializerMethodField()
-    status = serializers.CharField()
+    status = serializers.ChoiceField(choices=INVITATION_STATUSES)
     expires_at = serializers.DateTimeField()
     accepted_at = serializers.DateTimeField()
     revoked_at = serializers.DateTimeField()

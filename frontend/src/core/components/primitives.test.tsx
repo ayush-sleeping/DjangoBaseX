@@ -105,7 +105,7 @@ describe("Select", () => {
 
 describe("StatusPill", () => {
   it("renders the shared tone for a known status", () => {
-    render(<StatusPill status="user.deactivated" />);
+    render(<StatusPill status="users.user.deactivated" />);
     expect(screen.getByText("Deactivated").closest("[data-tone]")).toHaveAttribute("data-tone", "err");
   });
 

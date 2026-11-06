@@ -1,0 +1,1871 @@
+{
+  "components": {
+    "schemas": {
+      "ActivityLog": {
+        "description": "Read-only by construction: every field is read-only and no write view exists (§ 4.6).",
+        "properties": {
+          "action": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "actor_id": {
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "actor_kind": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "actor_label": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "batch_id": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "changes": {
+            "readOnly": true
+          },
+          "channel": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "event": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "label": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "readOnly": true
+          },
+          "method": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "origin_command": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "origin_host": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "origin_os_user": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "path": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "request_id": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "source": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "target_id": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "target_repr": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "target_type": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "tone": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "via": {
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "actor_id",
+          "actor_kind",
+          "actor_label",
+          "batch_id",
+          "changes",
+          "channel",
+          "created_at",
+          "description",
+          "event",
+          "id",
+          "label",
+          "meta",
+          "method",
+          "origin_command",
+          "origin_host",
+          "origin_os_user",
+          "path",
+          "request_id",
+          "source",
+          "target_id",
+          "target_repr",
+          "target_type",
+          "tone",
+          "via"
+        ],
+        "type": "object"
+      },
+      "Invitation": {
+        "properties": {
+          "accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "invited_by": {
+            "additionalProperties": {},
+            "nullable": true,
+            "readOnly": true,
+            "type": "object"
+          },
+          "public_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/RoleSummary"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusEnum"
+          }
+        },
+        "required": [
+          "accepted_at",
+          "created_at",
+          "email",
+          "expires_at",
+          "invited_by",
+          "public_id",
+          "revoked_at",
+          "role",
+          "status"
+        ],
+        "type": "object"
+      },
+      "InvitationRequest": {
+        "properties": {
+          "accepted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "minLength": 1,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "public_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/RoleSummaryRequest"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusEnum"
+          }
+        },
+        "required": [
+          "accepted_at",
+          "created_at",
+          "email",
+          "expires_at",
+          "public_id",
+          "revoked_at",
+          "role",
+          "status"
+        ],
+        "type": "object"
+      },
+      "PaginatedActivityLogList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityLog"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedInvitationList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/Invitation"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedRoleList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedUserList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "Role": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "is_elevated": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "is_system": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "mfa_required": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "public_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "slug": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "user_count": {
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created_at",
+          "description",
+          "is_elevated",
+          "is_system",
+          "mfa_required",
+          "name",
+          "permissions",
+          "public_id",
+          "slug",
+          "updated_at",
+          "user_count"
+        ],
+        "type": "object"
+      },
+      "RoleSummary": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "public_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "public_id",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "RoleSummaryRequest": {
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "public_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "slug": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "public_id",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "StatusEnum": {
+        "description": "* `pending` - pending\n* `accepted` - accepted\n* `revoked` - revoked\n* `expired` - expired",
+        "enum": [
+          "pending",
+          "accepted",
+          "revoked",
+          "expired"
+        ],
+        "type": "string"
+      },
+      "User": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "deactivated_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "deactivated_reason": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "readOnly": true,
+            "type": "string"
+          },
+          "full_name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "is_active": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "is_superuser": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "last_login": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "mfa_enabled": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "public_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleSummary"
+            },
+            "readOnly": true,
+            "type": "array"
+          }
+        },
+        "required": [
+          "created_at",
+          "deactivated_at",
+          "deactivated_reason",
+          "email",
+          "full_name",
+          "is_active",
+          "is_superuser",
+          "last_login",
+          "mfa_enabled",
+          "public_id",
+          "roles"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "description": "The httpOnly access cookie (<AUTH_COOKIE_PREFIX>_access, __Host- prefixed over HTTPS), set by POST /api/auth/login/ and rotated by /api/auth/refresh/. Unsafe methods also send X-CSRF-Token.",
+        "in": "cookie",
+        "name": "access",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "Generated contract; deployment identity is not part of it.",
+    "title": "API",
+    "version": "contract"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/auth/invitations/accept/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_invitations_accept_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/login/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_login_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_logout_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/me/": {
+      "get": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_me_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/mfa/confirm/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_mfa_confirm_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/mfa/disable/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_mfa_disable_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/mfa/setup/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_mfa_setup_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/mfa/verify/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_mfa_verify_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/password/confirm/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_password_confirm_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/password/forgot/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_password_forgot_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/password/reset/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_password_reset_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/refresh/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_refresh_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/sessions/revoke-all/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "auth_sessions_revoke_all_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/core/activity/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "core_activity_list",
+        "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedActivityLogList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/activity/export/": {
+      "get": {
+        "description": "Streamed over .iterator(), oldest-first. A human reading the evidence in bulk is itself\nan event, so the export is recorded BEFORE it streams.",
+        "operationId": "core_activity_export_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityLog"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/flags/": {
+      "get": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_flags_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/flags/{key}/": {
+      "patch": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_flags_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/lookups/": {
+      "get": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_lookups_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/lookups/{set_key}/values/": {
+      "patch": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_lookups_values_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "set_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      },
+      "post": {
+        "description": "Add a value — the § 14 done-when: a new choice with no deploy.",
+        "operationId": "core_lookups_values_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "set_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/lookups/{set_key}/values/{key}/": {
+      "patch": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_lookups_values_partial_update_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      },
+      "post": {
+        "description": "Add a value — the § 14 done-when: a new choice with no deploy.",
+        "operationId": "core_lookups_values_create_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "set_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/settings/": {
+      "get": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_settings_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/settings/{key}/": {
+      "patch": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_settings_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/core/settings/{key}/reset/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "core_settings_reset_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/me/bootstrap/": {
+      "get": {
+        "description": "GET /api/me/bootstrap/: the shell's one call after sign-in (FRONTEND_PLATFORM § 7).\n/api/auth/me/ stays as the identity endpoint. no-store comes from the cache middleware.",
+        "operationId": "me_bootstrap_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/navigation/": {
+      "get": {
+        "description": "GET /api/me/navigation/: the menu this user may follow, built from registry.navigation.",
+        "operationId": "me_navigation_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/public/config/": {
+      "get": {
+        "description": "GET /api/public/config/: what any visitor's page needs before sign-in (CONFIGURATION § 7).\n\nThe display identity only. Boot identity (cookie names, cache prefix) never leaves the server.\nThe frontend reads this in its root layout, so a rename is a restart, not a rebuild.",
+        "operationId": "public_config_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/api/rbac/permissions/": {
+      "get": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "rbac_permissions_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      }
+    },
+    "/api/rbac/roles/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "rbac_roles_list",
+        "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedRoleList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "rbac_roles_create",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      }
+    },
+    "/api/rbac/roles/{public_id}/": {
+      "delete": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "rbac_roles_destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "rbac_roles_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "rbac_roles_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      }
+    },
+    "/api/rbac/roles/{public_id}/permissions/": {
+      "put": {
+        "description": "Full replacement of the role's grants; answers with the diff.",
+        "operationId": "rbac_roles_permissions_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      }
+    },
+    "/api/rbac/users/{user_public_id}/roles/": {
+      "get": {
+        "description": "The roles one user holds. The user is resolved through users' own visible_to().",
+        "operationId": "rbac_users_roles_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      },
+      "post": {
+        "description": "The roles one user holds. The user is resolved through users' own visible_to().",
+        "operationId": "rbac_users_roles_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      }
+    },
+    "/api/rbac/users/{user_public_id}/roles/{public_id}/": {
+      "delete": {
+        "description": "The roles one user holds. The user is resolved through users' own visible_to().",
+        "operationId": "rbac_users_roles_destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "rbac"
+        ]
+      }
+    },
+    "/api/system/crypto/": {
+      "get": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "system_crypto_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/users/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_list",
+        "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedUserList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_create",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/invitations/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_invitations_list",
+        "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedInvitationList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_invitations_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/invitations/{public_id}/revoke/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_invitations_revoke_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/{public_id}/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/{public_id}/activate/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_activate_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/{public_id}/deactivate/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_deactivate_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/{public_id}/sessions/revoke/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "users_sessions_revoke_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    }
+  }
+}

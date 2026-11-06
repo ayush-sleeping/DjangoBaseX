@@ -1,0 +1,11 @@
+/**
+ * This plugin's permission codes, added to the platform's typed PermissionCode (FRONTEND_PLATFORM § 9),
+ * by module augmentation. Keep it in step with the codes {{package}}/wiring.py registers.
+ */
+import "@/generated/permissions";
+
+declare module "@/generated/permissions" {
+  interface PermissionCodes {
+    "{{label}}.home.view": true;
+  }
+}

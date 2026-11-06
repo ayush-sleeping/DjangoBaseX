@@ -9,13 +9,11 @@ entry is denied. It only shapes a menu and a page: every endpoint behind an item
 itself. core reads permissions through Django's user.get_all_permissions(), never through rbac.
 
 full_manifest() is the unfiltered catalogue the frontend's build-time checks read, committed as
-frontend/src/generated/nav-manifest.json and kept in step by tests/test_navigation.py.
+frontend/src/generated/nav-manifest.json by `manage.py export_frontend_contracts`
+(core/contracts.py) and kept in step by tests/test_contracts_export.py.
 """
 
 from .registry import NavItem, registry
-
-# Where the generated manifest lives, relative to the repository root.
-MANIFEST_PATH = "frontend/src/generated/nav-manifest.json"
 
 
 def _item(item: NavItem) -> dict:

@@ -3,16 +3,10 @@ GET /api/me/navigation/: the server-built menu (FRONTEND_PLATFORM.md § 8, BUILD
 A user lacking an item's permission never receives it; a superuser receives every item.
 """
 
-import json
-import os
-from pathlib import Path
-
 import pytest
-from django.conf import settings
 from django.test import Client
 
 from core import navigation
-from core.plugins import discover
 from core.registry import NavItem, NavSection, PermissionGroupSpec, PermissionSpec, Registry
 from rbac import services as rbac
 from tests.factories import DEFAULT_PASSWORD, UserFactory
@@ -149,26 +143,13 @@ def test_hidden_and_public_items_reach_the_client_so_the_route_gate_can_match_th
 
 
 # --- The committed manifest the frontend's route checks read (FRONTEND_PLATFORM § 10) ----------
+# It is one of the generated contracts now (core/contracts.py, BUILD_ORDER 8.4a): its drift is
+# checked with the others in tests/test_contracts_export.py.
 
-MANIFEST = Path(__file__).resolve().parents[2] / navigation.MANIFEST_PATH
 
-
-def test_the_committed_nav_manifest_matches_the_registry():
-    """frontend/src/generated/nav-manifest.json is the input to the route-manifest test that walks
-    every page. It is generated from the live registry; regenerate it with
-    DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py (BUILD_ORDER 8.4 folds this
-    into export_frontend_contracts)."""
-    plugins = frozenset(p.label for p in discover(settings.BASE_DIR / "plugins"))
-    live = navigation.full_manifest(exclude_modules=plugins)
-    assert live["sections"], "no navigation is registered: every page would be denied"
-    rendered = json.dumps(live, indent=2, ensure_ascii=False) + "\n"
-    if os.environ.get("DBX_WRITE_NAV_MANIFEST") == "1":
-        MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-        MANIFEST.write_text(rendered, encoding="utf-8")
-    committed = MANIFEST.read_text(encoding="utf-8") if MANIFEST.exists() else ""
-    assert rendered == committed, (
-        f"{navigation.MANIFEST_PATH} is stale: regenerate it with "
-        "DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py and commit it"
+def test_the_manifest_is_not_empty():
+    assert navigation.full_manifest()["sections"], (
+        "no navigation is registered: every page would be denied"
     )
 
 

@@ -736,7 +736,12 @@ status metadata, error codes, the full nav manifest — § 10).
 - **The context:** `{status, permissionsError, signedOut, user, can, canAny, canAll, retry}`.
   `signedOut` separates "a 401 the refresh could not recover" from "the server failed". `user` is
   bootstrap's user. `canAll([])` is false.
-- **Not built yet:** `PermissionCode` is still `string` until the generated union lands (8.4).
+- **`PermissionCode` (8.4a)** is `keyof PermissionCodes` from the generated
+  `src/generated/permissions.ts`. `can`, `canAny`, `canAll` and `<Can perm>` take it, so a typo'd
+  code is a compile error. `permissions.test.tsx` holds a `@ts-expect-error` positive control.
+  - A plugin adds its own codes by module augmentation of `@/generated/permissions` from its
+    frontend package; see `examples/plugins/notes/frontend/permissions.ts` and the template.
+  - The route gate checks nav-entry codes as server data, through one documented cast.
 - **Still reading `user.is_superuser`:** the existing role and invitation screens use it for the
   elevated-role affordances only, which the backend enforces too. The `no-superuser-gating` guard is
   not built yet.
@@ -814,10 +819,10 @@ the one deepest-prefix function, shared by the gate and the test), `src/core/ico
     `rbac/navigation.py`). `/` is **public**: it is the status page, and the sign-in page links
     back to it.
 - **The manifest:** `core.navigation.full_manifest()` is committed as
-  `frontend/src/generated/nav-manifest.json`, and `backend/tests/test_navigation.py` fails when it
-  is stale. Regenerate it with `DBX_WRITE_NAV_MANIFEST=1 uv run pytest tests/test_navigation.py`
-  (8.4 folds this into `export_frontend_contracts`). The committed file leaves out linked
-  plugins' sections, so it is identical with or without a plugin installed.
+  `frontend/src/generated/nav-manifest.json` by `export_frontend_contracts` (§ 24; since 8.4a,
+  `DBX_WRITE_NAV_MANIFEST` is retired), and `backend/tests/test_contracts_export.py` fails when it is
+  stale. The committed file leaves out linked plugins' sections, so it is identical with or without a
+  plugin installed.
 - **The gate:** `resolveRoute()` is in `src/core/shell/nav/resolve-route.ts` (deepest prefix;
   `exact` matches only its own href). The gate itself is `src/core/shell/nav/route-gate.tsx`
   (`decide()`, `useRouteGate()`, `RouteGate`), mounted by `src/app/(core)/layout.tsx` and
@@ -1118,8 +1123,13 @@ a positive-control fixture per rule that must make ESLint fail (§ 26).
   - The icon registry is `src/core/icons/registry.ts` (lucide-react 1.61.0): names → icons, and an
     unknown name renders nothing.
 - **Status tones:** `src/core/lib/status-tone.ts` holds the literal recipes (`TONE_PILL`,
-  `TONE_DOT`, `TONE_SOLID`, `TONE_EMPTY`). `STATUSES` is a **local** table (user, invitation and
-  role statuses) until 8.4 exports the backend's per-choice status metadata.
+  `TONE_DOT`, `TONE_SOLID`, `TONE_EMPTY`). **Since 8.4a, which tone a status has is backend data:**
+  - The owning app registers it (`registry.statuses`, `StatusSpec(key, label, tone, transitional)`,
+    keys namespaced by the module: `users.user.active`, `rbac.role.system`).
+  - `src/generated/statuses.ts` holds core's.
+  - Bootstrap's `statuses` holds every app's, plugins included.
+  - `StatusProvider` and `useStatus()` (`src/core/lib/statuses.tsx`) prefer bootstrap and fall back
+    to the generated table.
 - **The ESLint bans** (`eslint.config.mjs` → `UI_BANS`) form one `no-restricted-syntax` list, each
   with its home:
   - `<table>` (home `data-table/`; the temporary 8.3a exemption for three lists was removed in
@@ -1632,6 +1642,50 @@ on the full checkout. [`API_PLATFORM.md`](API_PLATFORM.md) owns schema quality.
 
 **Enforced by.** CI step: run the export, then `git diff --exit-code src/generated/`. Backend
 `test_contracts_export.py` exports into a temp dir and diffs against the committed files.
+
+**As built (BUILD_ORDER 8.4a; closes DB-4).**
+- **Regenerate:** `DJANGO_SETTINGS_MODULE=config.settings_test uv run python manage.py export_frontend_contracts` in `backend/` (any settings work; the test settings need no `.env`), then
+  `npm run contracts` in `frontend/` (openapi-typescript 7.13.0, types only; there is no generated
+  client, and the transport stays the one in § 2). Commit `frontend/src/generated/`.
+  `export_frontend_contracts --check` reports stale files without writing.
+- **`core/contracts.py`** renders:
+  - `openapi.json`: drf-spectacular with `COMPONENT_SPLIT_REQUEST`, the cookie-auth scheme
+    (`users/schema.py`) and a fixed `info`, so it does not differ per deployment;
+  - `permissions.ts` (a mergeable `interface PermissionCodes` and `PermissionCode`);
+  - `statuses.ts`;
+  - `ordering.ts` (route name → `ordering_fields`, list routes only);
+  - `public-routes.ts`;
+  - `nav-manifest.json`.
+
+  Output is sorted and deterministic. **Linked plugins' contributions are left out** (their
+  permission prefix, route prefix and status/nav module), so the committed files are the
+  boilerplate's own and the check passes in CI's plugin-linked run too. A plugin reaches the
+  frontend through bootstrap and type augmentation.
+- **No extra CI step.** The drift checks run inside the existing suites:
+  - backend `tests/test_contracts_export.py` (every file is current, deployment-independent, and
+    plugins are pruned);
+  - frontend `tests/architecture/contracts.test.ts` (`api.d.ts` equals openapi-typescript's output
+    for the committed `openapi.json`).
+
+  Changing a serializer field without regenerating fails the first (verified with a probe field).
+- **Types:** `User`, `RoleRef`, `Invitation` (and `InvitationStatus`) and `Role` are aliases of
+  `components["schemas"][…]`.
+  - Aliasing found real drift, now fixed: `User.roles` was untyped in the contract (now
+    `@extend_schema_field(RoleSummarySerializer(many=True))`), `Invitation.status` was any string
+    (now a `ChoiceField`), and the role editor mutated read-only fields (`RoleChanges` is now a
+    writable view).
+  - `tests/architecture/hand-typed-contracts.test.ts` lists every remaining hand-written object type
+    in `src/core/lib/`, as a wire type awaiting a schema (Me, Bootstrap, PublicConfig, MfaSetup, the
+    permission catalogue, the role-create body) or client-only. It is a two-way ratchet.
+- **Sorting:** `sortable-has-key.test.ts` now also checks that a file with a `sortKey` exports
+  `LIST_ENDPOINT` and that every `sortKey` is in that route's exported `ordering_fields`.
+- **Not built yet:**
+  - the error-code catalogue and `errors.<code>` keys (BUILD_ORDER 9.2);
+  - schema quality (9.2): 26 views still have no serializer for drf-spectacular, so they are absent
+    from the contract, and two lookups operationIds collide;
+  - enum names: `Invitation.status` is the generic `StatusEnum` until `ENUM_NAME_OVERRIDES` is set;
+  - generated zod schemas;
+  - enum/choice exports beyond statuses.
 
 ---
 

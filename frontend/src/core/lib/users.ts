@@ -2,6 +2,8 @@
  * The Users module (BUILD_ORDER 1.5; AUTH_BLUEPRINT § 10.2). Pages call these and the message
  * helpers; they never shape a request or read an error body themselves.
  */
+import type { components } from "@/generated/api";
+
 import { api, ApiError, type Page } from "./api";
 
 /** The code each endpoint enforces. Gate every control on exactly one of these (affordance parity). */
@@ -18,22 +20,11 @@ export const USER_CODES = {
   revokeSessions: "users.sessions.revoke",
 } as const;
 
-export type RoleRef = { public_id: string; slug: string; name: string };
+/** A role as embedded in other records: the API's RoleSummary (generated, DB-4). */
+export type RoleRef = components["schemas"]["RoleSummary"];
 
-/** No is_staff, on purpose: it is Django-admin trust, not an authorization concept (§ 3.1). */
-export type User = {
-  public_id: string;
-  email: string;
-  full_name: string;
-  is_active: boolean;
-  is_superuser: boolean;
-  mfa_enabled: boolean;
-  last_login: string | null;
-  created_at: string;
-  deactivated_at: string | null;
-  deactivated_reason: string;
-  roles: RoleRef[];
-};
+/** The API's User (generated from the OpenAPI contract, DB-4). No is_staff, on purpose (§ 3.1). */
+export type User = components["schemas"]["User"];
 
 const USERS = "/api/users/";
 const userUrl = (publicId: string) => `${USERS}${encodeURIComponent(publicId)}/`;

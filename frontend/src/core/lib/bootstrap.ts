@@ -7,6 +7,8 @@
  * function as has_perm(); the frontend never special-cases a bypass. `degraded` lists decorative
  * sections that failed on the server and were left out.
  */
+import type { StatusMeta } from "@/generated/statuses";
+
 import { api } from "./api";
 import type { NavSection } from "@/core/shell/nav/resolve-route";
 import { defineKeys } from "./query/keys";
@@ -29,6 +31,8 @@ export type Bootstrap = {
   server_time: string;
   nav?: NavSection[];
   flags?: string[];
+  /** Every app's status metadata, linked plugins included (decorative). */
+  statuses?: Record<string, StatusMeta>;
   build?: string;
   degraded: string[];
 };

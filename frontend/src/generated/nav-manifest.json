@@ -1,129 +1,129 @@
 {
   "sections": [
     {
-      "key": "home",
-      "label": "Home",
-      "module": "users",
       "items": [
         {
+          "exact": true,
+          "hidden": false,
+          "href": "/",
           "key": "home",
           "label": "Home",
-          "href": "/",
           "permission": null,
-          "hidden": false,
-          "public": true,
-          "exact": true
+          "public": true
         }
-      ]
+      ],
+      "key": "home",
+      "label": "Home",
+      "module": "users"
     },
     {
-      "key": "people",
-      "label": "People",
-      "module": "users",
       "items": [
         {
+          "exact": false,
+          "hidden": false,
+          "href": "/users",
           "key": "users",
           "label": "Users",
-          "href": "/users",
           "permission": "users.users.view",
-          "hidden": false,
-          "public": false,
-          "exact": false
+          "public": false
         },
         {
+          "exact": false,
+          "hidden": false,
+          "href": "/users/invitations",
           "key": "invitations",
           "label": "Invitations",
-          "href": "/users/invitations",
           "permission": "users.invitations.send",
-          "hidden": false,
-          "public": false,
-          "exact": false
+          "public": false
         },
         {
+          "exact": false,
+          "hidden": true,
+          "href": "/users/new",
           "key": "new",
           "label": "New user",
-          "href": "/users/new",
           "permission": "users.users.create",
-          "hidden": true,
-          "public": false,
-          "exact": false
+          "public": false
         }
-      ]
+      ],
+      "key": "people",
+      "label": "People",
+      "module": "users"
     },
     {
-      "key": "settings",
-      "label": "Settings",
-      "module": "rbac",
       "items": [
         {
+          "exact": false,
+          "hidden": false,
+          "href": "/settings/roles",
           "key": "roles",
           "label": "Roles",
-          "href": "/settings/roles",
           "permission": "rbac.roles.view",
-          "hidden": false,
-          "public": false,
-          "exact": false
+          "public": false
         }
-      ]
+      ],
+      "key": "settings",
+      "label": "Settings",
+      "module": "rbac"
     },
     {
-      "key": "account",
-      "label": "Account",
-      "module": "users",
       "items": [
         {
+          "exact": false,
+          "hidden": false,
+          "href": "/account/security",
           "key": "security",
           "label": "Security",
-          "href": "/account/security",
           "permission": null,
-          "hidden": false,
-          "public": false,
-          "exact": false
+          "public": false
         }
-      ]
+      ],
+      "key": "account",
+      "label": "Account",
+      "module": "users"
     },
     {
-      "key": "auth",
-      "label": "Sign in",
-      "module": "users",
       "items": [
         {
+          "exact": false,
+          "hidden": true,
+          "href": "/login",
           "key": "login",
           "label": "Sign in",
-          "href": "/login",
           "permission": null,
-          "hidden": true,
-          "public": true,
-          "exact": false
+          "public": true
         },
         {
+          "exact": false,
+          "hidden": true,
+          "href": "/forgot-password",
           "key": "forgot-password",
           "label": "Forgot password",
-          "href": "/forgot-password",
           "permission": null,
-          "hidden": true,
-          "public": true,
-          "exact": false
+          "public": true
         },
         {
+          "exact": false,
+          "hidden": true,
+          "href": "/reset-password",
           "key": "reset-password",
           "label": "Reset password",
-          "href": "/reset-password",
           "permission": null,
-          "hidden": true,
-          "public": true,
-          "exact": false
+          "public": true
         },
         {
+          "exact": false,
+          "hidden": true,
+          "href": "/accept-invitation",
           "key": "accept-invitation",
           "label": "Accept invitation",
-          "href": "/accept-invitation",
           "permission": null,
-          "hidden": true,
-          "public": true,
-          "exact": false
+          "public": true
         }
-      ]
+      ],
+      "key": "auth",
+      "label": "Sign in",
+      "module": "users"
     }
   ]
 }

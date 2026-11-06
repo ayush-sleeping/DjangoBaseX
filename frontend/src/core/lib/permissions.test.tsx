@@ -106,8 +106,18 @@ describe("<Can>", () => {
 
 describe("permissionsFrom", () => {
   it("canAll of nothing grants nothing", () => {
-    const p = permissionsFrom(["a.b.c"]);
+    const p = permissionsFrom(["users.users.view"]);
     expect(p.canAll([])).toBe(false);
-    expect(p.canAny(["x.y.z", "a.b.c"])).toBe(true);
+    expect(p.canAny(["rbac.roles.view", "users.users.view"])).toBe(true);
+    expect(p.canAll(["rbac.roles.view", "users.users.view"])).toBe(false);
+  });
+});
+
+describe("PermissionCode is typed from the backend catalogue", () => {
+  it("rejects a code no app declares, at compile time", () => {
+    const p = permissionsFrom([]);
+    // npm run typecheck fails if this line ever stops being an error (a typo'd code must not compile).
+    // @ts-expect-error — "users.user.delete" is not a declared permission code
+    expect(p.can("users.user.delete")).toBe(false);
   });
 });

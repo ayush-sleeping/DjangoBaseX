@@ -497,6 +497,56 @@ class AuditActionRegistry(_Catalog):
         return tuple(self._actions[k] for k in sorted(self._actions))
 
 
+# --- Status metadata (FRONTEND_PLATFORM § 13, BUILD_ORDER 8.4a) ----------------------------------
+
+# The tones a status chip may take. A decision such as "suspended is warn, not err" is recorded
+# once, here, by the app that owns the status — the frontend renders it and never re-decides it.
+STATUS_TONES = ("ok", "warn", "err", "info", "neutral")
+# "<module>.<thing>" or "<module>.<entity>.<state>": "users.active", "billing.invoice.void".
+STATUS_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$")
+
+
+@dataclass(frozen=True)
+class StatusSpec:
+    key: str  # namespaced by the owning module: its first segment
+    label: str
+    tone: str  # one of STATUS_TONES
+    transitional: bool = False  # a state on its way to another (pending, syncing): drawn pulsing
+
+
+class StatusRegistry(_Catalog):
+    """Every status a screen may show, with its tone and label. Exported to the frontend
+    (src/generated/statuses.ts) and carried in bootstrap, so a plugin's statuses render too."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._specs: dict[str, StatusSpec] = {}
+
+    def register(self, spec: StatusSpec) -> None:
+        owner = _caller_module()
+        with self._lock:
+            name = f"status {getattr(spec, 'key', spec)!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(spec, StatusSpec):
+                raise RegistryError(f"expected a StatusSpec, got {type(spec).__name__}")
+            if not isinstance(spec.key, str) or not STATUS_KEY_PATTERN.match(spec.key):
+                raise RegistryError(f"{name}: not <module>.<state> (lowercase, digits, _)")
+            _require_label(name, spec.label)
+            if spec.tone not in STATUS_TONES:
+                raise RegistryError(f"{name}: tone {spec.tone!r} is not one of {STATUS_TONES}")
+            if spec.key in self._specs:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[spec.key]}; "
+                    f"registered again by {owner}"
+                )
+            self._specs[spec.key] = spec
+            self._owner_of[spec.key] = owner
+
+    def specs(self) -> tuple[StatusSpec, ...]:
+        self.seal()
+        return tuple(self._specs[k] for k in sorted(self._specs))
+
+
 class EncryptedFieldRegistry(_Catalog):
     """Every column holding core.crypto ciphertext, so rotate_encryption walks the complete set.
     Purposes are validated against core.crypto's constants by a system check, not here: this
@@ -1181,6 +1231,7 @@ class Registry:
         self.dataplane = DataPlaneRegistry()
         self.encrypted_fields = EncryptedFieldRegistry()
         self.audit_actions = AuditActionRegistry()
+        self.statuses = StatusRegistry()
         self.api_routes = ApiRouteRegistry()
         self.public_routes = PublicRouteRegistry()
         self.settings = SettingRegistry()

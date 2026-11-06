@@ -959,6 +959,11 @@ mandatory primitives — built against the Users module of 1.5 as the reference.
 **Done when:** the token-completeness test passes in both themes; the Users module uses only the shells.
 
 ### 8.4 — i18n, formatters and contract generation ⬜
+*Split 2026-11-06.* **8.4a ✅ (2026-11-06, Dev 2 `djangobasex-a9`, manager review):** `manage.py
+export_frontend_contracts` writes `frontend/src/generated/` (OpenAPI, typed permission codes, status metadata,
+ordering allow-lists, public routes, nav manifest), with plugin contributions excluded; `npm run contracts` (openapi-typescript,
+types only) produces `api.d.ts`; drift tests on both sides fail CI (acceptance 1). Closes **DB-4**. **8.4b ⬜:**
+localization in bootstrap, the formatters and their lint bans (acceptance 2), i18n.
 A translation layer with per-plugin catalogues; formatters driven by bootstrap locale/currency/timezone;
 OpenAPI → TypeScript types plus exported enums and permission codes, each with a drift check. Closes **DB-4**.
 
@@ -990,6 +995,12 @@ tuple (`core/bootstrap.py`, 8.2) into the registry, keeping its `(key, build, es
 data; `manage.py check` passes with every plugin removed from `INSTALLED_APPS`.
 
 ### 9.2 — API platform ⬜
+*Input from 8.4a:* 26 views are absent from the OpenAPI contract ("unable to guess serializer"): AcceptInvitation,
+Bootstrap, CryptoStatus, FlagDetail, FlagList, ForgotPassword, Login, Logout, LookupList, LookupWrite, Me, MfaConfirm,
+MfaDisable, MfaSetup, MfaVerify, Navigation, PasswordConfirm, PermissionCatalog, PublicConfig, Refresh, ResetPassword,
+RevokeOtherSessions, SettingDetail, SettingList, SettingReset, UserRoleViewSet; two operationId collisions
+(`core_lookups_values_create`, `core_lookups_values_partial_update`); and stable enum names need
+`ENUM_NAME_OVERRIDES`. Each fixed view retires its entry in `hand-typed-contracts.test.ts`.
 The shared list pipeline (required pk tiebreak, unknown filters rejected), the error-code catalogue, the 429
 contract, content-sniffed uploads with private file serving, and machine callers once **DB-21** is decided.
 

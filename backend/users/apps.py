@@ -36,3 +36,8 @@ class UsersConfig(AppConfig):
         from .navigation import register as register_navigation
 
         register_navigation()
+        # Status tones (FRONTEND_PLATFORM § 13) and the OpenAPI description of cookie auth (§ 24).
+        from . import schema  # noqa: F401 — registers the auth extension with drf-spectacular
+        from .statuses import register as register_statuses
+
+        register_statuses()

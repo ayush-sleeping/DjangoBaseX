@@ -26,6 +26,7 @@ from typing import Any
 
 from django.utils import timezone
 
+from .contracts import PluginScope, status_table
 from .flags import flags_for
 from .navigation import navigation_for
 from .observability.health import read_release
@@ -57,6 +58,9 @@ CORE_CONTRIBUTORS: tuple[Contributor, ...] = (
     Contributor("nav", lambda request: navigation_for(request.user)),
     Contributor("flags", lambda request: flags_for(request.user)),
     Contributor("build", lambda request: read_release()),
+    # Every status's tone and label, linked plugins' included: the frontend's generated table holds
+    # core's only, so a plugin's chips take their tone from here (FRONTEND_PLATFORM § 13).
+    Contributor("statuses", lambda request: status_table(PluginScope.none())),
 )
 
 

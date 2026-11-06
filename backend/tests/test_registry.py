@@ -680,3 +680,42 @@ def test_e009_is_silent_when_every_catalog_seals(monkeypatch):
 
     monkeypatch.setattr(core.registry, "registry", Registry())
     assert checks.check_registry_seals(None) == []
+
+
+# --- Status metadata (BUILD_ORDER 8.4a) -----------------------------------------------------------
+
+
+def test_statuses_are_read_sorted_and_sealed():
+    from core.registry import StatusSpec
+
+    reg = Registry()
+    reg.statuses.register(StatusSpec("billing.invoice.void", "Void", "neutral"))
+    reg.statuses.register(StatusSpec("billing.invoice.paid", "Paid", "ok"))
+    assert [s.key for s in reg.statuses.specs()] == ["billing.invoice.paid", "billing.invoice.void"]
+    with pytest.raises(RegistryError, match="sealed"):
+        reg.statuses.register(StatusSpec("billing.invoice.late", "Late", "warn"))
+
+
+@pytest.mark.parametrize(
+    "spec, message",
+    [
+        (("billing.invoice.void", "Void", "purple"), "tone 'purple' is not one of"),
+        (("Billing.Void", "Void", "ok"), "not <module>.<state>"),
+        (("billing", "Void", "ok"), "not <module>.<state>"),
+        (("billing.invoice.void", " ", "ok"), "empty label"),
+    ],
+)
+def test_a_status_is_validated(spec, message):
+    from core.registry import StatusSpec
+
+    with pytest.raises(RegistryError, match=message):
+        Registry().statuses.register(StatusSpec(*spec))
+
+
+def test_a_status_key_is_registered_once():
+    from core.registry import StatusSpec
+
+    reg = Registry()
+    reg.statuses.register(StatusSpec("billing.invoice.void", "Void", "neutral"))
+    with pytest.raises(RegistryError, match="already registered"):
+        reg.statuses.register(StatusSpec("billing.invoice.void", "Void", "neutral"))

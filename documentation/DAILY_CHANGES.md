@@ -26,6 +26,39 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 8.4a: generated frontend contracts (closes DB-4)
+**What** (Dev 2 `djangobasex-a9`, manager review; the first half of 8.4):
+- **`manage.py export_frontend_contracts`** (`core/contracts.py`, `--check`) writes `frontend/src/generated/`: the
+  OpenAPI document, typed permission codes, status metadata, list ordering allow-lists, public routes and the nav
+  manifest. Output is deterministic and deployment-independent, and linked plugins' contributions are left out, so
+  the files are identical with or without a plugin. `npm run contracts` (openapi-typescript 7.13.0, types only)
+  produces `api.d.ts`.
+- **Drift checks:** `tests/test_contracts_export.py` and `tests/architecture/contracts.test.ts` fail CI when anything
+  is stale, naming the command to run. Verified live with a probe serializer field.
+- **DB-4:** `User`, `Invitation`, `Role` and `RoleRef` alias the generated types; a ratchet lists every remaining
+  hand-written type with the view that owes it a schema. Aliasing found three drifts, now fixed: untyped
+  `User.roles`, `Invitation.status` as any string, and the role editor writing read-only fields.
+- **Typed `PermissionCode`:** a typo'd code is a compile error; plugins add theirs by module augmentation (notes
+  example and template).
+- **`registry.statuses`:** apps declare each status's tone once; it reaches the frontend in the generated table and
+  in bootstrap (so plugin statuses render with their tone).
+- `sortable-has-key` now checks each `sortKey` against its endpoint's ordering allow-list. Cookie auth is described in
+  the schema; `COMPONENT_SPLIT_REQUEST` is on. `DBX_WRITE_NAV_MANIFEST` is retired. The plugin template's
+  home page lost a raw palette class that would have failed 8.3a's ban.
+**Why:** a hand-typed client typechecks against yesterday's contract while being wrong, and this round found three
+such drifts. Constants re-declared on both sides disagree.
+**Files:** `backend/core/{contracts,registry,checks,bootstrap,navigation}.py`,
+`backend/core/management/commands/export_frontend_contracts.py`, `backend/users/{schema,statuses,serializers,apps}.py`,
+`backend/rbac/{statuses,apps}.py`, `backend/config/settings.py`, backend tests; `frontend/{package.json,package-lock.json}`,
+`frontend/src/generated/*`, `frontend/src/core/lib/{permissions,statuses,status-tone,bootstrap,users,invitations,rbac}`,
+frontend tests; the notes example and plugin template; `FRONTEND_PLATFORM.md` § 9/§ 10/§ 13/§ 24,
+`NEXTJS_STANDARDS.md` § 3a, `BUILD_ORDER.md`, `TECH_DEBT.md`.
+**Verification:** Dev 2: backend SQLite 1475 passed, 5 skipped (with the notes plugin 1482 passed, 3 skipped);
+`export_frontend_contracts --check` current; frontend lint, typecheck, vitest 198 passed, both ways. Manager:
+the final tree on SQLite and PostgreSQL 16: see the commit.
+**Notes:** 26 views have no OpenAPI schema yet and are absent from the contract (listed under BUILD_ORDER 9.2). New
+debt: DB-56 (plugin status lane check).
+
 ### BUILD_ORDER 8.3b: the DataTable, the shells and the Users reference module (8.3 complete)
 **What** (Dev 2 `djangobasex-a9`, manager review; the second half of 8.3):
 - **DataTable** (`src/core/components/data-table/`): a server-driven list on TanStack Table v9. Modules declare our own

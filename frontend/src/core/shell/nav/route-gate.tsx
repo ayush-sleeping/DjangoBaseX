@@ -19,7 +19,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { useBootstrap } from "@/core/lib/bootstrap";
-import { DeniedCard, type Permissions, usePermissions } from "@/core/lib/permissions";
+import { DeniedCard, type PermissionCode, type Permissions, usePermissions } from "@/core/lib/permissions";
 
 import { MANIFEST_ENTRIES } from "./manifest";
 import { flatten, resolveRoute, type RouteEntry } from "./resolve-route";
@@ -42,7 +42,9 @@ export function decide(
   if (perms.status === "loading") return { kind: "loading" };
   if (perms.status === "error") return perms.signedOut ? { kind: "signed-out" } : { kind: "error" };
   if (!entry) return { kind: "no-entry" };
-  if (entry.permission !== null && !perms.can(entry.permission)) return { kind: "denied", entry };
+  // The code is data from the server's own navigation (a plugin's included), not a literal in
+  // source, so the compile-time PermissionCode check cannot apply: it is checked as the server sent it.
+  if (entry.permission !== null && !perms.can(entry.permission as PermissionCode)) return { kind: "denied", entry };
   return { kind: "allow", entry };
 }
 

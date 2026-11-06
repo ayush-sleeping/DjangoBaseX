@@ -4,27 +4,18 @@
  * The accept step is public and authenticates by the token in the emailed link, like a password
  * reset: the page carrying it follows the token-page rule (NEXTJS_STANDARDS § 3).
  */
+import type { components } from "@/generated/api";
+
 import { api, ApiError, type Page } from "./api";
-import type { RoleRef } from "./users";
 
 /** List, send and revoke are one right: whoever may invite may see and withdraw invitations. */
 export const INVITATION_CODES = {
   send: "users.invitations.send",
 } as const;
 
-export type InvitationStatus = "pending" | "accepted" | "revoked" | "expired";
-
-export type Invitation = {
-  public_id: string;
-  email: string;
-  role: RoleRef;
-  invited_by: { public_id: string; email: string } | null;
-  status: InvitationStatus;
-  expires_at: string;
-  accepted_at: string | null;
-  revoked_at: string | null;
-  created_at: string;
-};
+/** The API's Invitation (generated from the OpenAPI contract, DB-4). */
+export type Invitation = components["schemas"]["Invitation"];
+export type InvitationStatus = Invitation["status"];
 
 const INVITATIONS = "/api/users/invitations/";
 
