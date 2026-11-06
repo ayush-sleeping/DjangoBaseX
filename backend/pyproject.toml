@@ -8,8 +8,10 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "argon2-cffi>=23",
+    "celery[redis]>=5.6.3,<5.7",
     "cryptography>=44",
     "django>=5.2,<6",
+    "django-celery-beat>=2.9.0",
     "django-cors-headers>=4.9.0",
     "django-environ>=0.14.0",
     "djangorestframework>=3.18.1",
@@ -26,6 +28,7 @@ dev = [
     "pytest>=8",
     "pytest-cov>=6",
     "pytest-django>=4.9",
+    "pyyaml>=6",
     "ruff>=0.16.6",
 ]
 

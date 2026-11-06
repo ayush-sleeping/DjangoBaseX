@@ -29,3 +29,6 @@ class UsersConfig(AppConfig):
 
         for url_name, reason in PUBLIC_ROUTES.items():
             registry.public_routes.register(url_name, reason)
+        from .jobs import AUTH_CLEANUP
+
+        registry.jobs.register(AUTH_CLEANUP)

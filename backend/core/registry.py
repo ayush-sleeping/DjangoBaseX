@@ -931,6 +931,140 @@ class SettingRegistry(_Catalog):
         return MappingProxyType({p: MappingProxyType(k) for p, k in self._policies.items()})
 
 
+# --- Background jobs (JOBS_AND_INTEGRATIONS.md § 1) ---------------------------------------------
+
+
+# "<owner>.<job>": the task name, the schedule key, the lock prefix and the monitor row at once,
+# so renaming one is a migration (§ 1).
+JOB_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
+_QUEUE_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
+_CRON_FIELD = re.compile(r"^[0-9*/,\-]+$")
+
+
+@dataclass(frozen=True)
+class Interval:
+    """Every `seconds`. The sync staggers it by a per-name offset so a fleet never wakes at once."""
+
+    seconds: int
+
+
+@dataclass(frozen=True)
+class Cron:
+    """A five-field crontab ("17 3 * * *"), in CELERY_TIMEZONE. Pick an explicit minute, not :00."""
+
+    expression: str
+
+    def fields(self) -> tuple[str, str, str, str, str]:
+        minute, hour, day_of_month, month_of_year, day_of_week = self.expression.split()
+        return minute, hour, day_of_month, month_of_year, day_of_week
+
+
+@dataclass(frozen=True)
+class JobSpec:
+    """One background job (§ 1). `func` is a dotted path to `def run(ctx) -> int`."""
+
+    name: str
+    func: str
+    owner_module: str
+    description: str  # what it does, and what breaks if it stops
+    queue: str = "default"
+    schedule: Interval | Cron | None = None
+    enabled_by_default: bool = True
+    destructive: bool = False  # ⇒ enabled_by_default must be False
+    idempotent: bool = False  # a claim its tests prove; the only jobs that get acks_late
+    time_limit: int = 300  # hard, seconds
+    soft_time_limit: int = 270  # always < time_limit
+    expires: int | None = None  # periodic: < period, so a backlog drops stale runs
+    single_flight: bool = True
+    unit: str = "rows"  # what the returned count means
+
+
+class JobRegistry(_Catalog):
+    """Declared background jobs: the ONLY schedule (§ 1). Workers, beat and the topology tests
+    read this list and keep no second one. dbx.jobs.E001–E003 are refused here, at register()."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._specs: dict[str, JobSpec] = {}
+
+    def register(self, spec: JobSpec) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(spec, JobSpec):
+                raise RegistryError(f"expected a JobSpec, got {type(spec).__name__}")
+            name = f"job {spec.name!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(spec.name, str) or not JOB_NAME_PATTERN.match(spec.name):
+                raise RegistryError(f"{name}: not <owner>.<job> (lowercase, digits, _)")
+            if not isinstance(spec.func, str) or not _DOTTED_PATTERN.match(spec.func):
+                raise RegistryError(f"{name}: func must be a dotted path, got {spec.func!r}")
+            if spec.func.count(".") < 1:
+                raise RegistryError(f"{name}: func {spec.func!r} names no module")
+            for field_name in ("owner_module", "description"):
+                value = getattr(spec, field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            if not isinstance(spec.queue, str) or not _QUEUE_PATTERN.match(spec.queue):
+                raise RegistryError(f"{name}: queue {spec.queue!r} is not a plain queue name")
+            self._check_schedule(name, spec.schedule)
+            if spec.destructive and spec.enabled_by_default:
+                raise RegistryError(
+                    f"{name} (dbx.jobs.E002) is destructive and enabled by default: "
+                    "destructive jobs ship off until an operator turns them on"
+                )
+            if not (0 < spec.soft_time_limit < spec.time_limit):
+                raise RegistryError(
+                    f"{name} (dbx.jobs.E003): soft_time_limit {spec.soft_time_limit} must be "
+                    f"positive and below time_limit {spec.time_limit}"
+                )
+            if (
+                isinstance(spec.schedule, Interval)
+                and spec.expires is not None
+                and spec.expires >= spec.schedule.seconds
+            ):
+                raise RegistryError(
+                    f"{name} (dbx.jobs.E003): expires {spec.expires} is not below its "
+                    f"{spec.schedule.seconds}s period"
+                )
+            if spec.name in self._specs:
+                raise RegistryError(
+                    f"{name} (dbx.jobs.E001) is already registered by "
+                    f"{self._owner_of[spec.name]}; registered again by {owner}"
+                )
+            self._specs[spec.name] = spec
+            self._owner_of[spec.name] = owner
+
+    @staticmethod
+    def _check_schedule(name: str, schedule: object) -> None:
+        if schedule is None:
+            return
+        if isinstance(schedule, Interval):
+            if not isinstance(schedule.seconds, int) or schedule.seconds < 1:
+                raise RegistryError(f"{name}: Interval seconds must be a positive int")
+            return
+        if isinstance(schedule, Cron):
+            parts = schedule.expression.split() if isinstance(schedule.expression, str) else []
+            if len(parts) != 5 or not all(_CRON_FIELD.match(p) for p in parts):
+                raise RegistryError(
+                    f"{name}: Cron {schedule.expression!r} is not five numeric crontab fields"
+                )
+            return
+        raise RegistryError(f"{name}: schedule must be Interval, Cron or None")
+
+    def __contains__(self, name: str) -> bool:
+        self.seal()
+        return name in self._specs
+
+    def get(self, name: str) -> JobSpec:
+        """KeyError on an unknown name: enqueueing a job nobody declared is a programming error."""
+        self.seal()
+        return self._specs[name]
+
+    def specs(self) -> tuple[JobSpec, ...]:
+        self.seal()
+        return tuple(self._specs[k] for k in sorted(self._specs))
+
+
 def _caller_module() -> str:
     """The module that called register(), for naming both sides of a duplicate. Best effort."""
     try:
@@ -959,6 +1093,7 @@ class Registry:
         self.flags = FlagRegistry()
         self.lookups = LookupRegistry()
         self.guards = GuardRegistry()
+        self.jobs = JobRegistry()
 
 
 # The process-wide instance. Tests build their own and never touch this one.

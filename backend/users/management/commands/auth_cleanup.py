@@ -1,7 +1,8 @@
 """
 Retention for the three auth tables that grow forever (AUTH_BLUEPRINT § 19.2; BUILD_ORDER 1.7).
 
-A management command run by cron: there is no scheduler in Phase 1. It deletes ONLY:
+Runs daily from beat as the job users.auth_cleanup (users/jobs.py, JOBS_AND_INTEGRATIONS § 6); this
+command is the same purge by hand, with --dry-run. It deletes ONLY:
 
   users_login_attempt         created_at older than LOGIN_ATTEMPT_RETENTION_DAYS
   users_user_session          dead sessions (see _dead_sessions), SESSION_RETENTION_DAYS after
@@ -49,23 +50,7 @@ class Command(BaseCommand):
     def handle(self, *args, dry_run, batch_size, **options):
         if batch_size < 1:
             raise CommandError("--batch-size must be at least 1.")
-        now = timezone.now()
-
-        attempts_cutoff = now - self._retention("LOGIN_ATTEMPT_RETENTION_DAYS")
-        sessions_cutoff = now - self._retention("SESSION_RETENTION_DAYS")
-        tokens_cutoff = now - self._retention("PASSWORD_RESET_TOKEN_RETENTION_DAYS")
-
-        plan = [
-            (LoginAttempt, LoginAttempt.objects.filter(created_at__lt=attempts_cutoff)),
-            (UserSession, _dead_sessions(sessions_cutoff, now)),
-            (
-                PasswordResetToken,
-                PasswordResetToken.objects.filter(
-                    Q(used_at__lt=tokens_cutoff) | Q(expires_at__lt=tokens_cutoff)
-                ),
-            ),
-        ]
-        for model, queryset in plan:
+        for model, queryset in cleanup_plan(timezone.now(), warn=self._warn):
             table = model._meta.db_table
             if dry_run:
                 self.stdout.write(f"would delete {queryset.count()} from {table}")
@@ -73,17 +58,44 @@ class Command(BaseCommand):
                 count = _delete_in_batches(model, queryset, batch_size)
                 self.stdout.write(f"deleted {count} from {table}")
 
-    def _retention(self, name: str) -> timedelta:
-        days = getattr(settings, name)
-        if days < MINIMUM_DAYS:
-            self.stderr.write(
-                self.style.WARNING(
-                    f"{name}={days} is below {MINIMUM_DAYS}; using {MINIMUM_DAYS} day. "
-                    "A retention of 0 would delete every row, including today's."
-                )
-            )
-            days = MINIMUM_DAYS
-        return timedelta(days=days)
+    def _warn(self, message: str) -> None:
+        self.stderr.write(self.style.WARNING(message))
+
+
+def cleanup_plan(now, warn):
+    """(model, queryset) for each table, in delete order. `warn` receives a clamped retention."""
+    attempts_cutoff = now - _retention("LOGIN_ATTEMPT_RETENTION_DAYS", warn)
+    sessions_cutoff = now - _retention("SESSION_RETENTION_DAYS", warn)
+    tokens_cutoff = now - _retention("PASSWORD_RESET_TOKEN_RETENTION_DAYS", warn)
+    return [
+        (LoginAttempt, LoginAttempt.objects.filter(created_at__lt=attempts_cutoff)),
+        (UserSession, _dead_sessions(sessions_cutoff, now)),
+        (
+            PasswordResetToken,
+            PasswordResetToken.objects.filter(
+                Q(used_at__lt=tokens_cutoff) | Q(expires_at__lt=tokens_cutoff)
+            ),
+        ),
+    ]
+
+
+def purge_expired(warn, batch_size: int = DEFAULT_BATCH_SIZE) -> dict[str, int]:
+    """Delete everything the plan selects; table → rows deleted. The scheduled job calls this."""
+    return {
+        model._meta.db_table: _delete_in_batches(model, queryset, batch_size)
+        for model, queryset in cleanup_plan(timezone.now(), warn)
+    }
+
+
+def _retention(name: str, warn) -> timedelta:
+    days = getattr(settings, name)
+    if days < MINIMUM_DAYS:
+        warn(
+            f"{name}={days} is below {MINIMUM_DAYS}; using {MINIMUM_DAYS} day. "
+            "A retention of 0 would delete every row, including today's."
+        )
+        days = MINIMUM_DAYS
+    return timedelta(days=days)
 
 
 def _dead_sessions(cutoff, now):

@@ -245,3 +245,31 @@ class ActivityLog(models.Model):
 
     def delete(self, *args, **kwargs):
         raise AppendOnlyError("core_activity_log is append-only: delete() is refused")
+
+
+class JobScheduleQuerySet(models.QuerySet):
+    def for_jobs(self, names):
+        return self.filter(job_name__in=names)
+
+
+class JobSchedule(models.Model):
+    """
+    Which django-celery-beat rows the job registry owns (JOBS_AND_INTEGRATIONS.md § 6). The schedule
+    sync creates, updates and deletes ONLY rows listed here: ownership is recorded, never inferred
+    from a task-name prefix, so a row an operator added by hand is never touched.
+    """
+
+    job_name = models.CharField(max_length=128, unique=True)
+    periodic_task = models.OneToOneField(
+        "django_celery_beat.PeriodicTask", on_delete=models.CASCADE, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = JobScheduleQuerySet.as_manager()
+
+    class Meta:
+        db_table = "core_job_schedule"
+        ordering = ["job_name"]
+
+    def __str__(self):
+        return self.job_name

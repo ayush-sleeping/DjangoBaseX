@@ -26,6 +26,51 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 7.1: Celery, the job registry and queue invariants
+**What** (Dev 1 `djangobasex-4e`, manager review; closes DB-16):
+- **Celery 5.6 + `django-celery-beat` 2.9** ([ADR-0012](adr/0012-celery-from-day-one.md)). Jobs are
+  declared once as a `JobSpec` in `registry.jobs`; the Celery tasks, the closed queue set
+  (`task_create_missing_queues=False`) and the routes are generated from it.
+- **`core.jobs.enqueue()`** is the only dispatch path: ids-only payloads, `on_commit(robust=True)`
+  inside a transaction, reserved runner kwargs refused. `test_no_raw_dispatch` fails on a raw
+  `.delay()`/`.apply_async()`/`send_task()` outside `core/jobs/`.
+- **Schedules are code:** `sync_schedules` reconciles beat's rows from the registry on every migrate
+  and on demand. Ownership is recorded in `core_job_schedule` (core 0005); an unowned row holding a
+  job's name is reported as a conflict, never adopted, and never fails `migrate`.
+- **`users.auth_cleanup`** runs from beat daily (03:17 UTC, queue `bulk`) instead of cron.
+- **Compose:** a `worker` (`-Q default,bulk`) on by default; `beat` behind `--profile scheduler`.
+- **Checks:** `dbx.jobs.E003` (cron expiry), E004, E010–E015 (E015: a `memory://` broker is
+  refused when production-like).
+**Why:** the retention sweep depended on a crontab line nothing enforced (DB-16), and a queue with
+no consumer or a beat row naming an unknown task fails silently (BC-33).
+**Files:** `backend/core/jobs/` (new), `backend/core/{registry,checks,apps,models}.py`,
+`backend/core/migrations/0005_jobschedule.py`, `backend/core/management/commands/sync_schedules.py`,
+`backend/config/{celery,__init__,settings,settings_test}.py`, `backend/users/{jobs,apps}.py`,
+`backend/users/management/commands/auth_cleanup.py` (purge extracted, behaviour unchanged),
+`backend/{pyproject.toml,uv.lock,.env.example}`, `docker-compose.yml`,
+`backend/tests/architecture/{test_every_queue_has_a_worker,test_beat_entries_are_registered,test_no_raw_dispatch}.py`,
+`backend/tests/core/jobs/`, `backend/tests/infra/test_compose_policy.py`;
+`JOBS_AND_INTEGRATIONS.md` (as built), `DEPLOYMENT.md`, `OPERATIONS.md`, `BUG_CLASSES.md`,
+`BUILD_ORDER.md`, `TECH_DEBT.md`, `ROADMAP.md`, `README.md`, `AGENTS.md`.
+**Verification:** ruff check / format, `manage.py check`, `makemigrations --check --dry-run` and the
+scripts/examples ruff all clean. pytest: SQLite 1371 passed, 4 skipped; PostgreSQL 16 1371 passed,
+3 skipped (Dev 1, re-run by the manager before the final compose-profile change, which touches no
+DB code). Combined with 8.2 on both databases: in the 8.2 entry.
+**Notes:**
+- Found by the new tests and fixed: a robust `on_commit` callback built with `functools.partial`
+  crashed the commit on a broker outage; a process publishing before the Celery app finalized got
+  `QueueNotFound` for every non-default queue; worker connection hygiene closed the connection
+  inside an open transaction (PostgreSQL only).
+- **Never `django_db(transaction=True)`:** its teardown `TRUNCATE` is refused by the audit log's
+  PostgreSQL trigger. Use `django_capture_on_commit_callbacks`. SQLite hides this.
+- Manager review found: `migrate` failing on a same-named foreign beat row, a 2.1M-iteration cron
+  period walk on every `manage.py check`, caller kwargs overriding runner-reserved names, and an
+  empty registry silently replaced by the global one. All fixed with tests.
+- `AGENTS.md`: "no Celery" and the stale "no frontend tests" claims removed; `npm test` added to
+  the § 2 gate (CI already runs it).
+- Deferred: run record and monitor (7.2), per-job overrides (DB-47), two § 4 scans (DB-48),
+  single-flight locks (7.3). Production needs its own `noeviction` + AOF broker Redis (DEPLOYMENT).
+
 ### ADR-0012: Celery and beat run registered jobs from the first job onward
 **What:** the repository owner settled `PLATFORM_BLUEPRINT.md` § 6 pending decision #3: Celery +
 `django-celery-beat` from BUILD_ORDER 7.1, with no in-process `run_worker` built first. Recorded as

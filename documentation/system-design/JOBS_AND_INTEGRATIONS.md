@@ -10,6 +10,12 @@ outbound guard.**
 > sequencing live in [`../planning/PLATFORM_BLUEPRINT.md`](../planning/PLATFORM_BLUEPRINT.md) and
 > [`../planning/BUILD_ORDER.md`](../planning/BUILD_ORDER.md). When a section is built, move its "how it works" into
 > `documentation/core/` and leave the rules here.
+>
+> ✅ **Built in BUILD_ORDER 7.1:** the registry (§ 1), the Celery configuration (§ 3), `enqueue()`
+> (§ 4), the queue topology (§ 5) and the schedule sync (§ 6), on Celery + django-celery-beat
+> ([ADR-0012](../adr/0012-celery-from-day-one.md)). How they work, and where 7.1 differs from the
+> text below: [**As built — BUILD_ORDER 7.1**](#as-built--build_order-71). Everything else here is
+> still blueprint.
 
 ---
 
@@ -69,6 +75,118 @@ codes follow [`RBAC_DESIGN.md`](RBAC_DESIGN.md) (`core.jobs.view`). Environment 
 18. **Encryption keys are a list, separate from `SECRET_KEY`, distinct per environment; decrypt failure raises; nothing decrypts on attribute access.** ([§ 25](#25-the-encryption-service----tier-1--core))
 19. **Reading a stored secret needs a permission, a recent re-authentication, and writes an audit row every time.** Development never falls back to production credentials. ([§ 26](#26-the-encrypted-credential-store----tier-2--core))
 20. **Outside production, nothing messages a person or writes to another system** — and there is no switch that turns that guard off. ([§ 27](#27-the-non-production-outbound-guard----tier-1--core))
+
+---
+
+## As built — BUILD_ORDER 7.1
+
+The parts of §§ 1 and 3–6 that exist, and where they differ from the blueprint text. This section
+records reality; where it and a section below disagree, this section is the code.
+
+**Where it lives.**
+
+| Piece | File |
+|---|---|
+| `JobSpec`, `Interval`, `Cron`, `registry.jobs` (standard library only, like every catalog) | `backend/core/registry.py` |
+| `JobContext`, `RESERVED_KWARGS`, the public API (`from core.jobs import JobSpec, Cron, enqueue`) | `backend/core/jobs/spec.py`, `__init__.py` |
+| `execute(spec, ctx)`: the one place a job runs | `backend/core/jobs/runner.py` |
+| `install(app)`: tasks, queues and routes from the registry; worker hygiene | `backend/core/jobs/celery.py` |
+| `declared_queues()`, `routes()` | `backend/core/jobs/topology.py` |
+| `enqueue(name, **ids)` | `backend/core/jobs/dispatch.py` |
+| `sync_schedules()`, `period_seconds()` | `backend/core/jobs/schedules.py` |
+| Ownership of beat rows (`core_job_schedule`) | `backend/core/models.py` → `JobSchedule` (migration `core/0005`) |
+| The Celery app (composition root) | `backend/config/celery.py`, loaded by `config/__init__.py` |
+| The `CELERY_*` settings (§ 3's table, verbatim) | `backend/config/settings.py` |
+| The first job: `users.auth_cleanup` (closes TECH_DEBT DB-16) | `backend/users/jobs.py` |
+
+**Declaring a job.** Build a `JobSpec` and register it from `AppConfig.ready()`. The callable is
+`def run(ctx: JobContext) -> int`. Celery tasks are generated from the specs; never hand-write a
+`@shared_task` for a registered job.
+
+```python
+# users/jobs.py
+AUTH_CLEANUP = JobSpec(
+    name="users.auth_cleanup", func="users.jobs.auth_cleanup", owner_module="users",
+    description="Deletes … past retention. If it stops, users_login_attempt grows with attack traffic.",
+    queue="bulk", schedule=Cron("17 3 * * *"), idempotent=True, time_limit=900, soft_time_limit=840)
+
+# users/apps.py, in ready()
+registry.jobs.register(AUTH_CLEANUP)
+```
+
+**Differences from the blueprint text.**
+
+- **Params travel in `ctx.params`.** § 1's signature takes only `ctx`, so the keyword arguments
+  given to `enqueue()` arrive as `ctx.params` (a dict of primitives). The job re-reads its rows.
+- **Reserved keyword names.** `trigger` and `idempotency_key` are the generated task's own keyword
+  arguments (`core.jobs.spec.RESERVED_KWARGS`). `enqueue()` raises `TypeError` if a caller passes
+  either one, so a caller cannot forge a trigger or an idempotency key.
+  `test_reserved_names_match_the_generated_task` fails if the task gains a keyword argument that
+  isn't in that set.
+- **`dbx.jobs.E003` for crons is a system check, not a `register()` refusal.** An `Interval` job's
+  `expires >= period` is refused at `register()`. A cron job's period needs the cron calculator, so
+  `core/checks.py::check_job_callables` checks it. `period_seconds()` computes a cron's shortest gap
+  over a fixed four-year window (never relative to "now"). It stops at the first 60-second gap,
+  because no crontab fires more often.
+- **`dbx.jobs.E015` (new).** `CELERY_BROKER_URL` defaults to `memory://`, so development and tests
+  boot without a broker. E015 refuses an unset or `memory://` broker when `APP_ENV` is
+  production-like: tasks would queue in a process no worker can reach.
+- **Finalize before the first publish.** `install()` runs when the Celery app *finalizes*, and
+  only then do the registry's queues and routes exist. With `task_create_missing_queues=False`, an
+  unfinalized app refuses every queue except `default` (`QueueNotFound`). A web process never
+  touches `app.tasks`, so `enqueue()` calls `app.finalize(auto=True)` itself. Celery also caches its
+  queue table and router on first use, so `install()` discards those caches. That relies on Celery
+  internals: it is safe while `celery` is pinned `<5.7`, and
+  `test_install_replaces_a_topology_celery_already_cached` guards it.
+- **`core` never imports `config`** (`test_core_boundary`). Core code reaches the app through
+  `celery.current_app`; `config/celery.py` makes itself the current app.
+- **Worker hygiene never closes a connection inside a transaction.** `close_old_connections()`
+  runs on `task_prerun` and `task_postrun`, except while a connection is in an atomic block. Inside
+  a transaction, autocommit is off, which looks like a mismatch to Django, so it would close the
+  connection and destroy the caller's work. A real worker never starts a task inside a transaction;
+  an in-process `apply()` (a test, a shell) does.
+- **The sync's conflict rule.** `sync_schedules()` creates rows only for names that no
+  `PeriodicTask` holds. If an *unowned* row already has a job's name (made by hand, restored without
+  `core_job_schedule`, or left from a crontab-era setup), the sync **reports it and never adopts
+  it**. The name goes in `SyncReport.conflicts`, the sync logs it at ERROR as
+  `core.job.schedule_conflict`, and it carries on with the other jobs. `PeriodicTask.name` is
+  unique, so creating the row would raise inside `post_migrate` and fail `migrate`. Adopting it
+  would overwrite a row the registry does not own. `manage.py sync_schedules` prints
+  `conflict <name>: … Delete or rename it, then sync again.`
+- **`enabled` is written on create only.** The per-job settings overrides (`jobs.<name>.enabled`,
+  `jobs.<name>.schedule`) are **not built**: they need dynamic setting keys, which
+  `test_settings_are_read` forbids. Until that is decided, the sync sets `enabled` from
+  `enabled_by_default` when it creates a row and never overwrites it, so an operator's toggle on the
+  beat row survives every sync.
+- **Interval stagger.** Beat's interval schedule has no phase, so the sync sets `start_time` to a
+  deterministic per-name offset into the period, on create only. Default `expire_seconds` is
+  `expires`, or 90% of the period.
+- **Not built yet:** the run record and monitor (§ 7, BUILD_ORDER 7.2), `run_worker` (superseded by
+  ADR-0012), single-flight locks (§ 9: `single_flight` is declared but not enforced), per-spec
+  `tz_setting`, the payload AST scan (`test_task_payloads`) and `test_no_process_spawn_in_requests`.
+
+**System checks.** `dbx.jobs.E001`–`E003` are refused at `register()`, except E003 for crons, which
+is a check. `E004` and `E010`–`E015` are in `core/checks.py`. `registry.jobs` is in the `dbx.E009`
+seal list.
+
+**Tests: where they are.**
+
+| Invariant | Test |
+|---|---|
+| Every declared queue has a worker in `docker-compose.yml` (fails, never skips, with no topology file); the router resolves each task to its spec's queue | `tests/architecture/test_every_queue_has_a_worker.py` |
+| Every beat row names a registered task; every scheduled spec has a row | `tests/architecture/test_beat_entries_are_registered.py` |
+| No `.delay()` / `.apply_async()` / `send_task()` outside `core/jobs/` | `tests/architecture/test_no_raw_dispatch.py` |
+| Registry refusals, E003/E004, the cron period calculator | `tests/core/jobs/test_registry.py` |
+| § 3 settings, every task's soft limit below its hard limit, acks_late only where idempotent, E010–E015, worker hygiene | `tests/core/jobs/test_celery_config.py` |
+| `enqueue()`: after commit, rollback publishes nothing, broker failure, ids only, reserved names, a real `memory://` publish | `tests/core/jobs/test_dispatch.py` |
+| Sync: idempotent, update, delete, foreign rows, conflicts, operator toggle, `update_changed` | `tests/core/jobs/test_schedule_sync.py` |
+| `users.auth_cleanup` scheduled, idempotent, run by its task | `tests/core/jobs/test_auth_cleanup_job.py` |
+
+**Never `@pytest.mark.django_db(transaction=True)`.** A transactional test flushes the database with
+`TRUNCATE` at teardown, and on PostgreSQL the append-only trigger on `core_activity_log` refuses it.
+The failure shows up only in the Postgres CI job. Test `on_commit` behaviour with pytest-django's
+`django_capture_on_commit_callbacks(execute=True)` inside the normal test transaction. A rollback is
+an inner `transaction.atomic()` that raises, then the test asserts nothing was captured.
 
 ---
 

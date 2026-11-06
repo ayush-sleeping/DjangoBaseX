@@ -71,6 +71,10 @@ env = environ.Env(
     HEALTH_PROBE_TIMEOUT_SECONDS=(float, 2.0),
     DB_CONNECT_TIMEOUT_SECONDS=(int, 5),
     CACHE_SOCKET_TIMEOUT_SECONDS=(float, 2.0),
+    CELERY_BROKER_URL=(str, "memory://"),  # dbx.jobs.E015 refuses memory:// when production-like
+    CELERY_RESULT_BACKEND=(str, ""),
+    CELERY_VISIBILITY_TIMEOUT=(int, 3600),
+    CELERY_TIMEZONE=(str, "UTC"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -103,6 +107,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "drf_spectacular",
+    "django_celery_beat",
     # Local
     # The platform layer (ADR-0010): never imports project.
     "core",
@@ -196,6 +201,31 @@ if "redis" in CACHES["default"]["BACKEND"].lower():
 
 # Health (OBSERVABILITY § 6): the budget each components probe gets before it is reported down.
 HEALTH_PROBE_TIMEOUT_SECONDS = env("HEALTH_PROBE_TIMEOUT_SECONDS")
+
+# Background jobs (JOBS_AND_INTEGRATIONS § 3, ADR-0012)
+# -------------------------------------------------------------------------------------------- ::
+# Each value has its reason in § 3. The queue set and the routes are NOT here: core.jobs.celery
+# generates them from the job registry, which is why missing queues may be refused below.
+CELERY_BROKER_URL = env("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND") or None
+CELERY_TIMEZONE = env("CELERY_TIMEZONE")
+# JSON only: pickle is code execution for anyone who can write to the broker.
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+# Explicit: Celery's implicit default queue is "celery", which no worker here consumes.
+CELERY_TASK_DEFAULT_QUEUE = "default"
+CELERY_TASK_CREATE_MISSING_QUEUES = False  # a typo'd queue raises at publish
+CELERY_TASK_ACKS_LATE = False  # per task, only where the spec is idempotent
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 1800
+CELERY_TASK_SOFT_TIME_LIMIT = 1740
+CELERY_TASK_IGNORE_RESULT = True  # history is core_job_run, not the result backend
+# Above the longest time_limit (dbx.jobs.E011), or Redis redelivers a running task elsewhere.
+CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": env("CELERY_VISIBILITY_TIMEOUT")}
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_WORKER_SEND_TASK_EVENTS = False
 
 # Passwords
 # -------------------------------------------------------------------------------------------- ::

@@ -34,6 +34,7 @@ class CoreConfig(AppConfig):
         self_test()
         post_migrate.connect(_report_settings, sender=self, dispatch_uid="core.settings_report")
         post_migrate.connect(_seed_lookups, sender=self, dispatch_uid="core.seed_lookups")
+        post_migrate.connect(_sync_schedules, sender=self, dispatch_uid="core.sync_schedules")
 
 
 def _report_settings(sender, **kwargs):
@@ -58,3 +59,26 @@ def _seed_lookups(sender, **kwargs):
 
     for created in sync_lookups():
         logging.getLogger("core.lookups").info("core.lookup.seeded", extra={"value": created})
+
+
+def _sync_schedules(sender, **kwargs):
+    """sync_schedules after every migrate (JOBS_AND_INTEGRATIONS.md § 6): beat's rows follow the
+    registry, so a schedule is never created by hand or frozen into a data migration."""
+    from django.apps import apps
+
+    # A migrate that stops short of django_celery_beat's tables (`migrate core 0001`) has nothing
+    # to sync into yet.
+    if not apps.is_installed("django_celery_beat"):
+        return
+    from django.db import DEFAULT_DB_ALIAS, connections
+
+    tables = set(connections[kwargs.get("using", DEFAULT_DB_ALIAS)].introspection.table_names())
+    if not {"django_celery_beat_periodictask", "core_job_schedule"} <= tables:
+        return
+    from .jobs.schedules import sync_schedules
+
+    report = sync_schedules()
+    log = logging.getLogger("core.jobs")
+    for action in ("created", "updated", "deleted"):
+        for name in getattr(report, action):
+            log.info(f"core.job.schedule_{action}", extra={"job": name})

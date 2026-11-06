@@ -109,6 +109,11 @@ happened, and each is a naming or direction rule nobody wrote down.
 - **The scheduler is off in development by default.** Beat sits behind a compose profile
   (`--profile scheduler`). Jobs that only make sense against live data must not fire from a laptop;
   the outbound guard is the second line.
+  ✅ **As built (BUILD_ORDER 7.1):** `beat` has `profiles: ["scheduler"]`, so
+  `docker compose --profile scheduler up -d` starts it. The `worker` has no profile, because
+  `enqueue()` from the backend needs a consumer. `tests/infra/test_compose_policy.py` resolves the
+  file with the profile active, so every rule still covers beat, and its
+  `test_a2_the_scheduler_is_off_by_default_and_the_worker_is_not` pins both.
 - **Production data never flows to development.** Development gets seeded demo data
   (`manage.py seed --demo`, per-module seeders that go through services). When a real dump genuinely
   must move down (a staging reproduction), it passes through `manage.py sanitise_snapshot` first,
@@ -971,6 +976,9 @@ about ten hours. Every rule below is cheap on day one and a project on day three
   --maxmemory-policy noeviction` (a queue must survive a restart and must never lose a message to
   eviction); a cache wants `allkeys-lru`. Two Redis instances (or two logical services), not one with
   a compromise — a cache filling a `noeviction` instance makes the broker refuse writes.
+  > ⚠️ **As built (BUILD_ORDER 7.1), development does not follow this yet:** the dev compose puts
+  > the broker on **db 1 of the cache's Redis** (`allkeys-lru`, no persistence). That is acceptable
+  > for a laptop and wrong for anything else. A production topology needs its own broker instance.
 - **Redis requires authentication** (ACL user or `requirepass` from a secret file), even on an
   internal network.
 - **Named volumes** for stateful data (§ 2).

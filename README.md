@@ -309,7 +309,6 @@ Stated plainly, because assuming otherwise wastes time.
 - **Domain models** — the platform holds identity and RBAC only; no organisation model ([ADR-0011](documentation/adr/0011-no-organisation-in-core.md))
 - **Frontend tests** — the backend has a pytest suite; the frontend has lint and typecheck only. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
 - **The app shell** — a server-built menu exists (`/api/me/navigation/`), but no sidebar, route gate or design system yet (`BUILD_ORDER` Phase 8)
-- **Background jobs** — no Celery yet (`BUILD_ORDER` 7.1)
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
 **✅ Both foundational decisions are settled:** custom `User` model ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md))
@@ -362,7 +361,7 @@ Built by accumulation, one module at a time (see the [Journey's North Star table
 | Admin UI | Next.js dashboard — data tables, forms, ShadCN | ⬜ |
 | Core CRUD modules | DRF viewsets + Next.js pages | ⬜ |
 | Activity log | Append-only audit trail | ⬜ |
-| Background jobs | Celery + Redis + Flower | ⬜ |
+| Background jobs | Celery + Redis + Flower | ✅ Celery + beat, generated from the job registry (7.1); Flower not |
 | Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
 | Static analysis | mypy + Ruff | 🔄 Ruff done |
 | Test suite | pytest + pytest-django + factory_boy | ⬜ |

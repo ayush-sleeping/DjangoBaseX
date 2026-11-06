@@ -54,6 +54,11 @@ _PINNED_ENV = {
     "FIELD_ENCRYPTION_KEYS": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "MFA_ISSUER": "",
     "MFA_TOKEN_LIFETIME": "300",
+    # Never a developer's broker: a test that publishes must not reach a real Redis.
+    "CELERY_BROKER_URL": "memory://",
+    "CELERY_RESULT_BACKEND": "",
+    "CELERY_VISIBILITY_TIMEOUT": "3600",
+    "CELERY_TIMEZONE": "UTC",
 }
 os.environ.update(_PINNED_ENV)
 

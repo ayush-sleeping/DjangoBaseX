@@ -25,7 +25,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[3]
 COMPOSE_FILE = REPO / "docker-compose.yml"
 
-SERVICES = {"db", "redis", "backend", "frontend"}
+SERVICES = {"db", "redis", "backend", "worker", "beat", "frontend"}
 SECRET_NAME = re.compile(r"PASSWORD|SECRET|KEY|TOKEN")
 LOOPBACK = "127.0.0.1"
 # OPERATIONS.md § 12: the production server settings, in development too.
@@ -83,6 +83,9 @@ def resolve(
         [
             "docker",
             "compose",
+            # Every profile the file ships, so the rules cover beat (profile "scheduler") too.
+            "--profile",
+            "scheduler",
             "-f",
             str(compose_file),
             "--project-directory",
@@ -358,8 +361,18 @@ def frontend_backend_agreement_violations(cfg: dict) -> list[str]:
 # --- The real file ------------------------------------------------------------------------------
 
 
-def test_a_exactly_the_four_dev_services_exist(config):
+def test_a_exactly_the_dev_services_exist(config):
     assert service_set_violations(config) == []
+
+
+def test_a2_the_scheduler_is_off_by_default_and_the_worker_is_not():
+    """OPERATIONS.md § 1: beat fires jobs, so a laptop runs it only when asked. The worker is
+    always on: enqueue() from the backend needs a consumer."""
+    import yaml
+
+    raw = yaml.safe_load(COMPOSE_FILE.read_text(encoding="utf-8"))["services"]
+    assert raw["beat"].get("profiles") == ["scheduler"]
+    assert not raw["worker"].get("profiles")
 
 
 def test_b_every_published_port_binds_loopback(config):
@@ -412,7 +425,8 @@ def test_f3_every_app_image_runs_as_a_numeric_non_root_uid(config):
         for name, svc in services(config).items()
         if svc.get("build")
     }
-    assert set(dockerfiles) == {"backend", "frontend"}  # not an empty universe
+    # not an empty universe; worker and beat build the backend's image
+    assert set(dockerfiles) == {"backend", "worker", "beat", "frontend"}
     for name, path in dockerfiles.items():
         assert dockerfile_user_violations(path.read_text(encoding="utf-8")) == [], name
 
@@ -493,6 +507,16 @@ def compliant() -> dict:
                     "FRONTEND_BASE_URL": "http://localhost:3456",
                 },
             },
+            "worker": {
+                **hardening,
+                **health("CMD-SHELL", "celery -A config inspect ping"),
+                "command": ["celery", "-A", "config", "worker", "-Q", "default"],
+            },
+            "beat": {
+                **hardening,
+                **health("CMD", "python", "-c", "probe"),
+                "command": ["celery", "-A", "config", "beat"],
+            },
             "frontend": {
                 **hardening,
                 **health("CMD", "node", "-e", "probe"),
@@ -544,7 +568,7 @@ def _drop(d, key):
 VIOLATIONS = {
     "a: no services": (service_set_violations, lambda s, c: s.clear()),
     "a: a service missing": (service_set_violations, lambda s, c: _drop(s, "redis")),
-    "a: an extra service": (service_set_violations, lambda s, c: s.update(worker={})),
+    "a: an extra service": (service_set_violations, lambda s, c: s.update(mailcatcher={})),
     "b: 0.0.0.0": (port_violations, lambda s, c: s["db"]["ports"][0].update(host_ip="0.0.0.0")),
     "b: empty host_ip": (
         port_violations,

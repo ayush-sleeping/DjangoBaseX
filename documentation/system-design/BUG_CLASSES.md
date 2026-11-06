@@ -858,7 +858,11 @@ enqueuing on every `post_save`, whether or not anything changed; notifying befor
 
 **Guard.** `transaction.on_commit(lambda: …)` for every side effect, or the outbox (JOBS_AND_INTEGRATIONS); a scan
 flagging `.delay(`, `.apply_async(` and `send_mail(` lexically inside `atomic()` blocks (ratchet); tests use
-`captureOnCommitCallbacks` and assert a rolled-back request enqueued nothing.
+`captureOnCommitCallbacks` and assert a rolled-back request enqueued nothing. **Built (7.1):** `core.jobs.enqueue()`
+registers `on_commit(robust=True)` inside a transaction; raw dispatch outside `core/jobs/` fails
+`tests/architecture/test_no_raw_dispatch.py`. Test it with `django_capture_on_commit_callbacks`, **never**
+`django_db(transaction=True)`: its teardown `TRUNCATE` is refused by the audit log's append-only trigger, which happens
+only on PostgreSQL.
 
 **Review question.** *If the transaction around this rolled back, would the outside world already know?*
 
@@ -903,7 +907,9 @@ time limit without a soft one.
 
 **Guard.** JOBS_AND_INTEGRATIONS' tests: every routed queue has a worker in the process definitions; every beat
 entry names a registered task; `task_create_missing_queues=False`; the job-run monitor reports `never_run` and
-"worker seen recently" (OBSERVABILITY).
+"worker seen recently" (OBSERVABILITY). **Built (7.1):** `test_every_queue_has_a_worker`,
+`test_beat_entries_are_registered`, the closed queue set, and a fourth form: an app that publishes before
+it finalizes knows only `default` (JOBS_AND_INTEGRATIONS § "As built"). The monitor arrives with 7.2.
 
 **Review question.** *Which process picks this up — and what shows red if it never does?*
 

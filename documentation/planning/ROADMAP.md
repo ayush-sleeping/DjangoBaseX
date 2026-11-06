@@ -22,7 +22,7 @@ Built by accumulation, one module at a time, tracking the
 | Admin UI | Next.js dashboard — data tables, forms, ShadCN | ⬜ |
 | Core CRUD modules | DRF viewsets + Next.js pages | 🔄 the Users module (1.5); `examples/plugins/notes` |
 | Activity log | Append-only audit trail | ⬜ |
-| Background jobs | Celery + Redis + Flower | ⬜ |
+| Background jobs | Celery + Redis + Flower | ✅ Celery + beat from the job registry (7.1, [ADR-0012](../adr/0012-celery-from-day-one.md)); Flower not |
 | Social login / 2FA | django-allauth + `pyotp` TOTP | 🔄 TOTP 2FA done (1.1d); social login not |
 | Test suite | pytest + pytest-django + factory_boy | ✅ backend (2.1–2.3, CI on PostgreSQL); no frontend tests |
 | Containerisation | docker-compose — Django + Next + Postgres + Redis | 🔄 dev stack (both apps, SQLite) done |

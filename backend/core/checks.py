@@ -38,6 +38,7 @@ def check_registry_seals(app_configs, **kwargs):
         ("lookups", registry.lookups.defs),
         ("audit_actions", registry.audit_actions.actions),
         ("guards", registry.guards.defs),
+        ("jobs", registry.jobs.specs),
     ):
         try:
             read()
@@ -241,3 +242,148 @@ def check_encryption_keys(app_configs, **kwargs):
         except Exception as exc:  # noqa: BLE001 — the probe's failure is the finding
             errors.append(Error(f"The encryption self-test failed: {exc}", id="dbx.crypto.E002"))
     return errors
+
+
+# --- Background jobs (JOBS_AND_INTEGRATIONS.md § 1, § 3). E001–E003 are refused at register(). ---
+
+IN_PROCESS_RESULT_BACKENDS = ("cache+memory://", "memory://", "rpc://")
+
+
+@register()
+def check_job_callables(app_configs, **kwargs):
+    """dbx.jobs.E004: every spec's func imports and is `def run(ctx) -> int`. dbx.jobs.E003 for a
+    cron spec whose expires is not below its period (an Interval's is refused at register())."""
+    from .jobs.runner import resolve, signature_problem
+    from .jobs.schedules import period_seconds
+    from .registry import Cron, registry
+
+    errors = []
+    for spec in registry.jobs.specs():
+        try:
+            func = resolve(spec)
+        except (ImportError, AttributeError) as exc:
+            errors.append(
+                Error(
+                    f"job {spec.name}: func {spec.func} does not import: {exc}", id="dbx.jobs.E004"
+                )
+            )
+            continue
+        problem = signature_problem(func)
+        if problem:
+            errors.append(Error(f"job {spec.name}: {spec.func} {problem}", id="dbx.jobs.E004"))
+        if isinstance(spec.schedule, Cron):
+            try:
+                period = period_seconds(spec.schedule)
+            except ValueError as exc:
+                errors.append(Error(f"job {spec.name}: {exc}", id="dbx.jobs.E003"))
+                continue
+            if spec.expires is not None and spec.expires >= period:
+                errors.append(
+                    Error(
+                        f"job {spec.name}: expires {spec.expires} is not below the period "
+                        f"({period}s)",
+                        id="dbx.jobs.E003",
+                    )
+                )
+    return errors
+
+
+@register()
+def check_celery_config(app_configs, **kwargs):
+    """dbx.jobs.E010–E015: the § 3 settings that fail silently when wrong."""
+    from .env import is_production_like, normalise
+    from .registry import registry
+
+    errors = []
+    specs = {spec.name: spec for spec in registry.jobs.specs()}
+    tasks = _celery_tasks()
+    backend = (getattr(settings, "CELERY_RESULT_BACKEND", None) or "").lower()
+    for name, task in tasks.items():
+        if not task.ignore_result and (
+            not backend or backend.startswith(IN_PROCESS_RESULT_BACKENDS)
+        ):
+            errors.append(
+                Error(
+                    f"task {name} keeps its result (ignore_result=False) but CELERY_RESULT_BACKEND "
+                    f"is {backend or 'unset'}: nobody can read it back.",
+                    hint="Configure a shared result backend, or ignore the result (§ 3).",
+                    id="dbx.jobs.E010",
+                )
+            )
+        if task.acks_late and not (name in specs and specs[name].idempotent):
+            errors.append(
+                Error(
+                    f"task {name} acks late but is not a JobSpec declared idempotent=True.",
+                    hint="A crash re-delivers a late-acked task: only idempotent work may (§ 3).",
+                    id="dbx.jobs.E014",
+                )
+            )
+    if getattr(settings, "CELERY_TASK_ACKS_LATE", False):
+        errors.append(
+            Error(
+                "CELERY_TASK_ACKS_LATE is True globally; set it per idempotent task (§ 3).",
+                id="dbx.jobs.E014",
+            )
+        )
+
+    longest = max(
+        [getattr(settings, "CELERY_TASK_TIME_LIMIT", 0) or 0]
+        + [spec.time_limit for spec in specs.values()]
+    )
+    visibility = (getattr(settings, "CELERY_BROKER_TRANSPORT_OPTIONS", {}) or {}).get(
+        "visibility_timeout",
+        3600,  # kombu's Redis default
+    )
+    if visibility <= longest:
+        errors.append(
+            Error(
+                f"the broker visibility_timeout ({visibility}s) is not above the longest "
+                f"time_limit ({longest}s): Redis would redeliver a running task to another worker.",
+                hint="Raise CELERY_VISIBILITY_TIMEOUT (§ 3).",
+                id="dbx.jobs.E011",
+            )
+        )
+
+    serializers = {
+        getattr(settings, "CELERY_TASK_SERIALIZER", "json"),
+        getattr(settings, "CELERY_RESULT_SERIALIZER", "json"),
+        *getattr(settings, "CELERY_ACCEPT_CONTENT", ["json"]),
+    }
+    if serializers - {"json", "application/json"}:
+        errors.append(
+            Error(
+                f"Celery serializers include {sorted(serializers - {'json', 'application/json'})}: "
+                "only JSON is accepted (pickle is code execution for anyone who can write to the "
+                "broker).",
+                id="dbx.jobs.E012",
+            )
+        )
+    if (
+        getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False)
+        and normalise(settings.APP_ENV) != "test"
+    ):
+        errors.append(
+            Error(
+                "CELERY_TASK_ALWAYS_EAGER is True outside tests: it hides routing, "
+                "serialisation and transaction bugs (§ 3).",
+                id="dbx.jobs.E013",
+            )
+        )
+    broker = (getattr(settings, "CELERY_BROKER_URL", "") or "").lower()
+    if is_production_like(settings.APP_ENV) and (not broker or broker.startswith("memory://")):
+        errors.append(
+            Error(
+                f"CELERY_BROKER_URL is {broker or 'unset'} in a production-like environment: "
+                "tasks would be queued in a process no worker can reach.",
+                hint="Set CELERY_BROKER_URL to the shared broker (redis://...).",
+                id="dbx.jobs.E015",
+            )
+        )
+    return errors
+
+
+def _celery_tasks() -> dict:
+    """Every task the app knows, Celery's own (celery.*) excluded."""
+    from celery import current_app as app  # config/celery.py's app; core never imports config
+
+    return {name: task for name, task in app.tasks.items() if not name.startswith("celery.")}

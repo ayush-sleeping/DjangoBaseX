@@ -1,5 +1,5 @@
-# Development stack: PostgreSQL, Redis, the Django API and the Next.js frontend, both apps
-# reloading on save (BUILD_ORDER 4.4; OPERATIONS.md § 1, § 12, § 15).
+# Development stack: PostgreSQL, Redis, the Django API, a Celery worker, and the Next.js frontend,
+# the apps reloading on save; Celery beat only with `--profile scheduler` (BUILD_ORDER 4.4; OPERATIONS.md § 1, § 12, § 15).
 #
 #   ./scripts/setup.sh               first run, and any time after: writes .env, migrates, starts,
 #                                    proves the app answers (OPERATIONS.md § 2)
@@ -136,6 +136,67 @@ services:
       # Failures inside it are forgiven, a success counts at once: a slow laptop's cold start
       # must not fail `up --wait`, and a fast one is not held back.
       start_period: 60s
+
+  # Background jobs (JOBS_AND_INTEGRATIONS.md § 3, § 5; ADR-0012). The worker consumes EVERY queue
+  # the job registry declares: tests/architecture/test_every_queue_has_a_worker.py parses the -Q
+  # below and fails when a spec names a queue no worker here consumes. The broker is the same Redis
+  # on db 1, apart from the cache's db 0. Same image and source mount as the backend.
+  worker:
+    <<: [*hardening, *logging]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment: &job-environment
+      APP_ENV: development
+      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:?run ./scripts/setup.sh to generate .env}@db:5432/app
+      CACHE_URL: redis://:${REDIS_PASSWORD:?run ./scripts/setup.sh to generate .env}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:?run ./scripts/setup.sh to generate .env}@redis:6379/1
+    command: uv run --frozen celery -A config worker -Q default,bulk -n default@%h --concurrency=2 --loglevel=INFO
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Through the broker to this node and back: proves the worker is consuming, not just alive.
+      test: ["CMD-SHELL", "uv run --frozen celery -A config inspect ping -d default@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
+    # Longer than the longest soft time limit a job here runs (users.auth_cleanup: 840 s), so a
+    # stop lets the current job finish instead of killing it (§ 3 "Warm shutdown").
+    stop_grace_period: 900s
+
+  # Exactly one beat: two would double every periodic job (§ 6). It reads the schedule from the
+  # database rows that `migrate` syncs from the registry, never from a hand-kept list.
+  # Off in development unless asked for (OPERATIONS.md § 1): `docker compose --profile scheduler up`.
+  # The worker stays on, because enqueue() from the backend needs a consumer.
+  beat:
+    <<: [*hardening, *logging]
+    profiles: ["scheduler"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment: *job-environment
+    command: uv run --frozen celery -A config beat --loglevel=INFO
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Beat answers no ping, so this proves only that its process is alive. Whether its jobs
+      # actually run is the job-run monitor's question (BUILD_ORDER 7.2), not a probe's.
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   frontend:
     <<: [*hardening, *logging]

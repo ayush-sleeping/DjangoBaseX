@@ -38,6 +38,10 @@
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | The real frontend origin, **https**. Never `*` with credentials |
 | `CSRF_TRUSTED_ORIGINS` | `http://localhost:3000` | The real frontend origin, **https** |
 | `CACHE_URL` | unset (LocMem) — Docker sets Redis | **A shared Redis URL.** Throttles, lockout and session revocation live in the cache; LocMem makes each of them per worker (`AUTH_BLUEPRINT.md` § 17.4) |
+| `CELERY_BROKER_URL` | unset (`memory://`, boots without a broker; nothing consumes it). Docker sets Redis db 1 | **A Redis broker URL.** `dbx.jobs.E015` refuses `memory://` or unset when `APP_ENV` is production-like. Production: a Redis with `noeviction` and append-only persistence, not the LRU cache instance ([`OPERATIONS.md`](OPERATIONS.md)): an evicted message is a job that silently never ran |
+| `CELERY_RESULT_BACKEND` | unset | Unset. Job history is the run record, not Celery results ([`JOBS_AND_INTEGRATIONS.md`](JOBS_AND_INTEGRATIONS.md) § 3) |
+| `CELERY_VISIBILITY_TIMEOUT` | `3600` | Above the longest job `time_limit` (`dbx.jobs.E011`), or Redis redelivers a running job to a second worker |
+| `CELERY_TIMEZONE` | `UTC` | `UTC`. Cron schedules are read in it |
 | `TRUSTED_PROXY_COUNT` | `0` | **The number of proxies in front of the app.** Left at `0` behind a load balancer, every user shares one IP and one attacker locks everyone out (§ 17.3) |
 | `ADMIN_ENABLED` | defaults to `DEBUG` | **`False`** unless you deliberately want `/admin/` reachable (Ch. 20) |
 | `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` | console / `no-reply@example.com` | A real mail backend and a sender on your domain |
@@ -74,9 +78,26 @@ Sketch, for when the topology is decided:
 **Backend**
 1. `uv sync --frozen` — install from the lock, fail rather than re-resolve
 2. `uv run python manage.py migrate`
+   `migrate` also **syncs the beat schedule from the job registry** (`post_migrate`). A beat row
+   whose name a job needs but which the registry does not own is reported, never adopted:
+   `migrate` logs an ERROR `core.job.schedule_conflict`, and `manage.py sync_schedules` prints
+   `conflict <name>: a PeriodicTask with this name exists and the registry does not own it. Delete
+   or rename it, then sync again.` Do that, then run `manage.py sync_schedules`
+   (`--dry-run` first shows the diff).
 3. `uv run python manage.py collectstatic --noinput` — for the admin and Swagger UI assets
 4. Serve via **Gunicorn or Uvicorn**, never `runserver`
 5. Reverse proxy (Nginx/Caddy) terminating TLS and serving `STATIC_ROOT`
+6. **Background jobs are required, not optional** (BUILD_ORDER 7.1, ADR-0012). Run:
+   - **Workers that together consume every declared queue**: today `default,bulk`
+     (`celery -A config worker -Q default,bulk`). A queue nobody consumes is work that never runs,
+     and nothing raises. `tests/architecture/test_every_queue_has_a_worker.py` checks the shipped
+     compose file; keep any other topology in line with it. Give each worker a stop grace period
+     longer than the longest soft time limit it runs (840 s today).
+   - **Exactly one beat** (`celery -A config beat`). (The development compose starts it only with
+     `--profile scheduler`; a deployment always runs it.) Two double every scheduled job; when you
+     replace it, stop the old one before starting the new one.
+   - Without them, the auth retention sweep (`users.auth_cleanup`, formerly a cron entry) never
+     runs, and `users_login_attempt` grows with attack traffic. No crontab entry is needed any more.
 
 **Frontend**
 1. `npm ci` — from the lockfile, not `npm install`

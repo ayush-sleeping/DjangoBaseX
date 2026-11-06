@@ -823,7 +823,12 @@ named like money (positive control; skips with a reason while no money-named fie
 *Specs: [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md),
 [`NOTIFICATIONS_AND_ALERTING.md`](../system-design/NOTIFICATIONS_AND_ALERTING.md).*
 
-### 7.1 — Celery, the job registry and queue invariants ⬜
+### 7.1 — Celery, the job registry and queue invariants ✅
+*Done 2026-11-06* (Dev 1 `djangobasex-4e`, manager review). `JobSpec`s in `registry.jobs` generate the Celery
+tasks, the closed queue set and the routes; `core.jobs.enqueue()` is the only dispatch path (ids only, `on_commit`);
+`sync_schedules` reconciles beat from the registry on every migrate, with ownership in `core_job_schedule`;
+`users.auth_cleanup` runs from beat. As built: [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md)
+§ "As built — BUILD_ORDER 7.1". Deferred: per-job settings overrides (**DB-47**), two § 4 architecture tests (**DB-48**).
 Jobs declared in the registry and synced into beat in `post_migrate`; `task_create_missing_queues=False`; ids-only
 payloads dispatched `on_commit`. Closes **DB-16**. Runner settled 2026-11-06: **Celery from day one**, no
 in-process `run_worker` first ([ADR-0012](../adr/0012-celery-from-day-one.md)).
