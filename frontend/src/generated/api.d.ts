@@ -534,7 +534,8 @@ export interface paths {
         /**
          * @description GET /api/public/config/: what any visitor's page needs before sign-in (CONFIGURATION § 7).
          *
-         *     The display identity only. Boot identity (cookie names, cache prefix) never leaves the server.
+         *     The display identity and the platform's locale and timezone. Boot identity (cookie names, cache
+         *     prefix) never leaves the server.
          *     The frontend reads this in its root layout, so a rename is a restart, not a rebuild.
          */
         get: operations["public_config_retrieve"];

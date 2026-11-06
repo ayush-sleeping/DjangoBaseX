@@ -1185,6 +1185,54 @@ values never shift; unknown currency does not throw.
 **Configurable, not hard-coded.** `format.bytesBase`, `format.emptyValue`; everything locale-shaped is
 bootstrap data.
 
+**As built (BUILD_ORDER 8.4b).**
+- **The home:** `src/core/lib/format/index.ts` holds the formatters, each taking a `Localization`
+  and none naming a locale or currency:
+  - `formatNumber`, `formatPercent`;
+  - `formatMoney(decimal string, ISO code)`: formats the string exactly through Intl (never a float).
+    An unknown or missing code renders `CODE 12.50` or `¤ 12.50` and warns once in development; it
+    never throws. There is no symbol table.
+  - `formatDate("YYYY-MM-DD")`: built and formatted in UTC, so it never moves a day.
+  - `formatDateTime(iso)`: always with an explicit `timeZone`.
+  - `formatInstantUtc` (the tooltip), `formatBytes` (one configured base), and `EMPTY`.
+- **Binding:** `use-format.tsx` provides `useLocalization()` and `useFormat()`.
+  - The viewer's localization comes from bootstrap's essential `localization` contributor
+    (`asdict(locale_policy(user))`: user → tenant → platform).
+  - Before that, or signed out, it is the platform's locale and timezone, which the root layout reads
+    from `/api/public/config/` and passes to `LocalizationProvider`.
+  - Before either, it is the backend's shipped defaults (`src/generated/localization.ts`, exported by
+    `export_frontend_contracts`). No locale is a literal in frontend code; `<html lang>` follows the
+    platform locale too.
+  - Public config carries `locale` and `timezone`, never currency or country.
+- **Components:** `src/core/components/format/`: `<DateTime>` (`<time dateTime>` with the UTC and zone
+  tooltip), `<DateOnly>`, `<Money amount currency>` and `<Bytes>`. The users module's own
+  `formatDateTime`, which used the BROWSER's locale, is gone.
+- **ESLint** (`UI_BANS` key `formatters`, home `src/core/lib/format/**`) refuses:
+  - declaring a function or const named `format(Currency|Money|Amount|Price|Cost|Bytes|Size|FileSize|Date|DateTime|Time|Number|Percent)…`;
+  - `.toLocaleString/DateString/TimeString()`;
+  - `Intl.NumberFormat/DateTimeFormat`, with or without `new`.
+
+  `tests/lint-smoke.test.ts` has positive controls (BUILD_ORDER 8.4 acceptance 2), and a page
+  declaring a currency formatter was verified failing live.
+- **Tests:**
+  - `format.test.ts` switches `process.env.TZ` at runtime across three zones, with a positive
+    control proving the switch moves the process zone. Answers must be identical, and a date-only
+    value must never move.
+  - It covers de-DE/EUR, en-IN/INR and en-US/USD, an unknown code, and a decimal beyond float
+    precision.
+  - `components/format/format.test.tsx` checks the bootstrap and platform-default paths.
+- **Lessons from a production frontend (mechanism only):**
+  - Its single format module had a compile-time locale and one literal timezone, which locked the
+    product to one market.
+  - Dozens of call sites bypassed the module with literal-locale `toLocaleString`, so one screen
+    showed numbers in two conventions.
+  - A product-level second format module grew its own currency-symbol table.
+
+  Hence: no default locale here, bans that make bypassing impossible, a ban on parallel
+  `format*` declarations, and Intl-owned symbols.
+- **Not yet built:** relative time ("3 min ago"); the date-input family (§ 13); `country`- and
+  `week_start`-driven calendars; date/time style beyond "medium/short".
+
 ---
 
 ## 15. Forms — **Tier 1 · Core**
@@ -1582,6 +1630,41 @@ every `en` key is referenced (orphans fail); every plugin's keys are under its n
 
 **Configurable, not hard-coded.** Supported locales and the default are backend data
 ([`CONFIGURATION.md`](CONFIGURATION.md)).
+
+**As built (BUILD_ORDER 8.4b): locale plumbing and logical direction; messages are 8.4c.**
+- **Decision (manager, owner away): client-side next-intl plus `createTranslator` on the server, with
+  no plugin.** Verified against the next-intl 4.14.9 package itself:
+  - `next-intl/server` (`getTranslations`, `getRequestConfig`) imports `next-intl/config`, whose
+    shipped body is `throw new Error("Couldn't find next-intl config file…")`. Only
+    `createNextIntlPlugin` (a `next.config.ts` change) aliases it to a request config, so the
+    server helpers need the plugin.
+  - The package's react-server entry re-exports `use-intl/core`, including `createTranslator` and
+    `createFormatter`: pure functions of `{locale, messages}`. Server components can translate with
+    no plugin by passing the locale.
+  - **Per-user locale in server rendering would force every route dynamic.** A page request carries
+    only `Path=/` cookies; the access cookie is `Path=/api/` and is not sent, so the server cannot
+    ask bootstrap. It would need a new readable `Path=/` locale cookie read with `cookies()`, which
+    makes the root layout dynamic (the same reason the theme is applied by a pre-paint script).
+    The plugin does not change that.
+  - **Result:** authenticated screens (client-rendered) follow the user's bootstrap locale.
+    Server-rendered text (titles, signed-out pages, `<html lang>`) follows the PLATFORM default from
+    public config, not English. The only gap is a signed-in user whose own locale differs from the
+    platform's: they see server-rendered chrome in the platform's. Per-user server rendering (a
+    locale cookie plus dynamic routes) is a recorded owner decision, deferred.
+- **8.4b, in place:**
+  - The locale source: bootstrap `localization`, plus public config `locale`/`timezone`.
+  - The root `<html lang>` follows the platform locale.
+  - Formatters follow the viewer (§ 14).
+- **Logical direction:**
+  - `src/core/shells`, `src/core/components` and `src/core/modules` use `ms/me/ps/pe`, `start/end`
+    and `text-start/end`.
+  - DataTable's `sticky` and `align` take `"start" | "end"`. Its inset-shadow seams, which have a
+    physical side, mirror themselves with `rtl:`.
+  - ESLint's `physical` ban (scoped to those three directories) refuses left/right utilities, with
+    positive controls. `src/app/**` joins when its pages are translated (8.4c).
+- **8.4c, waiting on the owner's approval of `next-intl` 4.14.9 in `package.json`:**
+  `NextIntlClientProvider`, `src/core/messages/en.json`, server `createTranslator`, `t()`
+  extraction, `messages.test.ts`, `react/jsx-no-literals` and the `src/app` ratchet.
 
 ---
 

@@ -26,6 +26,39 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 8.4b: localization in bootstrap, the formatters and their lint bans
+**What** (Dev 2 `djangobasex-bc`; manager review and gate):
+- **Backend:** an essential `localization` bootstrap contributor (`asdict(locale_policy(user))`,
+  resolved user → tenant → platform); `PublicConfigView` adds the platform `locale` and `timezone`,
+  never currency or country; `contracts.py` exports `localization.ts` (the shipped defaults).
+- **Frontend:** `src/core/lib/format/` is the one formatter home: `formatMoney` formats a decimal
+  string exactly and never throws on an unknown code, `formatDate` never passes a date-only value
+  through a timezone, `formatDateTime` always sets an explicit `timeZone`; `formatNumber`,
+  `formatPercent`, `formatBytes`, `EMPTY`; `useFormat` reads bootstrap, then the platform, then the
+  shipped defaults; `<DateTime>`, `<DateOnly>`, `<Money>`, `<Bytes>`; `<html lang>` from the platform
+  locale; the Users module's browser-locale formatter deleted.
+- **Lint:** a `formatters` ban (any `format*` declaration, `toLocale*`, `Intl.NumberFormat`/
+  `DateTimeFormat` outside the home) and a `physical` ban (left/right utility classes in shells,
+  components and modules); shared components moved to logical CSS, DataTable `sticky`/`align` take
+  start/end.
+**Why:** a formatter inside a page hard-codes one market's locale and currency into one screen,
+and a date-only value pushed through a timezone renders as the previous day west of Greenwich.
+Both are the exact bugs multi-market products ship.
+**Files:** `backend/core/{bootstrap,contracts,views}.py`, `backend/tests/{test_bootstrap,test_contracts_export,test_identity}.py`,
+`frontend/src/core/lib/format/**`, `frontend/src/core/components/format/**`,
+`frontend/src/generated/{localization.ts,api.d.ts,openapi.json}`, `frontend/eslint.config.mjs`,
+`frontend/src/app/layout.tsx`, `frontend/src/core/{providers,components,modules,lib}/**` (logical CSS,
+`Identity`, `defaults.format`), `frontend/tests/{lint-smoke,architecture/hand-typed-contracts}.test.ts`,
+`FRONTEND_PLATFORM.md` §§ 14, 22, `NEXTJS_STANDARDS.md` § 5, `BUILD_ORDER.md`.
+**Verification:** manager's run in the dev worktree: ruff, format, `check`, `makemigrations --check`
+clean; pytest 1477 passed, 5 skipped; frontend lint and typecheck clean, vitest 30 files / 226
+passed. Dev's run with the notes plugin: 1484 passed, 3 skipped, 30/226. Acceptance 2 proven live:
+a page-level `formatPrice` with `new Intl.NumberFormat` → 2 ESLint errors. The gate on `main`
+after applying the patch, on SQLite and PostgreSQL 16: in the commit.
+**Notes:** deferred: per-user server locale (owner decision: a locale cookie), relative time, the
+date-input family, calendars by country/week start, RTL visual QA, the physical ban for `src/app/**`
+(joins 8.4c).
+
 ### TECH_DEBT DB-51: the scrubber's bare-secret backstop, rebuilt on measurement
 **What** (Dev 1 `djangobasex-4e`, manager ruling on the design): the high-entropy detector in
 `core/observability/scrub.py` now covers base64, base64url, hex and base32 runs of 20+ characters and judges them by

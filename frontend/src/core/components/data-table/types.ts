@@ -29,9 +29,9 @@ export type DataTableColumn<T> = {
   sortable?: boolean;
   /** Hidden below this breakpoint (secondary data on narrow screens). */
   hideBelow?: Breakpoint;
-  /** Sticky to an edge; identifier and actions default to left and right. */
-  sticky?: "left" | "right";
-  align?: "left" | "center" | "right";
+  /** Sticky to an edge; identifier and actions default to start and end (logical: RTL mirrors). */
+  sticky?: "start" | "end";
+  align?: "start" | "center" | "end";
   /** A CSS width, e.g. "12rem". */
   width?: string;
   headerTooltip?: string;

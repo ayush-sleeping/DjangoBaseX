@@ -73,4 +73,34 @@ describe("the ESLint rules this repository adds are live", () => {
   it("still applies the other bans in a home", async () => {
     expect(await banned('export const P = () => <p className="text-zinc-500" />;\n', "src/core/components/Modal.tsx")).toBeGreaterThan(0);
   });
+
+  // Formatters in one home (FRONTEND_PLATFORM § 14, BUILD_ORDER 8.4 acceptance 2).
+  it.each([
+    ["a hand-written currency formatter in a page", "export function formatCurrency(n: number) { return String(n); }\n"],
+    ["a formatter declared as a const", "export const formatMoney = (n: number) => String(n);\n"],
+    ["an Intl currency formatter in a page", 'export const p = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(1);\n'],
+    ["a toLocaleString call", 'export const d = new Date().toLocaleString("en-IN");\n'],
+    ["a toLocaleDateString call", "export const d = new Date().toLocaleDateString();\n"],
+    ["Intl.DateTimeFormat without new", "export const d = Intl.DateTimeFormat().format(new Date());\n"],
+  ])("refuses %s", async (_name, code) => {
+    expect(await banned(code)).toBeGreaterThan(0);
+  });
+
+  it("allows formatting inside src/core/lib/format/", async () => {
+    expect(await banned('export const p = new Intl.NumberFormat("de-DE").format(1);\n', "src/core/lib/format/index.ts")).toBe(0);
+  });
+
+  // Logical CSS direction (FRONTEND_PLATFORM § 22), in the direction-neutral scope.
+  it.each([
+    ["ml-auto", 'export const C = () => <div className="ml-auto" />;\n'],
+    ["text-right", 'export const C = () => <div className="text-right" />;\n'],
+    ["a left offset", 'export const C = () => <div className="absolute left-0" />;\n'],
+  ])("refuses %s in a shared component", async (_name, code) => {
+    expect(await banned(code, "src/core/components/Probe.tsx")).toBeGreaterThan(0);
+  });
+
+  it("allows logical direction, and leaves pages outside the scope for now", async () => {
+    expect(await banned('export const C = () => <div className="ms-auto text-end start-0" />;\n', "src/core/components/Probe.tsx")).toBe(0);
+    expect(await banned('export const C = () => <div className="ml-auto" />;\n')).toBe(0);
+  });
 });

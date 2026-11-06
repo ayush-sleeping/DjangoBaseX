@@ -90,9 +90,9 @@ export function Select({
           placeholder={placeholder}
           displayValue={(v: string | null) => labelOf(options, v)}
           onChange={(e) => setQuery(e.target.value)}
-          className={`${inputClass} pr-8`}
+          className={`${inputClass} pe-8`}
         />
-        <ComboboxButton aria-label="Show options" className="absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
+        <ComboboxButton aria-label="Show options" className="absolute inset-y-0 end-0 flex items-center px-2 text-muted-foreground">
           <ChevronsUpDown aria-hidden className="size-4" />
         </ComboboxButton>
       </div>

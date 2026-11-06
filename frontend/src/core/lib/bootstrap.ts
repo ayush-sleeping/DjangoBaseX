@@ -9,6 +9,8 @@
  */
 import type { StatusMeta } from "@/generated/statuses";
 
+import type { Localization } from "./format";
+
 import { api } from "./api";
 import type { NavSection } from "@/core/shell/nav/resolve-route";
 import { defineKeys } from "./query/keys";
@@ -29,6 +31,8 @@ export type Bootstrap = {
   permissions: string[];
   session: { expires_at: string; idle_expires_at: string };
   server_time: string;
+  /** The viewer's resolved locale, timezone, currency, styles (essential: formatters never guess). */
+  localization: Localization;
   nav?: NavSection[];
   flags?: string[];
   /** Every app's status metadata, linked plugins included (decorative). */

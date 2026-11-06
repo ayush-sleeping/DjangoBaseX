@@ -41,8 +41,8 @@ const ROLE_COLUMNS: DataTableColumn<Role>[] = [
       </div>
     ),
   },
-  { id: "permissions", kind: "data", header: "Permissions", align: "right", cell: (role) => role.permissions.length },
-  { id: "users", kind: "data", header: "Users", align: "right", cell: (role) => role.user_count },
+  { id: "permissions", kind: "data", header: "Permissions", align: "end", cell: (role) => role.permissions.length },
+  { id: "users", kind: "data", header: "Users", align: "end", cell: (role) => role.user_count },
 ];
 
 const card = "w-full max-w-3xl space-y-4 rounded-xl border border-border p-6";

@@ -24,6 +24,7 @@ def test_every_committed_contract_is_current(tmp_path):
         "statuses.ts",
         "ordering.ts",
         "public-routes.ts",
+        "localization.ts",
         "nav-manifest.json",
     }
     stale = contracts.stale_files(rendered=rendered)

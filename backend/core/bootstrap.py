@@ -21,13 +21,14 @@ endpoint and /api/auth/me/ use, so the UI and the API never compute it two ways.
 
 import logging
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from django.utils import timezone
 
 from .contracts import PluginScope, status_table
 from .flags import flags_for
+from .formatting import locale_policy
 from .navigation import navigation_for
 from .observability.health import read_release
 from .registry import registry
@@ -55,6 +56,12 @@ def effective_permissions(user) -> list[str]:
 CORE_CONTRIBUTORS: tuple[Contributor, ...] = (
     Contributor("permissions", lambda request: effective_permissions(request.user), essential=True),
     Contributor("server_time", lambda request: timezone.now().isoformat(), essential=True),
+    # Locale, timezone, currency, country, styles and week start, resolved for THIS viewer (user →
+    # tenant → platform). Essential: the frontend's formatters have no defaults of their own, so a
+    # shell without this would have to guess a market (FRONTEND_PLATFORM § 14, CONFIGURATION § 15).
+    Contributor(
+        "localization", lambda request: asdict(locale_policy(request.user)), essential=True
+    ),
     Contributor("nav", lambda request: navigation_for(request.user)),
     Contributor("flags", lambda request: flags_for(request.user)),
     Contributor("build", lambda request: read_release()),

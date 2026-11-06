@@ -120,3 +120,29 @@ def test_a_key_contributed_twice_is_refused():
     twice = (bootstrap.Contributor("x", lambda r: 1), bootstrap.Contributor("x", lambda r: 2))
     with pytest.raises(ValueError, match="contributed twice"):
         bootstrap.assemble(object(), twice)
+
+
+def test_localization_is_the_viewers_resolved_settings():
+    from core.settings_service import set_value
+
+    user = UserFactory()
+    set_value("platform.timezone", "Asia/Kolkata", scope="user", scope_id=str(user.public_id))
+    body = signed_in(user).get(URL).json()
+    loc = body["localization"]
+    assert set(loc) == {
+        "locale",
+        "timezone",
+        "currency",
+        "country",
+        "date_style",
+        "time_style",
+        "week_start",
+    }
+    assert loc["timezone"] == "Asia/Kolkata"  # the user's own, over the platform's UTC
+    assert loc["currency"] is None  # no market is assumed when none is configured
+
+
+def test_public_config_never_carries_currency():
+    body = Client().get("/api/public/config/").json()
+    assert {"locale", "timezone"} <= set(body)
+    assert "currency" not in body and "country" not in body

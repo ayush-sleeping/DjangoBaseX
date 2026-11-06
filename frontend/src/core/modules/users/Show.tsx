@@ -7,11 +7,12 @@ import { useState } from "react";
 
 import { Button } from "@/core/components/Button";
 import { confirm } from "@/core/components/confirm";
+import { DateTime } from "@/core/components/format";
 import { StatusPill } from "@/core/components/StatusPill";
 import { toast } from "@/core/components/toast";
 import { usePermissions } from "@/core/lib/permissions";
 import { useApiMutation, useApiQuery } from "@/core/lib/query";
-import { activateUser, formatDateTime, getUser, type User, usersErrorMessage } from "@/core/lib/users";
+import { activateUser, getUser, type User, usersErrorMessage } from "@/core/lib/users";
 import { MetaCard, ResourceShow } from "@/core/shells";
 
 import { USER_ACTIONS } from "./actions";
@@ -83,11 +84,21 @@ export function UserShow({ publicId }: { publicId: string }) {
         user ? (
           <MetaCard
             items={[
-              { label: "Created", value: formatDateTime(user.created_at) },
-              { label: "Last sign-in", value: formatDateTime(user.last_login) },
+              { label: "Created", value: <DateTime value={user.created_at} /> },
+              { label: "Last sign-in", value: <DateTime value={user.last_login} /> },
               ...(user.is_active
                 ? []
-                : [{ label: "Deactivated", value: `${formatDateTime(user.deactivated_at)}${user.deactivated_reason ? ` — ${user.deactivated_reason}` : ""}` }]),
+                : [
+                    {
+                      label: "Deactivated",
+                      value: (
+                        <>
+                          <DateTime value={user.deactivated_at} />
+                          {user.deactivated_reason ? ` — ${user.deactivated_reason}` : ""}
+                        </>
+                      ),
+                    },
+                  ]),
             ]}
           />
         ) : null

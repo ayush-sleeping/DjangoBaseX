@@ -34,9 +34,10 @@ const HIDE_BELOW: Record<Breakpoint, string> = {
   lg: "hidden lg:table-cell",
   xl: "hidden xl:table-cell",
 };
-const ALIGN = { left: "text-left", center: "text-center", right: "text-right" } as const;
-const SEAM_LEFT = "shadow-[inset_-1px_0_0_var(--border)]";
-const SEAM_RIGHT = "shadow-[inset_1px_0_0_var(--border)]";
+const ALIGN = { start: "text-start", center: "text-center", end: "text-end" } as const;
+// An inset shadow has a physical side, so each seam mirrors itself under rtl.
+const SEAM_START = "shadow-[inset_-1px_0_0_var(--border)] rtl:shadow-[inset_1px_0_0_var(--border)]";
+const SEAM_END = "shadow-[inset_1px_0_0_var(--border)] rtl:shadow-[inset_-1px_0_0_var(--border)]";
 
 export type DataTableSelection = {
   value: Selection;
@@ -66,18 +67,18 @@ export type DataTableProps<T extends RowData> = {
   caption: string;
 };
 
-function stickyFor<T>(column: DataTableColumn<T>): "left" | "right" | undefined {
-  return column.sticky ?? (column.kind === "identifier" ? "left" : column.kind === "actions" ? "right" : undefined);
+function stickyFor<T>(column: DataTableColumn<T>): "start" | "end" | undefined {
+  return column.sticky ?? (column.kind === "identifier" ? "start" : column.kind === "actions" ? "end" : undefined);
 }
 
 function cellClass<T>(column: DataTableColumn<T>, withSelection: boolean): string {
   const sticky = stickyFor(column);
   return [
     "px-3 py-2 align-middle bg-inherit",
-    ALIGN[column.align ?? (column.kind === "actions" ? "right" : "left")],
+    ALIGN[column.align ?? (column.kind === "actions" ? "end" : "start")],
     column.hideBelow ? HIDE_BELOW[column.hideBelow] : "",
-    sticky === "left" ? `sticky z-10 ${withSelection ? "left-10" : "left-0"} ${SEAM_LEFT}` : "",
-    sticky === "right" ? `sticky right-0 z-10 ${SEAM_RIGHT}` : "",
+    sticky === "start" ? `sticky z-10 ${withSelection ? "start-10" : "start-0"} ${SEAM_START}` : "",
+    sticky === "end" ? `sticky end-0 z-10 ${SEAM_END}` : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -176,7 +177,7 @@ export function DataTable<T extends RowData>({
           {table.getHeaderGroups().map((group) => (
             <tr key={group.id} className="bg-muted">
               {withSelection ? (
-                <th scope="col" className={`sticky left-0 z-10 w-10 bg-inherit px-3 py-2 ${SEAM_LEFT}`}>
+                <th scope="col" className={`sticky start-0 z-10 w-10 bg-inherit px-3 py-2 ${SEAM_START}`}>
                   <Checkbox
                     checked={page === "all"}
                     indeterminate={page === "some"}
@@ -235,7 +236,7 @@ export function DataTable<T extends RowData>({
                 return (
                   <tr key={id} aria-selected={selection ? ticked : undefined} className={`bg-card hover:bg-accent ${ticked ? "bg-accent" : ""}`}>
                     {withSelection ? (
-                      <td className={`sticky left-0 z-10 w-10 bg-inherit px-3 py-2 ${SEAM_LEFT}`}>
+                      <td className={`sticky start-0 z-10 w-10 bg-inherit px-3 py-2 ${SEAM_START}`}>
                         <Checkbox
                           checked={ticked}
                           label={`Select ${label}`}

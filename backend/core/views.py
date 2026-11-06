@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from core.observability import health
 
 from .api.views import BaseAPIView
+from .formatting import locale_policy
 from .navigation import navigation_for
 
 
@@ -46,15 +47,24 @@ class ComponentsView(BaseAPIView):
 class PublicConfigView(BaseAPIView):
     """GET /api/public/config/: what any visitor's page needs before sign-in (CONFIGURATION § 7).
 
-    The display identity only. Boot identity (cookie names, cache prefix) never leaves the server.
+    The display identity and the platform's locale and timezone. Boot identity (cookie names, cache
+    prefix) never leaves the server.
     The frontend reads this in its root layout, so a rename is a restart, not a rebuild."""
 
     public = True  # registry.public_routes
     authentication_classes: list = []
 
     def get(self, request):
+        # The platform's locale and timezone too: signed-out pages and server-rendered text format
+        # and (from 8.4c) translate with them. Never currency or country — those are not public.
+        policy = locale_policy(None)
         return Response(
-            {"product_name": settings.PRODUCT_NAME, "tagline": settings.PRODUCT_TAGLINE}
+            {
+                "product_name": settings.PRODUCT_NAME,
+                "tagline": settings.PRODUCT_TAGLINE,
+                "locale": policy.locale,
+                "timezone": policy.timezone,
+            }
         )
 
 

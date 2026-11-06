@@ -176,9 +176,16 @@ def test_a_cache_url_prefix_is_not_overridden(backend_copy):
 # --- The API --------------------------------------------------------------------------------------
 
 
+@pytest.mark.django_db
 def test_public_config_serves_the_display_identity_only(client, settings):
     settings.PRODUCT_NAME = "Acme Portal"
     settings.PRODUCT_TAGLINE = "Ship faster"
     response = client.get("/api/public/config/")
     assert response.status_code == 200
-    assert response.json() == {"product_name": "Acme Portal", "tagline": "Ship faster"}
+    assert response.json() == {
+        "product_name": "Acme Portal",
+        "tagline": "Ship faster",
+        # The platform defaults (no user): what signed-out pages format and translate with.
+        "locale": "en",
+        "timezone": "UTC",
+    }

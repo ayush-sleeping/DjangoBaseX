@@ -56,6 +56,9 @@ const PALETTE =
   "(bg|text|border|ring|fill|stroke|from|to|via|divide|outline|placeholder|decoration|shadow|accent|caret)-" +
   "(white|black|(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|" +
   "indigo|violet|purple|fuchsia|pink|rose)-\\d{2,3})";
+// left/right utilities and the bare words "left"/"right" used as a direction value.
+const PHYSICAL =
+  "(^|\\s|:)-?(m[lr]|p[lr]|left|right|border-[lr]|rounded-[lr][tb]?|text-(left|right)|float-(left|right)|scroll-[mp][lr])(-|\\s|$)";
 const UI_BANS = [
   {
     key: "table",
@@ -102,9 +105,36 @@ const UI_BANS = [
     message: "localStorage/sessionStorage throw in private modes and break SSR: go through src/core/lib/storage/ (§ 13).",
     selectors: ["Identifier[name=/^(localStorage|sessionStorage)$/]"],
   },
+  {
+    key: "formatters",
+    home: ["src/core/lib/format/**"],
+    message:
+      "Numbers, amounts, sizes and dates become text only in src/core/lib/format/ (useFormat, <DateTime>, <Money>, <Bytes>): a formatter elsewhere hard-codes a locale or currency into one screen (FRONTEND_PLATFORM § 14).",
+    selectors: [
+      "FunctionDeclaration[id.name=/^format(Currency|Money|Amount|Price|Cost|Bytes|Size|FileSize|Date|DateTime|Time|Number|Percent)/]",
+      "VariableDeclarator[id.name=/^format(Currency|Money|Amount|Price|Cost|Bytes|Size|FileSize|Date|DateTime|Time|Number|Percent)/]",
+      "CallExpression[callee.property.name=/^toLocale(String|DateString|TimeString)$/]",
+      "NewExpression[callee.object.name='Intl'][callee.property.name=/^(NumberFormat|DateTimeFormat)$/]",
+      "CallExpression[callee.object.name='Intl'][callee.property.name=/^(NumberFormat|DateTimeFormat)$/]",
+    ],
+  },
+  {
+    key: "physical",
+    home: [],
+    // Only where the code is already direction-neutral; src/app pages follow when they are translated.
+    scope: ["src/core/shells/", "src/core/components/", "src/core/modules/"],
+    message:
+      "Use logical direction (ms/me/ps/pe, start/end, text-start/end, border-s/e, rounded-s/e), not left/right: a right-to-left locale is then a catalogue, not a rewrite (FRONTEND_PLATFORM § 22).",
+    selectors: [`Literal[value=/${PHYSICAL}/]`, `TemplateElement[value.raw=/${PHYSICAL}/]`],
+  },
 ];
-const uiBans = (except) =>
-  UI_BANS.filter((ban) => ban.key !== except).flatMap((ban) => ban.selectors.map((selector) => ({ selector, message: ban.message })));
+// A scoped ban (ban.scope) applies only inside its scope; `inScope` says whether a block's files are.
+const uiBans = (except, inScope = false) =>
+  UI_BANS.filter((ban) => ban.key !== except && (!ban.scope || inScope)).flatMap((ban) =>
+    ban.selectors.map((selector) => ({ selector, message: ban.message })),
+  );
+const SCOPED = [...new Set(UI_BANS.flatMap((ban) => ban.scope ?? []))];
+const withinScope = (globs) => globs.every((glob) => SCOPED.some((prefix) => glob.startsWith(prefix)));
 const UI_SOURCES = ["src/**/*.ts", "src/**/*.tsx"];
 const UI_TESTS = ["src/**/*.test.ts", "src/**/*.test.tsx"];
 
@@ -155,10 +185,15 @@ const eslintConfig = defineConfig([
     },
   })),
   { files: UI_SOURCES, ignores: UI_TESTS, rules: { "no-restricted-syntax": ["error", ...uiBans(null)] } },
+  {
+    files: SCOPED.flatMap((prefix) => [`${prefix}**/*.ts`, `${prefix}**/*.tsx`]),
+    ignores: UI_TESTS,
+    rules: { "no-restricted-syntax": ["error", ...uiBans(null, true)] },
+  },
   ...UI_BANS.filter((ban) => ban.home.length).map((ban) => ({
     files: ban.home,
     ignores: UI_TESTS,
-    rules: { "no-restricted-syntax": ["error", ...uiBans(ban.key)] },
+    rules: { "no-restricted-syntax": ["error", ...uiBans(ban.key, withinScope(ban.home))] },
   })),
   // Override default ignores of eslint-config-next.
   globalIgnores([

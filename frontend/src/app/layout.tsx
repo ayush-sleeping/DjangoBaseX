@@ -28,11 +28,14 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // The platform's locale (and timezone), from the same cached public config as the product name:
+  // <html lang> and signed-out formatting follow it; a signed-in user's own comes from bootstrap.
+  const { locale, timezone } = await getIdentity();
   return (
     // suppressHydrationWarning: ThemeScript sets data-theme on <html> before React hydrates.
     <html
-      lang="en"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
@@ -40,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeScript />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Providers>{children}</Providers>
+        <Providers platform={{ locale, timezone }}>{children}</Providers>
       </body>
     </html>
   );

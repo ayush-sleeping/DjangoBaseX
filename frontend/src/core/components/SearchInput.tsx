@@ -46,8 +46,8 @@ export function SearchInput({
   return (
     <label className="relative block w-full max-w-xs">
       <span className="sr-only">{label}</span>
-      <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <input type="search" value={draft} placeholder={placeholder} onChange={(e) => setDraft(e.target.value)} className={`${inputClass} pl-8`} />
+      <Search aria-hidden className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <input type="search" value={draft} placeholder={placeholder} onChange={(e) => setDraft(e.target.value)} className={`${inputClass} ps-8`} />
     </label>
   );
 }

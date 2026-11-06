@@ -25,6 +25,7 @@ const LISTED: Record<string, string> = {
   "src/core/lib/bootstrap.ts::Bootstrap": `${WIRE}: BootstrapView assembles contributors`,
   "src/core/lib/bootstrap.ts::BootstrapUser": `${WIRE}: BootstrapView's user section`,
   "src/core/lib/identity.ts::Identity": `${WIRE}: PublicConfigView`,
+  "src/core/lib/format/index.ts::Localization": `${WIRE}: BootstrapView's localization section (LocalePolicy)`,
   "src/core/lib/mfa.ts::MfaSetup": `${WIRE}: MfaSetupView`,
   "src/core/lib/rbac.ts::CatalogPermission": `${WIRE}: PermissionCatalogView`,
   "src/core/lib/rbac.ts::PermissionGroup": `${WIRE}: PermissionCatalogView`,

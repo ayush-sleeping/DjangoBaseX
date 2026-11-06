@@ -962,8 +962,15 @@ mandatory primitives — built against the Users module of 1.5 as the reference.
 *Split 2026-11-06.* **8.4a ✅ (2026-11-06, Dev 2 `djangobasex-a9`, manager review):** `manage.py
 export_frontend_contracts` writes `frontend/src/generated/` (OpenAPI, typed permission codes, status metadata,
 ordering allow-lists, public routes, nav manifest), with plugin contributions excluded; `npm run contracts` (openapi-typescript,
-types only) produces `api.d.ts`; drift tests on both sides fail CI (acceptance 1). Closes **DB-4**. **8.4b ⬜:**
-localization in bootstrap, the formatters and their lint bans (acceptance 2), i18n.
+types only) produces `api.d.ts`; drift tests on both sides fail CI (acceptance 1). Closes **DB-4**. **8.4b ✅
+(2026-11-06, Dev 2 `djangobasex-bc`, manager review):** bootstrap carries the viewer's `localization`
+(user → tenant → platform, never a frontend default); public config carries the platform locale and
+timezone (never currency); `src/core/lib/format/` is the one formatter home (`formatMoney` exact on
+decimal strings, date-only values never shifted, datetimes always with an explicit timezone),
+`<DateTime>`/`<DateOnly>`/`<Money>`/`<Bytes>`; ESLint refuses a formatter or `Intl.*Format`/`toLocale*`
+anywhere else (acceptance 2, proven live) and physical left/right classes in shells, components and
+modules; the shared components moved to logical CSS. **8.4c ⬜:** the translation layer (next-intl,
+owner-approved 2026-11-06), per-plugin catalogues, `jsx-no-literals`, the untranslated-pages ratchet.
 A translation layer with per-plugin catalogues; formatters driven by bootstrap locale/currency/timezone;
 OpenAPI → TypeScript types plus exported enums and permission codes, each with a drift check. Closes **DB-4**.
 

@@ -75,14 +75,6 @@ export async function revokeUserSessions(publicId: string): Promise<number> {
   return body.revoked;
 }
 
-/** "11 Oct 2026, 20:41" in the viewer's locale and time zone; "—" for null. */
-export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
-
 export function usersErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) return "Could not reach the server. Try again.";
   switch (error.code) {

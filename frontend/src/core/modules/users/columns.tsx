@@ -5,12 +5,14 @@
  */
 import { Ban, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { buttonClass, IconButton } from "@/core/components/Button";
+import { DateTime } from "@/core/components/format";
 import type { DataTableColumn } from "@/core/components/data-table";
 import { StatusPill } from "@/core/components/StatusPill";
 import type { Invitation } from "@/core/lib/invitations";
-import { formatDateTime, type User } from "@/core/lib/users";
+import type { User } from "@/core/lib/users";
 
 export const userHref = (publicId: string) => `/users/${encodeURIComponent(publicId)}`;
 export const userLabel = (user: User) => user.full_name || user.email;
@@ -59,7 +61,7 @@ export const USER_COLUMNS: DataTableColumn<User>[] = [
     kind: "data",
     header: "Last sign-in",
     hideBelow: "sm",
-    cell: (user) => <span className="text-xs text-muted-foreground">{formatDateTime(user.last_login)}</span>,
+    cell: (user) => <span className="text-xs text-muted-foreground"><DateTime value={user.last_login} /></span>,
   },
   {
     id: "actions",
@@ -74,11 +76,15 @@ export const USER_COLUMNS: DataTableColumn<User>[] = [
   },
 ];
 
-const INVITATION_DETAIL: Record<Invitation["status"], (i: Invitation) => string> = {
-  pending: (i) => `Expires ${formatDateTime(i.expires_at)}`,
-  accepted: (i) => formatDateTime(i.accepted_at),
-  revoked: (i) => formatDateTime(i.revoked_at),
-  expired: (i) => formatDateTime(i.expires_at),
+const INVITATION_DETAIL: Record<Invitation["status"], (i: Invitation) => ReactNode> = {
+  pending: (i) => (
+    <>
+      Expires <DateTime value={i.expires_at} />
+    </>
+  ),
+  accepted: (i) => <DateTime value={i.accepted_at} />,
+  revoked: (i) => <DateTime value={i.revoked_at} />,
+  expired: (i) => <DateTime value={i.expires_at} />,
 };
 
 /** `onRevoke` undefined → no revoke button: a control nobody authorised is never drawn (§ 9). */
@@ -92,7 +98,7 @@ export function invitationColumns({ onRevoke, revoking }: { onRevoke?: (i: Invit
         <div className="min-w-0">
           <span className="font-medium">{i.email}</span>
           <span className="block text-xs text-muted-foreground">
-            Sent {formatDateTime(i.created_at)}
+            Sent <DateTime value={i.created_at} />
             {i.invited_by ? ` by ${i.invited_by.email}` : ""}
           </span>
         </div>

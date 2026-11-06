@@ -1160,7 +1160,7 @@
     },
     "/api/public/config/": {
       "get": {
-        "description": "GET /api/public/config/: what any visitor's page needs before sign-in (CONFIGURATION § 7).\n\nThe display identity only. Boot identity (cookie names, cache prefix) never leaves the server.\nThe frontend reads this in its root layout, so a rename is a restart, not a rebuild.",
+        "description": "GET /api/public/config/: what any visitor's page needs before sign-in (CONFIGURATION § 7).\n\nThe display identity and the platform's locale and timezone. Boot identity (cookie names, cache\nprefix) never leaves the server.\nThe frontend reads this in its root layout, so a rename is a restart, not a rebuild.",
         "operationId": "public_config_retrieve",
         "responses": {
           "200": {

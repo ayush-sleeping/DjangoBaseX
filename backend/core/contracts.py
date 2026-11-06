@@ -9,6 +9,7 @@ changing a serializer field, a permission, a status or a nav item without regene
 - statuses.ts: registry.statuses, StatusPill's tones.
 - ordering.ts: list views' ordering_fields; a column's sortKey must be one of them.
 - public-routes.ts: registry.public_routes, what answers signed out.
+- localization.ts: the shipped locale defaults, the formatters' last-resort fallback.
 - nav-manifest.json: registry.navigation, the route gate and its page test.
 
 The committed files are the BOILERPLATE's own contract: a linked plugin's contributions are left
@@ -257,6 +258,30 @@ def render_public_routes(scope: PluginScope) -> str:
     )
 
 
+def render_localization() -> str:
+    """The shipped locale defaults (LocalePolicy), so the frontend's last-resort fallback — the API
+    unreachable, nothing resolved yet — is the backend's own default, never a literal in frontend
+    code (FRONTEND_PLATFORM § 14)."""
+    from dataclasses import asdict
+
+    from .formatting import LocalePolicy
+
+    rows = "\n".join(
+        f"  {key}: {'null' if value is None else _ts_string(value)},"
+        for key, value in sorted(asdict(LocalePolicy()).items())
+    )
+    return (
+        TS_HEADER
+        + "//\n"
+        + "// The platform's shipped locale defaults (core.formatting.LocalePolicy). Runtime\n"
+        + "// values come from bootstrap `localization` (signed in) or /api/public/config/.\n"
+        + "\n"
+        + "export const SHIPPED_LOCALIZATION = {\n"
+        + rows
+        + "\n} as const;\n"
+    )
+
+
 # --- The whole set -------------------------------------------------------------------------------
 
 
@@ -269,6 +294,7 @@ def render_all(scope: PluginScope | None = None) -> dict[str, str]:
         "statuses.ts": render_statuses(scope),
         "ordering.ts": render_ordering(scope),
         "public-routes.ts": render_public_routes(scope),
+        "localization.ts": render_localization(),
         "nav-manifest.json": _json(navigation.full_manifest(exclude_modules=scope.labels)),
     }
 

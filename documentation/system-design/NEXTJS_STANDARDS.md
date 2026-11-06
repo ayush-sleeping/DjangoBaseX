@@ -209,6 +209,17 @@ author meets:
   - `Select`/`MultiSelect`/`AsyncSelect`, never a native `<select>`;
   - `SearchInput`, `EmptyState`, `ListLoadError`/`PanelError`, `StatusPill`, and
     `FormField kind=…`.
+- **Numbers, amounts, sizes and dates become text only through the formatters**
+  ([`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md) § 14):
+  - Use `useFormat()` or `<DateTime>`, `<DateOnly>`, `<Money amount currency>` and `<Bytes>`.
+  - Never `toLocaleString`, `new Intl.*Format` or your own `format*` function: ESLint refuses them
+    outside `src/core/lib/format/`.
+  - No literal locale, timezone or currency anywhere. They come from bootstrap `localization` (or
+    the platform's, signed out).
+  - Money is the API's decimal string plus the record's ISO code.
+- **Logical direction, not left/right**, in shared components, shells and modules (`ms-`, `me-`,
+  `ps-`, `pe-`, `start-`, `end-`, `text-start`/`text-end`), so a right-to-left locale needs no
+  rewrite (§ 22). ESLint enforces it there.
 
 ---
 

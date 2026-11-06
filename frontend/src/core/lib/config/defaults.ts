@@ -29,3 +29,10 @@ export const list = {
    */
   pageSize: 20,
 } as const;
+
+export const format = {
+  /** Bytes: 1024 (KiB, MiB…) or 1000 (kB, MB…). One base everywhere, with matching unit labels. */
+  bytesBase: 1024 as 1024 | 1000,
+  /** What a missing value renders as, everywhere. */
+  emptyValue: "—",
+} as const;

@@ -42,7 +42,7 @@ export function BulkBar({
       <Button variant="link" onClick={() => onChange(EMPTY_SELECTION)}>
         Clear selection
       </Button>
-      {children ? <div className="ml-auto flex gap-2">{children}</div> : null}
+      {children ? <div className="ms-auto flex gap-2">{children}</div> : null}
     </div>
   );
 }
