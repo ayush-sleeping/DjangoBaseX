@@ -61,6 +61,10 @@ describe("<DateTime> / <Money>", () => {
   });
 
   it("render the one empty marker for a missing value", () => {
+    // The provider still asks for bootstrap; without a handler MSW's "error" strategy rejects and
+    // Vitest fails the run as an unhandled error even though every assertion passed.
+    server.use(http.get(BOOT, () => HttpResponse.json({ error: { code: "not_authenticated", message: "x" } }, { status: 401 })));
+    server.use(http.post(`${API_URL}/api/auth/refresh/`, () => new HttpResponse(null, { status: 401 })));
     wrap(<DateTime value={null} />);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
