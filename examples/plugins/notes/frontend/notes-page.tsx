@@ -5,6 +5,7 @@ import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
 import { fieldErrors } from "@/core/lib/api";
+import { useT } from "@/core/lib/i18n";
 import { usePermissions } from "@/core/lib/permissions";
 
 import { createNote, deleteNote, listNotes, type Note, NOTE_CODES } from "./notes";
@@ -17,6 +18,8 @@ const ui = {
 };
 
 export default function NotesPage() {
+  // This plugin's own namespace (its name), from messages/*.json via the (plugins) layout.
+  const t = useT("notes");
   const perms = usePermissions();
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,8 +28,8 @@ export default function NotesPage() {
   const load = useCallback(() => {
     listNotes()
       .then((page) => setNotes(page.results))
-      .catch(() => setError("Could not load your notes."));
-  }, []);
+      .catch(() => setError(t("loadFailed")));
+  }, [t]);
 
   useEffect(() => {
     if (canView) load();
@@ -42,7 +45,7 @@ export default function NotesPage() {
       setError(null);
       load();
     } catch (caught) {
-      setError(fieldErrors(caught).title?.[0] ?? "Could not save the note.");
+      setError(fieldErrors(caught).title?.[0] ?? t("saveFailed"));
     }
   }
 
@@ -51,28 +54,28 @@ export default function NotesPage() {
       await deleteNote(note.public_id);
       load();
     } catch {
-      setError("Could not delete the note.");
+      setError(t("deleteFailed"));
     }
   }
 
   let content;
-  if (perms.status === "loading") content = <p className="text-sm text-muted-foreground">Checking your session…</p>;
+  if (perms.status === "loading") content = <p className="text-sm text-muted-foreground">{t("checking")}</p>;
   else if (!perms.user)
     content = (
       <Link className="text-sm underline" href="/login">
-        Sign in to see your notes
+        {t("signIn")}
       </Link>
     );
-  else if (!canView) content = <p className="text-sm">You don&apos;t have permission to view notes.</p>;
+  else if (!canView) content = <p className="text-sm">{t("denied")}</p>;
   else
     content = (
       <>
         {perms.can(NOTE_CODES.create) && (
           <form onSubmit={handleCreate} className={ui.card}>
-            <input name="title" placeholder="Title" aria-label="Title" className={ui.input} />
-            <textarea name="body" placeholder="Note" aria-label="Note" className={ui.input} />
+            <input name="title" placeholder={t("titleField")} aria-label={t("titleField")} className={ui.input} />
+            <textarea name="body" placeholder={t("body")} aria-label={t("body")} className={ui.input} />
             <button type="submit" className={ui.button}>
-              Add note
+              {t("add")}
             </button>
           </form>
         )}
@@ -82,8 +85,9 @@ export default function NotesPage() {
           </p>
         )}
         <ul className={ui.card}>
-          {notes === null && <li className="text-sm text-muted-foreground">Loading…</li>}
-          {notes?.length === 0 && <li className="text-sm text-muted-foreground">No notes yet.</li>}
+          {notes === null && <li className="text-sm text-muted-foreground">{t("loading")}</li>}
+          {notes?.length === 0 && <li className="text-sm text-muted-foreground">{t("empty")}</li>}
+          {notes?.length ? <li className="text-xs text-muted-foreground">{t("count", { count: notes.length })}</li> : null}
           {notes?.map((note) => (
             <li key={note.public_id} className="flex items-start justify-between gap-4">
               <div>
@@ -92,7 +96,7 @@ export default function NotesPage() {
               </div>
               {perms.can(NOTE_CODES.delete) && (
                 <button type="button" className="text-sm underline" onClick={() => handleDelete(note)}>
-                  Delete
+                  {t("delete")}
                 </button>
               )}
             </li>
@@ -103,10 +107,10 @@ export default function NotesPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
-      <h1 className="text-2xl font-bold tracking-tight">Notes</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       {content}
       <Link className="text-xs text-muted-foreground underline" href="/">
-        Home
+        {t("home")}
       </Link>
     </main>
   );

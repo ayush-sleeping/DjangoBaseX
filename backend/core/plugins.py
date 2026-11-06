@@ -47,9 +47,12 @@ MANIFEST = "plugin.toml"
 DEFAULT_ORDER = 100
 
 # Django app labels the platform already uses: a plugin taking one would collide in migrations,
-# admin URLs and permission codes.
+# admin URLs and permission codes. Also core's frontend message namespaces: a plugin's copy lives
+# under its name in the translation catalogue (FRONTEND_PLATFORM § 22), so a plugin named "theme"
+# would collide with core's "theme.*" keys (tests/test_plugins.py checks the two lists agree).
 RESERVED_LABELS = frozenset(
     {"core", "users", "rbac", "project", "config", "admin", "auth", "contenttypes", "sessions"}
+    | {"common", "components", "permissions", "shell", "shells", "theme"}
 )
 PREFIX_KINDS = ("table", "permission", "route", "frontend")
 

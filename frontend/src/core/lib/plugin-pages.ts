@@ -16,6 +16,12 @@ export type PluginFrontend = {
   name: string;
   /** Sub-path under /<prefix>/ → page. "" is /<prefix> itself; "a/b" is /<prefix>/a/b. */
   pages: Record<string, PluginPage>;
+  /**
+   * The plugin's translation catalogues (FRONTEND_PLATFORM § 22, BUILD_ORDER 8.4d): BCP 47 tag →
+   * lazy JSON, `en` (the source) required. Each file holds ONE top-level key, the plugin's name, and
+   * the plugin's pages read it with useT("<name>"). Mounted by the (plugins) route.
+   */
+  messages?: Readonly<Record<string, () => Promise<unknown>>>;
 };
 
 /** The page for /<plugin>/<...slug>, or null (→ 404) when no plugin or page claims it. */

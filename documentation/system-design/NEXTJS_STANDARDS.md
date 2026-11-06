@@ -237,6 +237,13 @@ author meets:
     `toast("…")`, `{ title: "…" }`) in `src/core/` shells, components, modules, shell and theme.
     Pages under `src/app/` are held by a ratchet (`untranslated-pages.test.ts`) until translated: a
     new page must not join its list.
+  - A plugin's copy lives in its own `frontend/messages/<locale>.json`, under ONE key, its name
+    (`en` required). It is typed by its `frontend/i18n.ts` (augmenting `PluginMessages`), read with
+    `useT("<name>")`, and may also read core's `common`. Lint covers `src/plugins/`, and
+    `plugin-messages.test.ts` keeps it in its lane (§ 22 of FRONTEND_PLATFORM; the notes example
+    and the scaffold template show the shape).
+  - A translation must keep the source's ICU arguments and tags. One that does not falls back to the
+    source for that key at load time and fails the test suite.
 
 ---
 

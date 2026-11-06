@@ -26,6 +26,63 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 8.4d: per-plugin catalogues, and translations that are present but wrong
+**What** (Dev 2 `djangobasex-bc`; manager review and gate):
+- **Plugin catalogues:**
+  - A plugin's copy lives in `frontend/messages/<locale>.json` under ONE key, its NAME (not its URL
+    prefix). `en` is required.
+  - Typed by augmenting `PluginMessages` from the plugin's `i18n.ts`, the PermissionCodes pattern.
+  - Mounted by `app/(plugins)/[plugin]/layout.tsx` → core's `<ExtendMessages>`.
+  - Catalogues layer key by key, least specific first: the plugin's `de`, then `de-AT`, over its
+    `en`, then the key path. Core's catalogues layer the same way.
+  - An out-of-lane key is dropped. A plugin whose name is already a namespace in the app's messages
+    is refused at runtime and core's copy is left intact.
+  - Plugins may read core's `common`.
+- **Backend:** core's message namespaces are reserved plugin labels (`RESERVED_LABELS`); a test keeps
+  the two lists in step.
+- **Present-but-wrong translations:**
+  - A translation of a different shape keeps the source copy for that key at load time and warns
+    once. That covers different ICU arguments or tags, a `plural`/`select` without `other`, and
+    unbalanced braces.
+  - Merging skips `__proto__`, `constructor` and `prototype`.
+  - `validate.ts` formats every message in the tests.
+  - `getServerT` warns once on a missing key instead of swallowing it.
+- **Lint and tests:**
+  - Lint's translated scope adds `src/plugins/`.
+  - `plugin-messages.test.ts` covers the examples, the scaffold template and linked plugins, with 7
+    positive controls.
+  - `validate.test.ts`.
+  - `extend-messages.test.tsx`.
+- **Example and template:** the notes example ships `en.json`, a deliberately partial `de.json` and
+  `i18n.ts`; its page uses `useT("notes")`. The scaffold template ships the same skeleton.
+
+**Why:** a plugin's copy needs the same catalogue as core's, or every product with a plugin ships
+English-only screens. A plugin must never overwrite core's copy, whether by an out-of-lane key, by
+its name, or through a prototype key, and a bad translation must not break a screen. A translation
+that drops `{email}` should show correct English, not a sentence with a hole.
+
+**Files:**
+- `backend/core/plugins.py`, `backend/tests/{test_plugins,test_plugins_script}.py`.
+- `frontend/src/core/lib/i18n/{messages,validate,ExtendMessages,index,server,I18nProvider}.ts(x)`
+  and their tests, and `frontend/src/core/lib/plugin-pages.ts`.
+- `frontend/src/app/(plugins)/[plugin]/{layout,plugin-catalogue}.tsx`.
+- `frontend/eslint.config.mjs`, `frontend/tests/{setup.ts,lint-smoke.test.ts}`,
+  `frontend/tests/architecture/{i18n-scan.ts,messages.test.ts,plugin-messages.test.ts,hand-typed-contracts.test.ts}`.
+- `examples/plugins/notes/frontend/**`, `scripts/plugin_template/frontend/**`.
+- `FRONTEND_PLATFORM.md` §§ 22, 25, `NEXTJS_STANDARDS.md` § 5, `BUILD_ORDER.md`.
+
+**Verification:** Dev's run, exit codes captured directly:
+- No plugin: backend ruff, format, scripts lint and format, check, makemigrations and contracts all
+  0; pytest 0. Frontend lint 0, typecheck 0, vitest 0. `next build` 0.
+- With the notes plugin linked: lint, typecheck and vitest 0; `next build` 0; pytest 0.
+- A misspelt plugin key fails `tsc` (TS2345).
+- The final counts are in the review report. The manager's gate on `main` is in the commit.
+
+**Notes:** deferred: server-side plugin copy (plugin pages are client components; `getServerT`
+knows only core's catalogue). Parked for later (manager): the copy ban is a deny-list of prop names,
+the key scanner sees only `const t = useT("ns")`, and the first paint of a plugin page is blank
+until its catalogue loads (documented).
+
 ### BUILD_ORDER 7.3: the outbox, reconcilers, locks and the findings queue
 **What** (Dev 1, manager review):
 - **Outbox** (`core_outbox`, core 0007): `outbox.enqueue()` only inside the business transaction, with a unique

@@ -67,8 +67,16 @@ const PALETTE =
 // left/right utilities and the bare words "left"/"right" used as a direction value.
 const PHYSICAL =
   "(^|\\s|:)-?(m[lr]|p[lr]|left|right|border-[lr]|rounded-[lr][tb]?|text-(left|right)|float-(left|right)|scroll-[mp][lr])(-|\\s|$)";
-// The directories whose copy is fully in the catalogue (BUILD_ORDER 8.4c).
-const TRANSLATED = ["src/core/shells/", "src/core/components/", "src/core/modules/", "src/core/shell/", "src/core/theme/"];
+// The directories whose copy is fully in the catalogue (BUILD_ORDER 8.4c), and every linked
+// plugin's (8.4d: a plugin's copy lives in its own messages/<locale>.json).
+const TRANSLATED = [
+  "src/core/shells/",
+  "src/core/components/",
+  "src/core/modules/",
+  "src/core/shell/",
+  "src/core/theme/",
+  "src/plugins/",
+];
 // Props and object keys that carry text a user reads, and the calls that show one.
 const COPY_PROPS =
   "aria-label|aria-description|aria-placeholder|title|alt|placeholder|label|pendingLabel|submitLabel|confirmLabel|cancelLabel|noun|resource|what|intro|description|hint|body|caption|emptyBody";

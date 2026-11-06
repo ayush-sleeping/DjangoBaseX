@@ -1715,9 +1715,78 @@ every `en` key is referenced (orphans fail); every plugin's keys are under its n
   - `errors.<code>` copy from the backend error catalogue (BUILD_ORDER 9.2).
   - Backend-provided labels (status labels, navigation labels, API error messages): they are the
     backend's copy, in its language.
-  - Plugin catalogues merged through the plugin manifest.
   - A second shipped language.
   - Per-user server rendering (the owner decision above).
+
+**As built (BUILD_ORDER 8.4d): plugin catalogues, and translations that are present but wrong.**
+- **A plugin's copy lives under its NAME** (its label), not its URL prefix. A product may move a
+  plugin's URL in `plugin.toml` without breaking its `t("notes.…")` calls.
+  - Catalogues are `frontend/messages/<locale>.json`, each holding ONE top-level key, the name.
+    `en` is the plugin's source and required.
+  - `PluginFrontend.messages` maps a locale tag to a lazy `import()`.
+  - Core's namespaces (`common`, `components`, `permissions`, `shell`, `shells`, `theme`, `users`)
+    are reserved plugin labels in backend `RESERVED_LABELS`, so `plugins.py new theme` fails at
+    scaffold time. `tests/test_plugins.py` checks the reserved list covers every lowercase core
+    namespace.
+- **Typing:** `@/core/lib/i18n` exports an augmentable `interface PluginMessages {}`;
+  `AppConfig.Messages` is `Messages & PluginMessages`. A plugin's `frontend/i18n.ts` adds
+  `notes: (typeof en)["notes"]`, the same pattern as `PermissionCodes`. Its keys are typed only while
+  it is linked, so core never names a plugin. A misspelt plugin key fails `tsc` in the plugin-linked
+  run.
+- **Delivery:** `app/(plugins)/[plugin]/layout.tsx` (server) → `plugin-catalogue.tsx` (client, reads
+  the generated registry) → core's `<ExtendMessages namespace catalogues>`.
+  - It nests a provider holding the app's messages plus the plugin's catalogue mounted under its
+    name. Core's copy keeps resolving inside plugin pages.
+  - Any other top-level key in a plugin catalogue is dropped and warned about. It can never override
+    core's `users.*`.
+  - A plugin whose NAME is already a namespace in the app's messages (a plugin called `theme`) is
+    refused at runtime as well. Its pages render with the app's messages unchanged and development
+    warns. This is the last of three layers, after backend `RESERVED_LABELS` and the lane test.
+  - It renders nothing until the catalogue loads (no flash of key paths). A catalogue that fails to
+    load renders the page with key paths and a development warning.
+- **Fallback, key by key:** every catalogue that applies to the viewer's locale is layered, least
+  specific first. For `de-AT` that is the plugin's `de`, then its `de-AT` over it, all over the
+  plugin's `en`, then the key path. Core's catalogues layer the same way (`loadOver`). Never core's
+  copy for a plugin key.
+- **Plugin pages are client components.** `getServerT` knows only core's catalogue: server-side
+  plugin copy (a plugin page's metadata) is deferred, and plugin pages have none today. Plugins may READ core's
+  `common` keys; `common` key names are therefore kept stable.
+- **Absent versus present-but-wrong translations.** Both fall back per key, by different routes:
+  - An ABSENT key falls back to the source (8.4c).
+  - A PRESENT key falls back too, at load time, when its shape differs from the source (unbalanced
+    braces, different ICU arguments or rich-text tags, or a `plural`/`select` with no `other`
+    branch; `messageShape()` in `messages.ts`). It keeps the source copy for that key and warns
+    once. A translation that drops `{email}` therefore shows correct English, not a sentence with a
+    hole.
+  - Merging treats catalogues as data: `__proto__`, `constructor` and `prototype` keys are skipped,
+    and only keys the base already has are taken.
+  - Anything subtler that only formatting reveals is caught by the test suite: `validate.ts` formats
+    every message through next-intl with sample values, for core's catalogue, core's `CATALOGUES`,
+    and every plugin catalogue.
+- **Development warnings** are once per distinct message, shared by the client provider,
+  `getServerT` (which used to swallow missing keys silently) and `ExtendMessages`. Production never
+  warns, and nothing ever throws.
+- **Enforced by:**
+  - `tests/architecture/plugin-messages.test.ts` covers the example plugins, the scaffold template
+    (rendered) and any linked plugin, so it runs whether or not a plugin is linked. It checks:
+    - one top-level key equal to the plugin's name;
+    - the name is not a core namespace;
+    - `en` exists;
+    - translations are subsets of the source and pass `validate.ts`;
+    - two-way keys inside the plugin;
+    - references only to its own namespace and core's `common`;
+    - no literal copy in plugin pages (core's lint rules, applied at the linked path).
+    - It has positive controls for each.
+  - ESLint's translated scope includes `src/plugins/`.
+  - `validate.test.ts` has the three load-time and validator controls: a missing argument,
+    unbalanced braces, and a plural without `other`.
+  - `extend-messages.test.tsx` covers the per-key fallback, the dropped out-of-lane key, core's keys
+    still resolving, the loading and failure states, and the no-catalogue case.
+- **The proof:** `examples/plugins/notes` ships `messages/en.json`, `i18n.ts`, and a deliberately
+  partial `messages/de.json` (two keys); its page reads `useT("notes")`. The scaffold template ships
+  the same skeleton.
+- **Not yet:** server-side plugin copy (plugin page metadata through `getServerT`). Plugin pages have
+  no metadata today.
 
 ---
 
@@ -1849,6 +1918,9 @@ its plugins" coupling the architecture exists to remove.
   `src/project/`, never deep core internals.
 - Plugin query-key roots, message namespaces, icon names and field kinds are all **prefixed with the
   plugin key**.
+- **As built (8.4d):** `messages` is in `PluginFrontend` (`src/core/lib/plugin-pages.ts`) as locale tag
+  → lazy JSON, namespaced by the plugin's NAME. It is mounted by `app/(plugins)/[plugin]/layout.tsx`;
+  see § 22.
 
 **Enforced by.** ESLint `no-restricted-imports` per plugin directory; `tests/architecture/plugin-manifest.test.ts`
 (every plugin page is covered by the route-manifest test of § 10; every prefixed name carries the

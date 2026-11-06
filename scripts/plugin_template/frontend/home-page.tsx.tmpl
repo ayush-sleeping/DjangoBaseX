@@ -4,20 +4,27 @@
 import { useEffect, useState } from "react";
 
 import { api } from "@/core/lib/api";
+import { useT } from "@/core/lib/i18n";
+
+type Status = { kind: "loading" } | { kind: "connected"; plugin: string } | { kind: "failed" };
 
 export default function HomePage() {
-  const [status, setStatus] = useState("Loading…");
+  // This plugin's own namespace: its copy lives in messages/en.json under "{{name}}".
+  const t = useT("{{name}}");
+  const [status, setStatus] = useState<Status>({ kind: "loading" });
 
   useEffect(() => {
     api<{ plugin: string }>("/api/{{route}}/", { cache: "no-store" })
-      .then((body) => setStatus(`Connected to the ${body.plugin} API.`))
-      .catch(() => setStatus("Could not load. Are you signed in, with {{label}}.home.view?"));
+      .then((body) => setStatus({ kind: "connected", plugin: body.plugin }))
+      .catch(() => setStatus({ kind: "failed" }));
   }, []);
 
+  const text =
+    status.kind === "connected" ? t("connected", { plugin: status.plugin }) : status.kind === "failed" ? t("failed") : t("loading");
   return (
     <main className="flex min-h-screen flex-col items-center gap-4 p-8 font-sans">
-      <h1 className="text-2xl font-bold tracking-tight">{{title}}</h1>
-      <p className="text-sm text-muted-foreground">{status}</p>
+      <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+      <p className="text-sm text-muted-foreground">{text}</p>
     </main>
   );
 }

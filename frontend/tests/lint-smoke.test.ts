@@ -138,6 +138,12 @@ describe("the ESLint rules this repository adds are live", () => {
     expect(await rulesFor(code, COMPONENT)).toEqual([]);
   });
 
+  it("refuses literal copy in a linked plugin's page too (8.4d)", async () => {
+    expect(await rulesFor("export const P = () => <h1>Notes</h1>;\n", "src/plugins/notes/notes-page.tsx")).toContain("react/jsx-no-literals");
+    expect(await banned('export const P = () => <input placeholder="Title" />;\n', "src/plugins/notes/notes-page.tsx")).toBeGreaterThan(0);
+    expect(await banned('export const P = () => <div className="ml-auto" />;\n', "src/plugins/notes/notes-page.tsx")).toBeGreaterThan(0);
+  });
+
   it("leaves src/app copy to the untranslated-pages ratchet", async () => {
     expect(await rulesFor("export const P = () => <p>Sign in</p>;\n", UI)).not.toContain("react/jsx-no-literals");
   });

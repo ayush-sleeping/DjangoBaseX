@@ -1,0 +1,19 @@
+{
+  "notes": {
+    "add": "Add note",
+    "body": "Note",
+    "checking": "Checking your session…",
+    "count": "{count, plural, one {# note} other {# notes}}",
+    "delete": "Delete",
+    "deleteFailed": "Could not delete the note.",
+    "denied": "You don't have permission to view notes.",
+    "empty": "No notes yet.",
+    "home": "Home",
+    "loadFailed": "Could not load your notes.",
+    "loading": "Loading…",
+    "saveFailed": "Could not save the note.",
+    "signIn": "Sign in to see your notes",
+    "title": "Notes",
+    "titleField": "Title"
+  }
+}

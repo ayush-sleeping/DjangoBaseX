@@ -5,6 +5,7 @@ leaks an importable djx_* package into another.
 """
 
 import importlib
+import json
 import logging
 import sys
 import textwrap
@@ -296,6 +297,19 @@ def test_a_reserved_platform_label_is_refused(tmp_path, label):
     make_plugin(tmp_path, label, manifest(label))
     with pytest.raises(PluginError, match=rf"plugin\.label: '{label}' is reserved"):
         discover(tmp_path)
+
+
+def test_every_core_message_namespace_is_a_reserved_label():
+    # A plugin's frontend copy lives under its name in the catalogue (FRONTEND_PLATFORM § 22): a
+    # plugin may not take the name of one of core's namespaces. Namespaces that cannot be a label
+    # (camelCase: not lowercase) cannot collide and are skipped.
+    catalogue = (
+        Path(__file__).resolve().parents[2] / "frontend" / "src" / "core" / "messages" / "en.json"
+    )
+    namespaces = set(json.loads(catalogue.read_text(encoding="utf-8")))
+    assert namespaces, "the core catalogue is empty or moved"
+    labelable = {ns for ns in namespaces if ns == ns.lower()}
+    assert labelable - RESERVED_LABELS == set()
 
 
 @pytest.mark.parametrize("label", ["health", "schema", "docs", "me", "meta", "extensions"])

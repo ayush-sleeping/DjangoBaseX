@@ -1,0 +1,13 @@
+/**
+ * This plugin's copy, added to the platform's typed catalogue (FRONTEND_PLATFORM § 22), by module
+ * augmentation: `useT("{{name}}")` typechecks while the plugin is linked. Every catalogue in
+ * messages/ holds ONE top-level key, the plugin's name; messages/en.json is the source, and any other
+ * language (messages/de.json, …) falls back to it key by key.
+ */
+import type en from "./messages/en.json";
+
+declare module "@/core/lib/i18n" {
+  interface PluginMessages {
+    {{name}}: (typeof en)["{{name}}"];
+  }
+}

@@ -16,7 +16,7 @@ import { createTranslator, type NamespaceKeys, type NestedKeyOf } from "next-int
 
 import { getIdentity } from "@/core/lib/identity";
 
-import { loadMessages, type Messages, missingMessage } from "./messages";
+import { loadMessages, type Messages, missingMessage, reportIntlError } from "./messages";
 
 export type Namespace = NamespaceKeys<Messages, NestedKeyOf<Messages>>;
 
@@ -28,7 +28,7 @@ export async function getServerT<const NS extends Namespace>(namespace: NS) {
     timeZone: timezone,
     messages,
     namespace,
-    onError: () => undefined, // a missing key renders its path (below); never fail a render
+    onError: reportIntlError, // never fail a render: the key renders its path, and development warns once
     getMessageFallback: missingMessage,
   });
 }

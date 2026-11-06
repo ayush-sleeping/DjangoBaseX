@@ -72,6 +72,8 @@ EXPECTED_TREE = {
     "frontend/index.ts",
     "frontend/home-page.tsx",
     "frontend/permissions.ts",
+    "frontend/i18n.ts",
+    "frontend/messages/en.json",
     "djx_credit_notes/__init__.py",
     "djx_credit_notes/apps.py",
     "djx_credit_notes/migrations/__init__.py",

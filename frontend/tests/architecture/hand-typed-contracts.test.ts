@@ -36,6 +36,7 @@ const LISTED: Record<string, string> = {
   "src/core/lib/auth.ts::SignInResult": `${CLIENT}: the outcome of the sign-in flow`,
   "src/core/lib/auth.ts::MfaStepFailure": `${CLIENT}: what the MFA step shows on failure`,
   "src/core/lib/list-state.ts::ListState": `${CLIENT}: URL list state`,
+  "src/core/lib/i18n/messages.ts::Tree": `${CLIENT}: a translation catalogue's JSON shape`,
   "src/core/lib/permissions.tsx::Permissions": `${CLIENT}: the provider's context value`,
   "src/core/lib/plugin-pages.ts::PluginFrontend": `${CLIENT}: a plugin's frontend manifest`,
   "src/core/lib/query/keys.ts::Keys": `${CLIENT}: query-key factory typing`,

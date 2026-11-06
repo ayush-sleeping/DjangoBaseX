@@ -958,7 +958,7 @@ mandatory primitives — built against the Users module of 1.5 as the reference.
 
 **Done when:** the token-completeness test passes in both themes; the Users module uses only the shells.
 
-### 8.4 — i18n, formatters and contract generation ⬜
+### 8.4 — i18n, formatters and contract generation ✅
 *Split 2026-11-06.* **8.4a ✅ (2026-11-06, Dev 2 `djangobasex-a9`, manager review):** `manage.py
 export_frontend_contracts` writes `frontend/src/generated/` (OpenAPI, typed permission codes, status metadata,
 ordering allow-lists, public routes, nav manifest), with plugin contributions excluded; `npm run contracts` (openapi-typescript,
@@ -972,9 +972,16 @@ anywhere else (acceptance 2, proven live) and physical left/right classes in she
 modules; the shared components moved to logical CSS. **8.4c ✅ (2026-11-06, Dev 2, manager review):** the
 translation layer (next-intl 4.14.9, owner-approved), `src/core/lib/i18n/` as its only importer, the
 ICU catalogue `en.json` with lazy per-key-fallback languages, the shells/primitives/Users module
-extracted, `jsx-no-literals` + a scoped copy ban, the untranslated-pages ratchet (16 pages). **8.4d ⬜:**
-per-plugin catalogues (namespace = plugin name, augmentable `PluginMessages`, plugin-lane tests),
-the load-time argument/tag guard for translations, the server-side missing-key warning.
+extracted, `jsx-no-literals` + a scoped copy ban, the untranslated-pages ratchet (16 pages). **8.4d ✅
+(2026-11-06, Dev 2, manager review):** per-plugin catalogues. Each plugin's copy lives under its NAME in
+`frontend/messages/<locale>.json` (`en` required), typed by augmenting `PluginMessages` and mounted by
+`app/(plugins)/[plugin]/layout.tsx` through core's `<ExtendMessages>`. Regional, language and source
+catalogues layer key by key, an out-of-lane key is dropped, and a name already in the app's messages is
+refused at runtime. Core's namespaces are reserved plugin labels on the backend.
+`plugin-messages.test.ts` covers the examples, the scaffold template and linked plugins, with positive
+controls. A translation of a different shape (arguments, tags, an `other`-less plural, unbalanced
+braces) keeps the source copy at load time, and `validate.ts` formats every message in the tests.
+`getServerT` warns once on a missing key. The notes example ships a deliberately partial `de.json`.
 A translation layer with per-plugin catalogues; formatters driven by bootstrap locale/currency/timezone;
 OpenAPI → TypeScript types plus exported enums and permission codes, each with a drift check. Closes **DB-4**.
 
@@ -982,6 +989,12 @@ OpenAPI → TypeScript types plus exported enums and permission codes, each with
 page fails lint.
 
 ### 8.5 — CSP and runtime branding ⬜
+*Split 2026-11-06.* **8.5 (this task):** the per-request nonce CSP in `src/proxy.ts` (Report-Only by
+default, `CSP_MODE` read at runtime), the pure CSP builder, runtime `platform.brand` as OKLCH numbers
+with a stdlib contrast solver that refuses a failing colour with the measured ratio and a passing
+suggestion (4.5:1 text-on-fill, 3:1 fill-vs-card). **8.5b ⬜:** the static security headers in
+`next.config.ts` (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP), the
+`/fe/revalidate` route and its shared secret, logos/favicon/TitleSync, host-matched identity.
 Per-request nonce CSP, Report-Only first with enforcement flipped by a runtime variable; runtime brand identity
 with a validated colour grammar and a backend contrast solver.
 
