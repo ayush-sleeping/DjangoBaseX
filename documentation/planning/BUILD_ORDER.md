@@ -825,7 +825,8 @@ named like money (positive control; skips with a reason while no money-named fie
 
 ### 7.1 — Celery, the job registry and queue invariants ⬜
 Jobs declared in the registry and synced into beat in `post_migrate`; `task_create_missing_queues=False`; ids-only
-payloads dispatched `on_commit`. Closes **DB-16**.
+payloads dispatched `on_commit`. Closes **DB-16**. Runner settled 2026-11-06: **Celery from day one**, no
+in-process `run_worker` first ([ADR-0012](../adr/0012-celery-from-day-one.md)).
 
 **Done when:** a test fails if any declared queue has no worker in the compose file, or any beat entry names an
 unregistered task; `auth_cleanup` runs from beat, not cron.

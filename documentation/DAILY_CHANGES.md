@@ -24,6 +24,22 @@ Newest first.
 
 ---
 
+## 2026-11-06
+
+### ADR-0012: Celery and beat run registered jobs from the first job onward
+**What:** the repository owner settled `PLATFORM_BLUEPRINT.md` § 6 pending decision #3: Celery +
+`django-celery-beat` from BUILD_ORDER 7.1, with no in-process `run_worker` built first. Recorded as
+ADR-0012; the § 6 list, BUILD_ORDER 7.1 and `JOBS_AND_INTEGRATIONS.md` (Owns line, § 2) now say so.
+**Why:** 7.1 was blocked on the question. Phase 7 (outbox, webhooks, notifications, alerting) needs
+queued, retried, user-triggered work right after 7.1, so an interim loop would be built only to
+become the less-tested second path.
+**Files:** `documentation/adr/0012-celery-from-day-one.md`, `documentation/ADR.md`,
+`documentation/planning/{PLATFORM_BLUEPRINT,BUILD_ORDER}.md`,
+`documentation/system-design/JOBS_AND_INTEGRATIONS.md`.
+**Verification:** docs only; links checked by hand against the files they name.
+**Notes:** the registry, run record and health model stay runner-agnostic, so a no-broker fallback
+can still be added later. Building one is not scheduled.
+
 ## 2026-10-24
 
 ### BUILD_ORDER 6.4: the audit engine — Phase 6 complete

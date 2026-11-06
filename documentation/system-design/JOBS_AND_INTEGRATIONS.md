@@ -15,7 +15,7 @@ outbound guard.**
 
 ## Scope — read first
 
-**Owns:** the job/worker model (Celery + beat, and the in-process `run_worker` that precedes it) ·
+**Owns:** the job/worker model (Celery + beat from the first job, [ADR-0012](../adr/0012-celery-from-day-one.md); an in-process `run_worker` only as a later no-broker fallback) ·
 the job registry and the run monitor · queue topology and its invariants · schedules · locks ·
 retry policy · reconcilers · the transactional outbox · idempotent run ledgers · "push once" control
 rows · outbound webhooks · inbound webhooks · the SSRF-safe HTTP client and per-target circuit
@@ -154,6 +154,11 @@ same parser), `jobs.<name>.stale_after_minutes`. The spec carries the defaults.
 ---
 
 ## 2. Two runners, one registry   — **Tier 1 · Core**
+
+> **Superseded in part, 2026-11-06 — [ADR-0012](../adr/0012-celery-from-day-one.md).** Celery + beat is the
+> runner from the first job onward (BUILD_ORDER 7.1). The in-process `run_worker` is **not** built first; the
+> registry stays runner-agnostic so it can still be added later as a no-broker fallback. The phase timing below
+> is the original plan, kept for the reasoning.
 
 **What.** Two ways to execute registered jobs, sharing every piece of code except the loop:
 
