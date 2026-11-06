@@ -26,6 +26,19 @@ Newest first.
 
 ## 2026-11-06
 
+### Untrack a committed `.pyc`; regenerate the core manifest
+**What:** `scripts/lib/__pycache__/envfile.cpython-312.pyc`, committed in c7d1f55, is removed from the
+index, and `.gitignore` now covers `scripts/**/__pycache__/` and `examples/**/__pycache__/`.
+`core.manifest.json` is regenerated for 7.1 and 8.2. README and ROADMAP stop saying the frontend
+has no tests.
+**Why:** every pytest run rewrote the tracked `.pyc`, so every worktree showed a modified file
+(`AGENTS.md` § 1 rule 7). The manifest must hash the committed core files or core-guard fails.
+**Files:** `.gitignore`, `core.manifest.json`, `README.md`, `documentation/planning/ROADMAP.md`,
+`documentation/DAILY_CHANGES.md`.
+**Verification:** regenerated in a detached worktree of 33cb8ed (DB-43), `core_doctor --verify`:
+current. Gate on that tree: ruff, check, makemigrations clean; pytest 1392 passed, 4 skipped;
+frontend lint, typecheck, vitest 84 passed.
+
 ### BUILD_ORDER 8.2: bootstrap, fail-closed permissions, navigation as the route gate, the session marker
 **What** (Dev 2 `djangobasex-a9`, manager review; closes DB-37 and the frontend half of DB-20):
 - **`GET /api/me/bootstrap/`**, the shell's one call after sign-in. `core/bootstrap.py` holds the

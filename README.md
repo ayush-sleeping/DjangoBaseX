@@ -307,7 +307,7 @@ Stated plainly, because assuming otherwise wastes time.
 
 **❌ Not built yet**
 - **Domain models** — the platform holds identity and RBAC only; no organisation model ([ADR-0011](documentation/adr/0011-no-organisation-in-core.md))
-- **Frontend tests** — the backend has a pytest suite; the frontend has lint and typecheck only. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
+- **Frontend tests** — the backend has a pytest suite and the frontend a Vitest + MSW suite (8.1); no browser end-to-end tests yet. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
 - **The app shell** — the bootstrap call (`/api/me/bootstrap/`), the fail-closed permission provider, a server-built menu that is also the default-deny route gate, and the session-marker proxy exist (`BUILD_ORDER` 8.2); no sidebar or design system yet (`BUILD_ORDER` 8.3)
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 

@@ -41,4 +41,6 @@ frontend/next-env.d.ts
 .claude/agent-memory-local/
 .claude/worktrees/
 .claude/**/__pycache__/
+scripts/**/__pycache__/
+examples/**/__pycache__/
 CLAUDE.local.md

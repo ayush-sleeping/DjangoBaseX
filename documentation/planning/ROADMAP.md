@@ -24,7 +24,7 @@ Built by accumulation, one module at a time, tracking the
 | Activity log | Append-only audit trail | ⬜ |
 | Background jobs | Celery + Redis + Flower | ✅ Celery + beat from the job registry (7.1, [ADR-0012](../adr/0012-celery-from-day-one.md)); Flower not |
 | Social login / 2FA | django-allauth + `pyotp` TOTP | 🔄 TOTP 2FA done (1.1d); social login not |
-| Test suite | pytest + pytest-django + factory_boy | ✅ backend (2.1–2.3, CI on PostgreSQL); no frontend tests |
+| Test suite | pytest + pytest-django + factory_boy | ✅ backend (2.1–2.3, CI on PostgreSQL); frontend Vitest + MSW (8.1); no browser end-to-end tests |
 | Containerisation | docker-compose — Django + Next + Postgres + Redis | 🔄 dev stack (both apps, SQLite) done |
 | Configuration — nothing hard-coded | Boot refusal, typed settings registry, feature flags, lookups, locale/currency/timezone settings — [`CONFIGURATION.md`](../system-design/CONFIGURATION.md) | 🔄 boot refusal done (5.1); the rest not |
 | Extensibility | Full registry catalogue, soft-disable, versioned plugin SDK — [`EXTENSIBILITY.md`](../system-design/EXTENSIBILITY.md) | 🔄 registries, plugin discovery, scaffold, frontend mounting and an example (Phase 3); soft-disable and the SDK not |
