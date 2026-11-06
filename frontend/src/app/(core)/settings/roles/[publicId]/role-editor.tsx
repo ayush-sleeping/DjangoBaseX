@@ -354,7 +354,7 @@ function GrantsSection({
                     {permission.label}{" "}
                     <code className="text-xs text-muted-foreground">{permission.code}</code>
                     {permission.is_deprecated ? (
-                      <span className="ml-1 text-xs text-warn-text">deprecated</span>
+                      <span className="ms-1 text-xs text-warn-text">deprecated</span>
                     ) : null}
                   </span>
                 </label>

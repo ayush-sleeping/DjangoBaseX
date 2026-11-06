@@ -68,7 +68,7 @@ export function AcceptInvitationForm({ token }: { token: string }) {
         <div role="alert" className="text-sm text-destructive">
           <p>{failure.message}</p>
           {failure.kind === "invalid-password" && failure.details.length > 0 ? (
-            <ul className="mt-1 list-disc pl-5">
+            <ul className="mt-1 list-disc ps-5">
               {failure.details.map((detail) => (
                 <li key={detail}>{detail}</li>
               ))}

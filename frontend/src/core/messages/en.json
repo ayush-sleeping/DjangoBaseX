@@ -1,0 +1,225 @@
+{
+  "common": {
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "close": "Close",
+    "displayProblem": "This is a display problem — nothing has changed.",
+    "reference": "Reference: {requestId}",
+    "required": "(required)",
+    "saving": "Saving…",
+    "somethingWentWrong": "Something went wrong.",
+    "status": "Status",
+    "tryAgain": "Try again"
+  },
+  "components": {
+    "confirm": {
+      "confirm": "Confirm"
+    },
+    "listError": {
+      "couldNotLoad": "Couldn't load {resource}. {message}"
+    },
+    "panelError": {
+      "couldNotLoad": "Couldn't load {what}."
+    },
+    "search": {
+      "label": "Search",
+      "placeholder": "Search…"
+    },
+    "select": {
+      "add": "Add…",
+      "choose": "Choose…",
+      "minLength": "{count, plural, one {Type # or more character} other {Type # or more characters}}",
+      "noMatches": "No matches",
+      "remove": "Remove {label}",
+      "search": "Search…",
+      "searchFailed": "Couldn't search — try again",
+      "searching": "Searching…",
+      "showOptions": "Show options"
+    },
+    "status": {
+      "notSet": "Not set"
+    },
+    "toast": {
+      "dismiss": "Dismiss"
+    }
+  },
+  "dataTable": {
+    "bulk": {
+      "allMatchingSelected": "All {total, number} matching {noun} selected",
+      "clear": "Clear selection",
+      "region": "Selection",
+      "selectAllMatching": "Select all {total, number} matching",
+      "selected": "{count, number} selected"
+    },
+    "pager": {
+      "label": "Pagination",
+      "next": "Next page",
+      "none": "{count, number} {noun}",
+      "number": "{page, number}",
+      "page": "Page {page, number}",
+      "previous": "Previous page",
+      "range": "{from, number}–{to, number} of {count, number} {noun}"
+    },
+    "rows": "rows",
+    "selectAllOnPage": "Select all rows on this page",
+    "selectRow": "Select {label}"
+  },
+  "permissions": {
+    "denied": "You don't have permission to {what}.",
+    "viewThisSection": "view this section"
+  },
+  "shell": {
+    "gate": {
+      "checking": "Checking your session…",
+      "openThisPage": "open this page",
+      "permissionsFailed": "Could not load your permissions, so nothing is shown.",
+      "signIn": "Sign in",
+      "signInPrompt": "Sign in to continue."
+    },
+    "nav": {
+      "failed": "Could not load the menu. Reload the page to try again.",
+      "label": "Modules"
+    }
+  },
+  "shells": {
+    "form": {
+      "createSubmit": "Create {resource}",
+      "createTitle": "New {resource}",
+      "discard": "Discard",
+      "discardTitle": "Discard your changes?",
+      "editTitle": "Edit {name}",
+      "failed": "Something went wrong. Try again.",
+      "fieldsNeedAttention": "{count, plural, one {# field needs attention.} other {# fields need attention.}}",
+      "save": "Save changes"
+    },
+    "index": {
+      "clearFilters": "Clear filters",
+      "filteredEmpty": "No {noun} match these filters",
+      "noneYet": "No {noun} yet"
+    },
+    "show": {
+      "details": "Details",
+      "thisRecord": "this {noun}"
+    }
+  },
+  "theme": {
+    "dark": "Dark",
+    "label": "Theme",
+    "light": "Light",
+    "system": "System"
+  },
+  "users": {
+    "columns": {
+      "lastSignIn": "Last sign-in",
+      "off": "Off",
+      "open": "Open",
+      "openUser": "Open {name}",
+      "roles": "Roles",
+      "superuser": "Bypasses every permission check.",
+      "twoFactor": "Two-factor",
+      "user": "User"
+    },
+    "deactivate": {
+      "done": "Account deactivated.",
+      "intro": "A deactivated account cannot sign in, and every session it has is signed out at once. Nothing is deleted; you can activate it again.",
+      "pending": "Deactivating…",
+      "reason": "Reason",
+      "reasonHint": "Kept with the account.",
+      "submit": "Deactivate and sign out everywhere"
+    },
+    "form": {
+      "createIntro": "The account is created active, with no password: we email the address a link to set one. It holds no role until you assign one.",
+      "email": "Email",
+      "fullName": "Full name",
+      "inviteInstead": "To give someone a role from the start, <link>send an invitation</link> instead.",
+      "optional": "Optional.",
+      "resource": "user"
+    },
+    "index": {
+      "description": "Everyone who can sign in, and what they hold.",
+      "invitations": "Invitations",
+      "newUser": "New user",
+      "noun": "users",
+      "searchLabel": "Search users",
+      "searchPlaceholder": "Search by email or name",
+      "title": "Users"
+    },
+    "invitations": {
+      "cannotListRoles": "Inviting needs a role to give, and you cannot list roles. Ask an administrator for the rbac.roles.view permission.",
+      "chooseRole": "Choose a role",
+      "description": "An invitation lets someone set their own password and starts them with a role.",
+      "elevated": "elevated",
+      "email": "Email",
+      "expires": "Expires <date></date>",
+      "loadingRoles": "Loading roles…",
+      "noun": "invitations",
+      "resource": "invitation",
+      "revoke": "Revoke",
+      "revokeBody": "The link stops working at once. You can send a new invitation later.",
+      "revokeLabel": "Revoke the invitation to {email}",
+      "revokeTitle": "Revoke the invitation to {email}?",
+      "revoked": "Invitation revoked.",
+      "role": "Role",
+      "rolesToGive": "the roles you can give",
+      "send": "Send invitation",
+      "sending": "Sending…",
+      "sent": "Invitation sent to {email}.",
+      "sentAt": "Sent <date></date>",
+      "sentAtBy": "Sent <date></date> by {email}",
+      "title": "Invitations"
+    },
+    "new": {
+      "title": "New user"
+    },
+    "roles": {
+      "assign": "Assign",
+      "assigned": "{role} assigned.",
+      "assigning": "Assigning…",
+      "elevated": "elevated",
+      "loading": "Loading roles…",
+      "none": "No roles. This user can sign in and see nothing else.",
+      "noneToAssign": "No other role you can assign.",
+      "remove": "Remove {role}",
+      "removeConfirm": "Remove",
+      "removeTitle": "Remove {role} from {name}?",
+      "removed": "{role} removed.",
+      "rolesToAssign": "the roles you can assign",
+      "superusersOnly": "Superusers only",
+      "title": "Roles",
+      "toAssign": "Role to assign"
+    },
+    "sessions": {
+      "explainOther": "Signs this user out on every device.",
+      "explainSelf": "Signs you out on every device, this browser included.",
+      "otherBody": "Anyone signed in as them must sign in again.",
+      "otherTitle": "Sign {name} out everywhere?",
+      "selfBody": "That includes this browser: you will sign in again.",
+      "selfTitle": "Sign out all your sessions?",
+      "signOutEverywhere": "Sign out everywhere",
+      "signedOut": "{count, plural, one {Signed out of # session.} other {Signed out of # sessions.}}",
+      "signingOut": "Signing out…",
+      "title": "Sessions"
+    },
+    "show": {
+      "activate": "Activate",
+      "activateBody": "They can sign in again.",
+      "activateTitle": "Activate {name}?",
+      "activated": "Account activated.",
+      "activating": "Activating…",
+      "created": "Created",
+      "deactivate": "Deactivate",
+      "deactivated": "Deactivated",
+      "deactivatedBecause": "<date></date> — {reason}",
+      "edit": "Edit",
+      "lastSignIn": "Last sign-in",
+      "noun": "user",
+      "self": "This is your account.",
+      "title": "User"
+    },
+    "validation": {
+      "chooseRole": "Choose a role.",
+      "email": "Enter a valid email address.",
+      "tooLong": "{max, plural, other {Use # characters or fewer.}}"
+    }
+  }
+}

@@ -210,7 +210,7 @@ export function SecurityPanel() {
       return (
         <form onSubmit={(event) => handleConfirm(event, me, setup)} className={card} noValidate>
           <h2 className="text-sm font-semibold">Set up two-factor</h2>
-          <ol className="list-decimal space-y-3 pl-5 text-sm">
+          <ol className="list-decimal space-y-3 ps-5 text-sm">
             <li>
               In your authenticator app, add an account and enter this key:
               <code className="mt-1 block select-all rounded bg-muted px-2 py-1 font-mono tracking-wider">

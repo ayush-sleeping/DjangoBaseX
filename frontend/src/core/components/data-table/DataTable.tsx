@@ -20,6 +20,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
 
 import { list as listDefaults } from "@/core/lib/config/defaults";
+import { useT } from "@/core/lib/i18n";
 
 import { nextOrdering, parseOrdering } from "./ordering";
 import { EMPTY_SELECTION, isSelected, pageState, type Selection, toggleRow, togglePage } from "./selection";
@@ -135,6 +136,7 @@ export function DataTable<T extends RowData>({
   empty,
   caption,
 }: DataTableProps<T>) {
+  const t = useT("dataTable");
   const sort = parseOrdering(ordering);
   const withSelection = selection !== undefined;
   const data = rows.length ? (rows as T[]) : (EMPTY_ROWS as T[]);
@@ -181,7 +183,7 @@ export function DataTable<T extends RowData>({
                   <Checkbox
                     checked={page === "all"}
                     indeterminate={page === "some"}
-                    label="Select all rows on this page"
+                    label={t("selectAllOnPage")}
                     onToggle={() => selection.onChange(togglePage(selection.value, pageIds))}
                   />
                 </th>
@@ -239,7 +241,7 @@ export function DataTable<T extends RowData>({
                       <td className={`sticky start-0 z-10 w-10 bg-inherit px-3 py-2 ${SEAM_START}`}>
                         <Checkbox
                           checked={ticked}
-                          label={`Select ${label}`}
+                          label={t("selectRow", { label })}
                           onToggle={(shift) => selection.onChange(toggleRow(selection.value, id, pageIds, shift))}
                         />
                       </td>

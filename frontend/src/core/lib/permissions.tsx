@@ -19,6 +19,7 @@ import { isApiError } from "./api";
 import type { PermissionCode } from "@/generated/permissions";
 
 import { type BootstrapUser, useBootstrap } from "./bootstrap";
+import { useT } from "./i18n";
 
 export type { PermissionCode } from "@/generated/permissions";
 
@@ -118,10 +119,12 @@ export function Can({ perm, fallback, children }: { perm: PermissionCode; fallba
   return fallback !== undefined ? <>{fallback}</> : <DeniedCard />;
 }
 
-export function DeniedCard({ what = "view this section" }: { what?: string }) {
+/** `what` is an already translated phrase ("open this page"); "view this section" when omitted. */
+export function DeniedCard({ what }: { what?: string }) {
+  const t = useT("permissions");
   return (
     <p role="status" className="rounded-md border border-border p-4 text-sm">
-      You don&apos;t have permission to {what}.
+      {t("denied", { what: what ?? t("viewThisSection") })}
     </p>
   );
 }

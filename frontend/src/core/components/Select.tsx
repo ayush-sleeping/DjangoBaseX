@@ -11,6 +11,7 @@ import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOption
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useT } from "@/core/lib/i18n";
 import type { QueryKey } from "@/core/lib/query/keys";
 import { useApiQuery } from "@/core/lib/query/use-api-query";
 
@@ -22,6 +23,7 @@ type Common = {
   /** The accessible name when no visible <label> points at the control. */
   label?: string;
   name?: string;
+  /** Already translated; each control has a translated default. */
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
@@ -71,12 +73,13 @@ export function Select({
   onChange,
   label,
   name,
-  placeholder = "Choose…",
+  placeholder,
   disabled,
   required,
   invalid,
   id,
 }: Common & { options: readonly Option[]; value: string | null; onChange: (value: string | null) => void }) {
+  const t = useT("components.select");
   const [query, setQuery] = useState("");
   const shown = useMemo(() => matchOptions(options, query), [options, query]);
   return (
@@ -87,16 +90,16 @@ export function Select({
           aria-label={label}
           aria-required={required || undefined}
           aria-invalid={invalid || undefined}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t("choose")}
           displayValue={(v: string | null) => labelOf(options, v)}
           onChange={(e) => setQuery(e.target.value)}
           className={`${inputClass} pe-8`}
         />
-        <ComboboxButton aria-label="Show options" className="absolute inset-y-0 end-0 flex items-center px-2 text-muted-foreground">
+        <ComboboxButton aria-label={t("showOptions")} className="absolute inset-y-0 end-0 flex items-center px-2 text-muted-foreground">
           <ChevronsUpDown aria-hidden className="size-4" />
         </ComboboxButton>
       </div>
-      <OptionList options={shown} empty="No matches" />
+      <OptionList options={shown} empty={t("noMatches")} />
     </Combobox>
   );
 }
@@ -107,11 +110,12 @@ export function MultiSelect({
   onChange,
   label,
   name,
-  placeholder = "Add…",
+  placeholder,
   disabled,
   invalid,
   id,
 }: Common & { options: readonly Option[]; value: string[]; onChange: (value: string[]) => void }) {
+  const t = useT("components.select");
   const [query, setQuery] = useState("");
   const shown = useMemo(() => matchOptions(options, query), [options, query]);
   return (
@@ -120,7 +124,7 @@ export function MultiSelect({
         {value.map((v) => (
           <span key={v} className="inline-flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
             {labelOf(options, v) || v}
-            <button type="button" aria-label={`Remove ${labelOf(options, v) || v}`} disabled={disabled} onClick={() => onChange(value.filter((x) => x !== v))}>
+            <button type="button" aria-label={t("remove", { label: labelOf(options, v) || v })} disabled={disabled} onClick={() => onChange(value.filter((x) => x !== v))}>
               <X aria-hidden className="size-3" />
             </button>
           </span>
@@ -129,12 +133,12 @@ export function MultiSelect({
           id={id}
           aria-label={label}
           aria-invalid={invalid || undefined}
-          placeholder={value.length ? "" : placeholder}
+          placeholder={value.length ? "" : (placeholder ?? t("add"))}
           onChange={(e) => setQuery(e.target.value)}
           className="min-w-24 flex-1 bg-transparent text-sm outline-none"
         />
       </div>
-      <OptionList options={shown} empty="No matches" />
+      <OptionList options={shown} empty={t("noMatches")} />
     </Combobox>
   );
 }
@@ -153,7 +157,7 @@ export function AsyncSelect({
   minLength = 1,
   label,
   name,
-  placeholder = "Search…",
+  placeholder,
   disabled,
   invalid,
   id,
@@ -166,11 +170,18 @@ export function AsyncSelect({
   selectedLabel?: string;
   minLength?: number;
 }) {
+  const t = useT("components.select");
   const [query, setQuery] = useState("");
   const enabled = query.trim().length >= minLength;
   const result = useApiQuery<Option[]>(queryKey(query.trim()), (signal) => load(query.trim(), signal), { enabled });
   const options = result.data ?? [];
-  const empty = !enabled ? `Type ${minLength} or more characters` : result.isLoading ? "Searching…" : result.showError ? "Couldn't search — try again" : "No matches";
+  const empty = !enabled
+    ? t("minLength", { count: minLength })
+    : result.isLoading
+      ? t("searching")
+      : result.showError
+        ? t("searchFailed")
+        : t("noMatches");
   return (
     <Combobox
       value={value}
@@ -184,7 +195,7 @@ export function AsyncSelect({
         id={id}
         aria-label={label}
         aria-invalid={invalid || undefined}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("search")}
         displayValue={(v: string | null) => options.find((o) => o.value === v)?.label ?? (v ? selectedLabel ?? v : "")}
         onChange={(e) => setQuery(e.target.value)}
         className={inputClass}

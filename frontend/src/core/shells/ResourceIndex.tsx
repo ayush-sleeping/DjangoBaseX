@@ -25,6 +25,7 @@ import {
 import { EmptyState } from "@/core/components/EmptyState";
 import { ListLoadError } from "@/core/components/ListLoadError";
 import { list as listDefaults } from "@/core/lib/config/defaults";
+import { useT } from "@/core/lib/i18n";
 import type { ListErrorProps } from "@/core/lib/query/use-api-query";
 
 /** The slice of useApiList the shell reads. */
@@ -42,7 +43,7 @@ export type ResourceIndexProps<T extends RowData> = {
   /** "<module>.<resource>.index", rendered as data-page for e2e selectors. */
   pageKey: string;
   title: string;
-  /** Plural noun: "users", "orders". Used by the pager, the empty state and the error. */
+  /** Plural noun, already translated: "users", "orders". Used by the pager, the empty state and the error. */
   noun: string;
   description?: ReactNode;
   /** Header actions: New, Export… each already permission-gated by the caller. */
@@ -99,16 +100,17 @@ export function ResourceIndex<T extends RowData>({
   bulkActions,
   children,
 }: ResourceIndexProps<T>) {
+  const t = useT("shells.index");
   useEnrolmentRedirect(list.showError ? list.listErrorProps.error : null);
   const empty = list.isEmpty ? (
     filtered ? (
       <EmptyState
         variant="filtered"
-        title={`No ${noun} match these filters`}
-        action={onClearFilters ? <Button variant="secondary" onClick={onClearFilters}>Clear filters</Button> : undefined}
+        title={t("filteredEmpty", { noun })}
+        action={onClearFilters ? <Button variant="secondary" onClick={onClearFilters}>{t("clearFilters")}</Button> : undefined}
       />
     ) : (
-      <EmptyState variant="none" title={`No ${noun} yet`} body={emptyBody} action={emptyAction} />
+      <EmptyState variant="none" title={t("noneYet", { noun })} body={emptyBody} action={emptyAction} />
     )
   ) : null;
   const showPager = !list.showError && !list.isLoading && list.count > 0;

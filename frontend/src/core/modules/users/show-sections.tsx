@@ -10,6 +10,7 @@ import { confirm } from "@/core/components/confirm";
 import { PanelError } from "@/core/components/PanelError";
 import { Select } from "@/core/components/Select";
 import { toast } from "@/core/components/toast";
+import { useT } from "@/core/lib/i18n";
 import { usePermissions } from "@/core/lib/permissions";
 import { useApiMutation, useApiQuery } from "@/core/lib/query";
 import { assignableBy, assignRole, listAllRoles, type Role, ROLE_CODES, rbacErrorMessage, roleKeys, unassignRole } from "@/core/lib/rbac";
@@ -20,6 +21,7 @@ import { USER_ACTIONS } from "./actions";
 import { userLabel } from "./columns";
 
 export function RolesCard({ user }: { user: User }) {
+  const t = useT("users.roles");
   const perms = usePermissions();
   const superuser = perms.user?.is_superuser === true;
   // Assigning needs the right to assign AND to list roles to pick from.
@@ -42,19 +44,19 @@ export function RolesCard({ user }: { user: User }) {
   const selected = chosen && offered.some((r) => r.public_id === chosen) ? chosen : (offered[0]?.public_id ?? null);
 
   async function run(action: { assign: boolean; role: string }, name: string) {
-    if (!action.assign && !(await confirm({ title: `Remove ${name} from ${userLabel(user)}?`, confirmLabel: "Remove", tone: "danger" }))) return;
+    if (!action.assign && !(await confirm({ title: t("removeTitle", { role: name, name: userLabel(user) }), confirmLabel: t("removeConfirm"), tone: "danger" }))) return;
     try {
       await change.mutateAsync(action);
-      toast(action.assign ? `${name} assigned.` : `${name} removed.`, { tone: "ok" });
+      toast(action.assign ? t("assigned", { role: name }) : t("removed", { role: name }), { tone: "ok" });
     } catch (error) {
       toast(rbacErrorMessage(error), { tone: "err" });
     }
   }
 
   return (
-    <InfoCard title="Roles">
+    <InfoCard title={t("title")}>
       {user.roles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No roles. This user can sign in and see nothing else.</p>
+        <p className="text-sm text-muted-foreground">{t("none")}</p>
       ) : (
         <ul className="divide-y divide-border text-sm">
           {user.roles.map((role) => (
@@ -67,9 +69,9 @@ export function RolesCard({ user }: { user: User }) {
                 <span>{role.name}</span>
               )}
               {canAssign && mayChange(role.public_id) ? (
-                <IconButton icon={X} label={`Remove ${role.name}`} disabled={change.isPending} onClick={() => void run({ assign: false, role: role.public_id }, role.name)} />
+                <IconButton icon={X} label={t("remove", { role: role.name })} disabled={change.isPending} onClick={() => void run({ assign: false, role: role.public_id }, role.name)} />
               ) : canAssign ? (
-                <span className="text-xs text-muted-foreground">Superusers only</span>
+                <span className="text-xs text-muted-foreground">{t("superusersOnly")}</span>
               ) : null}
             </li>
           ))}
@@ -77,25 +79,25 @@ export function RolesCard({ user }: { user: User }) {
       )}
       {canAssign ? (
         catalog.showError ? (
-          <PanelError error={catalog.error} retry={catalog.refetch} what="the roles you can assign" />
+          <PanelError error={catalog.error} retry={catalog.refetch} what={t("rolesToAssign")} />
         ) : catalog.isLoading ? (
-          <p className="text-xs text-muted-foreground">Loading roles…</p>
+          <p className="text-xs text-muted-foreground">{t("loading")}</p>
         ) : offered.length > 0 && selected ? (
           <div className="flex gap-2">
             <div className="min-w-0 flex-1">
               <Select
-                label="Role to assign"
-                options={offered.map((role) => ({ value: role.public_id, label: role.name, hint: role.is_elevated ? "elevated" : undefined }))}
+                label={t("toAssign")}
+                options={offered.map((role) => ({ value: role.public_id, label: role.name, hint: role.is_elevated ? t("elevated") : undefined }))}
                 value={selected}
                 onChange={setChosen}
               />
             </div>
-            <Button onClick={() => void run({ assign: true, role: selected }, byId.get(selected)?.name ?? "Role")} pending={change.isPending} pendingLabel="Assigning…">
-              <Plus aria-hidden className="size-4" /> Assign
+            <Button onClick={() => void run({ assign: true, role: selected }, byId.get(selected)?.name ?? selected)} pending={change.isPending} pendingLabel={t("assigning")}>
+              <Plus aria-hidden className="size-4" /> {t("assign")}
             </Button>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">No other role you can assign.</p>
+          <p className="text-xs text-muted-foreground">{t("noneToAssign")}</p>
         )
       ) : null}
     </InfoCard>
@@ -103,6 +105,7 @@ export function RolesCard({ user }: { user: User }) {
 }
 
 export function SessionsCard({ user, self, onSignedOutSelf }: { user: User; self: boolean; onSignedOutSelf: () => void }) {
+  const t = useT("users.sessions");
   const revoke = useApiMutation({
     mutationFn: () => revokeUserSessions(user.public_id),
     invalidates: [],
@@ -111,16 +114,16 @@ export function SessionsCard({ user, self, onSignedOutSelf }: { user: User; self
 
   async function handleRevoke() {
     const ok = await confirm({
-      title: self ? "Sign out all your sessions?" : `Sign ${userLabel(user)} out everywhere?`,
-      body: self ? "That includes this browser: you will sign in again." : "Anyone signed in as them must sign in again.",
-      confirmLabel: "Sign out everywhere",
+      title: self ? t("selfTitle") : t("otherTitle", { name: userLabel(user) }),
+      body: self ? t("selfBody") : t("otherBody"),
+      confirmLabel: t("signOutEverywhere"),
       tone: "danger",
     });
     if (!ok) return;
     try {
       const count = await revoke.mutateAsync();
       if (self) return onSignedOutSelf();
-      toast(`Signed out of ${count} session${count === 1 ? "" : "s"}.`, { tone: "ok" });
+      toast(t("signedOut", { count }), { tone: "ok" });
     } catch (error) {
       toast(usersErrorMessage(error), { tone: "err" });
     }
@@ -128,16 +131,14 @@ export function SessionsCard({ user, self, onSignedOutSelf }: { user: User; self
 
   return (
     <InfoCard
-      title="Sessions"
+      title={t("title")}
       actions={
-        <Button variant="secondary" size="sm" onClick={() => void handleRevoke()} pending={revoke.isPending} pendingLabel="Signing out…">
-          <LogOut aria-hidden className="size-4" /> Sign out everywhere
+        <Button variant="secondary" size="sm" onClick={() => void handleRevoke()} pending={revoke.isPending} pendingLabel={t("signingOut")}>
+          <LogOut aria-hidden className="size-4" /> {t("signOutEverywhere")}
         </Button>
       }
     >
-      <p className="text-sm text-muted-foreground">
-        Signs {self ? "you" : "this user"} out on every device{self ? ", this browser included" : ""}.
-      </p>
+      <p className="text-sm text-muted-foreground">{self ? t("explainSelf") : t("explainOther")}</p>
     </InfoCard>
   );
 }

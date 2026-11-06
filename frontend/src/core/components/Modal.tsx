@@ -11,6 +11,8 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { useT } from "@/core/lib/i18n";
+
 import { IconButton } from "./Button";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl";
@@ -38,6 +40,7 @@ export function Modal({
   /** False while a submit is in flight: Escape and the backdrop do nothing. */
   dismissible?: boolean;
 }) {
+  const t = useT("common");
   return (
     <Dialog open={open} onClose={() => dismissible && onClose()} className="relative z-50">
       <div aria-hidden className="fixed inset-0 bg-foreground/40" />
@@ -47,7 +50,7 @@ export function Modal({
         >
           <header className="flex items-center justify-between gap-4 border-b border-border px-5 py-3">
             <DialogTitle className="text-base font-semibold">{title}</DialogTitle>
-            <IconButton icon={X} label="Close" onClick={onClose} disabled={!dismissible} />
+            <IconButton icon={X} label={t("close")} onClick={onClose} disabled={!dismissible} />
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
           {footer || footerMessage ? (

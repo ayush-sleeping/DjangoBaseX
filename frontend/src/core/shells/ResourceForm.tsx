@@ -17,6 +17,7 @@ import type { FieldValues, UseFormReturn } from "react-hook-form";
 import { Button } from "@/core/components/Button";
 import { confirm } from "@/core/components/confirm";
 import { Modal } from "@/core/components/Modal";
+import { useT } from "@/core/lib/i18n";
 
 import { applyServerErrors, dirtyValues, FORM_ERROR } from "./form-errors";
 
@@ -26,7 +27,7 @@ export type ResourceFormProps<T extends FieldValues> = {
   form: UseFormReturn<T>;
   /** Receives all values and only the changed ones (send those on a PATCH). Throw to show errors. */
   onSubmit: (values: T, changed: Partial<T>) => Promise<void>;
-  /** The resource, singular: "user" → "New user" / "Edit Ada Lovelace". */
+  /** The resource, singular and already translated: "user" → "New user" / "Edit Ada Lovelace". */
   resource: string;
   /** Present in edit mode: the record's human name for the heading. */
   record?: { name: string } | null;
@@ -50,7 +51,7 @@ export function ResourceForm<T extends FieldValues>({
   resource,
   record,
   submitLabel,
-  pendingLabel = "Saving…",
+  pendingLabel,
   children,
   intro,
   layout = "page",
@@ -58,11 +59,13 @@ export function ResourceForm<T extends FieldValues>({
   onClose,
   cancel,
 }: ResourceFormProps<T>) {
+  const t = useT("shells.form");
+  const common = useT("common");
   const id = useId();
   const { isDirty, isSubmitting, errors, dirtyFields } = form.formState;
   const editing = Boolean(record);
-  const heading = editing ? `Edit ${record!.name}` : `New ${resource}`;
-  const label = submitLabel ?? (editing ? "Save changes" : `Create ${resource}`);
+  const heading = editing ? t("editTitle", { name: record!.name }) : t("createTitle", { resource });
+  const label = submitLabel ?? (editing ? t("save") : t("createSubmit", { resource }));
   const formError = (errors as { root?: { server?: { message?: string } } }).root?.server?.message;
   const fieldErrorCount = Object.keys(errors).filter((key) => key !== "root").length;
 
@@ -78,7 +81,7 @@ export function ResourceForm<T extends FieldValues>({
     try {
       await onSubmit(values, dirtyValues(values, dirtyFields as Partial<Record<keyof T, unknown>>));
     } catch (error) {
-      applyServerErrors(form, error);
+      applyServerErrors(form, error, t("failed"));
     }
   });
 
@@ -88,12 +91,12 @@ export function ResourceForm<T extends FieldValues>({
     </p>
   ) : fieldErrorCount > 0 ? (
     <p role="alert" className="text-destructive">
-      {fieldErrorCount === 1 ? "1 field needs attention." : `${fieldErrorCount} fields need attention.`}
+      {t("fieldsNeedAttention", { count: fieldErrorCount })}
     </p>
   ) : null;
 
   const save = (
-    <Button type="submit" form={id} disabled={!isDirty} pending={isSubmitting} pendingLabel={pendingLabel}>
+    <Button type="submit" form={id} disabled={!isDirty} pending={isSubmitting} pendingLabel={pendingLabel ?? common("saving")}>
       {label}
     </Button>
   );
@@ -108,7 +111,7 @@ export function ResourceForm<T extends FieldValues>({
   if (layout === "modal") {
     const close = async () => {
       if (isSubmitting) return;
-      if (isDirty && !(await confirm({ title: "Discard your changes?", confirmLabel: "Discard", tone: "danger" }))) return;
+      if (isDirty && !(await confirm({ title: t("discardTitle"), confirmLabel: t("discard"), tone: "danger" }))) return;
       form.reset();
       onClose?.();
     };
@@ -123,7 +126,7 @@ export function ResourceForm<T extends FieldValues>({
         footer={
           <>
             <Button variant="secondary" onClick={() => void close()} disabled={isSubmitting}>
-              Cancel
+              {common("cancel")}
             </Button>
             {save}
           </>

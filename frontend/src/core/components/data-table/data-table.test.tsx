@@ -63,10 +63,11 @@ describe("selection", () => {
     const seen = vi.fn();
     render(<Harness onSelection={seen} total={1337} />);
     await user.click(screen.getByRole("checkbox", { name: "Select all rows on this page" }));
-    await user.click(screen.getByRole("button", { name: "Select all 1337 matching" }));
+    // The count is grouped by the locale (ICU {total, number}): "1,337" in the shipped one.
+    await user.click(screen.getByRole("button", { name: /^Select all 1\D?337 matching$/ }));
     const last = seen.mock.calls.at(-1)![0] as Selection;
     expect(last.mode).toBe("query");
-    expect(screen.getByText("All 1337 matching rows selected")).toBeInTheDocument();
+    expect(screen.getByText(/^All 1\D?337 matching rows selected$/)).toBeInTheDocument();
     // Unticking one row in query mode excludes it, and the bulk target re-runs the query.
     await user.click(screen.getByRole("checkbox", { name: "Select Row A" }));
     const after = seen.mock.calls.at(-1)![0] as Selection;

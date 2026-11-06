@@ -3,23 +3,25 @@
 // Client component: navigation is per-user, and the session is an httpOnly cookie.
 import Link from "next/link";
 
+import { useT } from "@/core/lib/i18n";
 import { useNav } from "@/core/shell/nav/use-nav";
 
 /** Every section and item this user may follow; renders nothing when signed out. */
 export function NavMenu() {
+  const t = useT("shell.nav");
   const nav = useNav();
 
   if (nav.failed && nav.signedIn) {
     // A broken registration or menu build is shown, never rendered as an empty menu (BC-42).
     return (
       <p role="alert" className="text-sm text-destructive">
-        Could not load the menu. Reload the page to try again.
+        {t("failed")}
       </p>
     );
   }
   if (nav.sections.length === 0) return null;
   return (
-    <nav aria-label="Modules" className="w-full max-w-md rounded-xl border border-border p-6">
+    <nav aria-label={t("label")} className="w-full max-w-md rounded-xl border border-border p-6">
       {nav.sections.map((section) => (
         <section key={section.key} className="mb-3 last:mb-0">
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">

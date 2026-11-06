@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { Button, buttonClass } from "@/core/components/Button";
 import { SearchInput } from "@/core/components/SearchInput";
+import { useT } from "@/core/lib/i18n";
 import { useListState } from "@/core/lib/list-state";
 import { usePermissions } from "@/core/lib/permissions";
 import { useApiList } from "@/core/lib/query";
@@ -15,13 +16,15 @@ import { listUsers, type User } from "@/core/lib/users";
 import { ResourceIndex } from "@/core/shells";
 
 import { USER_ACTIONS } from "./actions";
-import { USER_COLUMNS, userHref, userLabel } from "./columns";
+import { userHref, userLabel, useUserColumns } from "./columns";
 import { UserForm } from "./Form";
 import { userKeys } from "./keys";
 
 const getRowId = (user: User) => user.public_id;
 
 export function UsersIndex() {
+  const t = useT("users.index");
+  const columns = useUserColumns();
   const router = useRouter();
   const perms = usePermissions();
   const state = useListState();
@@ -31,28 +34,28 @@ export function UsersIndex() {
   const canCreate = perms.can(USER_ACTIONS.create.permission);
   const newUser = canCreate ? (
     <Button onClick={() => setCreating(true)}>
-      <Plus aria-hidden className="size-4" /> New user
+      <Plus aria-hidden className="size-4" /> {t("newUser")}
     </Button>
   ) : null;
 
   return (
     <ResourceIndex<User>
       pageKey="users.user.index"
-      title="Users"
-      noun="users"
-      description="Everyone who can sign in, and what they hold."
+      title={t("title")}
+      noun={t("noun")}
+      description={t("description")}
       actions={
         <>
           {perms.can(USER_ACTIONS.invite.permission) ? (
             <Link href="/users/invitations" className={buttonClass("secondary")}>
-              <Mail aria-hidden className="size-4" /> Invitations
+              <Mail aria-hidden className="size-4" /> {t("invitations")}
             </Link>
           ) : null}
           {newUser}
         </>
       }
-      toolbar={<SearchInput value={state.search} onSearch={state.setSearch} label="Search users" placeholder="Search by email or name" />}
-      columns={USER_COLUMNS}
+      toolbar={<SearchInput value={state.search} onSearch={state.setSearch} label={t("searchLabel")} placeholder={t("searchPlaceholder")} />}
+      columns={columns}
       list={list}
       getRowId={getRowId}
       getRowLabel={userLabel}

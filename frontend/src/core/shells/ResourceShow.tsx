@@ -13,6 +13,8 @@ import type { ReactNode } from "react";
 import { useEnrolmentRedirect } from "./use-enrolment-redirect";
 
 import { PanelError } from "@/core/components/PanelError";
+import { EMPTY } from "@/core/lib/format";
+import { useT } from "@/core/lib/i18n";
 
 export type ShowState = { isLoading: boolean; showError: boolean; error: unknown; refetch: () => unknown };
 
@@ -29,7 +31,7 @@ export function ResourceShow({
 }: {
   /** "<module>.<resource>.show", rendered as data-page for e2e selectors. */
   pageKey: string;
-  /** Singular noun: "user". */
+  /** Singular noun, already translated: "user". */
   noun: string;
   state: ShowState;
   title?: ReactNode;
@@ -41,11 +43,12 @@ export function ResourceShow({
   /** The record's sections (InfoCards). Rendered only once the record has loaded. */
   children?: ReactNode;
 }) {
+  const t = useT("shells.show");
   useEnrolmentRedirect(state.showError ? state.error : null);
   if (state.showError) {
     return (
       <main data-page={pageKey} className="mx-auto w-full max-w-6xl p-6">
-        <PanelError error={state.error} retry={state.refetch} what={`this ${noun}`} />
+        <PanelError error={state.error} retry={state.refetch} what={t("thisRecord", { noun })} />
       </main>
     );
   }
@@ -91,15 +94,16 @@ export function InfoCard({ title, actions, children }: { title: string; actions?
 }
 
 /** Facts about a record: label → value. A missing value renders one em dash. */
-export function MetaCard({ title = "Details", items }: { title?: string; items: { label: string; value: ReactNode }[] }) {
+export function MetaCard({ title, items }: { title?: string; items: { label: string; value: ReactNode }[] }) {
+  const t = useT("shells.show");
   return (
     <section className="rounded-xl border border-border bg-card p-5 text-card-foreground">
-      <h2 className="mb-3 text-sm font-semibold">{title}</h2>
+      <h2 className="mb-3 text-sm font-semibold">{title ?? t("details")}</h2>
       <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
         {items.map((item) => (
           <div key={item.label} className="contents">
             <dt className="text-muted-foreground">{item.label}</dt>
-            <dd className="min-w-0 break-words">{item.value ?? "—"}</dd>
+            <dd className="min-w-0 break-words">{item.value ?? EMPTY}</dd>
           </div>
         ))}
       </dl>

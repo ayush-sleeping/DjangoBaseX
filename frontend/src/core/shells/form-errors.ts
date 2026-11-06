@@ -21,8 +21,11 @@ function hasPath(values: unknown, path: string): boolean {
   return true;
 }
 
-/** Returns how many field errors were applied. */
-export function applyServerErrors<T extends FieldValues>(form: UseFormReturn<T>, error: unknown): number {
+/**
+ * Returns how many field errors were applied. `failed` is the translated form-level message for an
+ * error the API did not describe (a network failure): this module renders no copy of its own.
+ */
+export function applyServerErrors<T extends FieldValues>(form: UseFormReturn<T>, error: unknown, failed: string): number {
   const values = form.getValues();
   const formLevel: string[] = [];
   let first: string | null = null;
@@ -43,7 +46,7 @@ export function applyServerErrors<T extends FieldValues>(form: UseFormReturn<T>,
     formLevel.push(...error.nonField);
     if (!applied && !formLevel.length) formLevel.push(messageFor(error));
   } else {
-    formLevel.push(isApiError(error) ? messageFor(error) : "Something went wrong. Try again.");
+    formLevel.push(isApiError(error) ? messageFor(error) : failed);
   }
 
   if (formLevel.length) form.setError(FORM_ERROR, { type: "server", message: formLevel.join(" ") });

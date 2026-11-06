@@ -99,8 +99,53 @@ describe("the ESLint rules this repository adds are live", () => {
     expect(await banned(code, "src/core/components/Probe.tsx")).toBeGreaterThan(0);
   });
 
-  it("allows logical direction, and leaves pages outside the scope for now", async () => {
+  it("refuses physical direction in a page too (8.4c)", async () => {
+    expect(await banned('export const C = () => <div className="ml-auto" />;\n')).toBeGreaterThan(0);
+  });
+
+  it("allows logical direction", async () => {
     expect(await banned('export const C = () => <div className="ms-auto text-end start-0" />;\n', "src/core/components/Probe.tsx")).toBe(0);
-    expect(await banned('export const C = () => <div className="ml-auto" />;\n')).toBe(0);
+    expect(await banned('export const C = () => <div className="ms-auto ps-5" />;\n')).toBe(0);
+  });
+
+  // Translation (FRONTEND_PLATFORM § 22, BUILD_ORDER 8.4c): copy comes from the catalogue.
+  const COMPONENT = "src/core/components/Probe.tsx";
+  it("refuses text between tags in a translated directory", async () => {
+    expect(await rulesFor("export const C = () => <p>Couldn't load</p>;\n", COMPONENT)).toContain("react/jsx-no-literals");
+    expect(await rulesFor('export const C = () => <p>{"Saved"}</p>;\n', "src/core/modules/x/Probe.tsx")).toContain("react/jsx-no-literals");
+  });
+
+  it.each([
+    ["an aria-label", 'export const C = () => <button aria-label="Close" />;\n'],
+    ["a label prop", 'export const C = () => <Field label="Email" />;\n'],
+    ["a conditional placeholder", 'export const C = (x: boolean) => <Field placeholder={x ? "Loading…" : "Choose"} />;\n'],
+    ["a template aria-label", "export const C = (p: number) => <button aria-label={`Page ${p}`} />;\n"],
+    ["a confirm title", 'export const c = () => confirm({ title: "Discard your changes?" });\n'],
+    ["a column header", 'export const cols = [{ id: "a", header: "Email" }];\n'],
+    ["a toast", 'export const s = () => toast("Saved.");\n'],
+    ["a toast template", "export const s = (n: number) => toast(`Signed out of ${n} sessions.`);\n"],
+    ["a default label", 'export function S({ label = "Search" }: { label?: string }) { return label; }\n'],
+    ["computed text between tags", "export const C = (n: number) => <p>{n === 1 ? \"1 field\" : `${n} fields`}</p>;\n"],
+  ])("refuses %s as copy in a translated directory", async (_name, code) => {
+    expect(await banned(code, COMPONENT)).toBeGreaterThan(0);
+  });
+
+  it("allows translated copy, punctuation and non-copy strings", async () => {
+    const code =
+      "const Pill = (p: { status: string; kind: string }) => p.status;\n" +
+      'export const C = (t: (k: string) => string) => <p aria-label={t("a")} className="flex gap-2" title={t("b")}>' +
+      '{t("c")} — <span aria-hidden> *</span><Pill status="users.user.active" kind="data" /></p>;\n';
+    expect(await rulesFor(code, COMPONENT)).toEqual([]);
+  });
+
+  it("leaves src/app copy to the untranslated-pages ratchet", async () => {
+    expect(await rulesFor("export const P = () => <p>Sign in</p>;\n", UI)).not.toContain("react/jsx-no-literals");
+  });
+
+  it("refuses next-intl outside the translation entry, and allows it inside", async () => {
+    const code = 'import { useTranslations } from "next-intl";\nexport const u = useTranslations;\n';
+    expect(await rulesFor(code, COMPONENT)).toContain("no-restricted-imports");
+    expect(await rulesFor('import { createTranslator } from "use-intl/core";\nexport const c = createTranslator;\n', UI)).toContain("no-restricted-imports");
+    expect(await rulesFor(code, "src/core/lib/i18n/probe.ts")).not.toContain("no-restricted-imports");
   });
 });

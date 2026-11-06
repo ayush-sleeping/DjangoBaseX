@@ -26,6 +26,61 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 8.4c: the translation layer, the catalogue and the extraction
+**What** (Dev 2 `djangobasex-bc`; manager review and gate):
+- **next-intl, client-side, no plugin:** `src/core/lib/i18n/` is the only importer. `I18nProvider`
+  (`NextIntlClientProvider` inside `LocalizationProvider`) takes the same viewer locale and zone as
+  the formatters. `useT` has keys typed from `src/core/messages/en.json`. `getServerT` is
+  `createTranslator` with the platform locale, used by the Users pages' `generateMetadata`; the
+  routes stay static.
+- **Catalogue:** `en.json` is the source, always bundled. Other languages load lazily and merge
+  over it key by key; a missing key renders its path. ICU only.
+- **Extracted:** the shells, DataTable/BulkBar/Pager, every primitive, the Users module (column
+  hooks; zod schemas built from translated copy), the nav menu, the route gate, ThemeToggle and
+  DeniedCard. Concatenated copy became ICU plurals, `{n, number}` and rich-text tags.
+- **Lint:** `react/jsx-no-literals` and a scoped `copy` ban in src/core shells, components, modules,
+  shell and theme. `next-intl` is importable only from the i18n entry. The physical left/right ban
+  now covers src/core/shell, src/core/theme and src/app (the five classes there moved to logical).
+- **Tests:**
+  - `messages.test.ts`: two-way keys, no orphans, literal keys, namespace ownership.
+  - `i18n.test.tsx`: per-key fallback, ICU plurals in two languages, locale grouping, the provider
+    following bootstrap and then the platform.
+  - `untranslated-pages.test.ts`: a two-way ratchet; 16 src/app pages listed.
+  - lint-smoke controls.
+  - `tests/setup.ts` renders every test inside the real source catalogue.
+**Why:** inline English is free to write and expensive to extract, and the extraction always lands
+when a customer is waiting. A shared core for an ERP, a shop and a CRM needs its copy in a
+catalogue from the start, keyed and pluralised by ICU rather than glued together in English word
+order.
+**Files:** `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/core/lib/i18n/**`,
+`frontend/src/core/messages/en.json`,
+`frontend/src/core/{shells,components,modules/users,shell,theme,providers}/**`,
+`frontend/src/core/lib/permissions.tsx`, `frontend/src/app/(core)/users/**` (titles),
+`frontend/src/app/(core)/{page,accept-invitation/…,reset-password/…,account/security/…,settings/roles/[publicId]/…}.tsx`
+(logical CSS), `frontend/eslint.config.mjs`,
+`frontend/tests/{setup.ts,i18n.tsx,lint-smoke.test.ts,architecture/messages.test.ts,architecture/untranslated-pages.test.ts}`,
+`FRONTEND_PLATFORM.md` § 22, `NEXTJS_STANDARDS.md` § 5, `BUILD_ORDER.md`.
+**Verification:**
+- Dev's run, exit codes captured directly: frontend lint 0, typecheck 0; vitest 0 (33 files / 261
+  tests, no Errors); `next build` 0 (Users routes still static).
+- Backend, unchanged: ruff 0, format 0, check 0, makemigrations 0, contracts 0; pytest 0 (1535
+  passed, 5 skipped).
+- With the notes plugin: lint, typecheck and vitest 0 (33/261); pytest 1542 passed, 3 skipped.
+- Manager's gate on `main` after applying the patch and `npm ci`: lint 0, typecheck 0, vitest 0
+  (33/261, no Errors), `next build` 0, pytest 0 (1535 passed, 5 skipped), contracts current.
+  Backend untouched, so the PostgreSQL run of the previous push stands.
+**Notes:**
+- **`@swc/core` override:** pinned to 1.16.20 through `overrides`. next-intl's extractor wanted
+  `~1.16.0`, which resolved to 1.16.22, published 2026-11-05 and so under the 14-day rule. Drop the
+  override on or after 2026-11-19. Next's own compiler is `@next/swc`, unaffected.
+- **Deferred:**
+  - per-plugin catalogues (a typing decision, recommended as 8.4d);
+  - the 16 src/app pages on the ratchet;
+  - `errors.<code>` copy (9.2);
+  - backend-provided labels;
+  - a second language;
+  - per-user server rendering.
+
 ### BUILD_ORDER 8.4b: localization in bootstrap, the formatters and their lint bans
 **What** (Dev 2 `djangobasex-bc`; manager review and gate):
 - **Backend:** an essential `localization` bootstrap contributor (`asdict(locale_policy(user))`,

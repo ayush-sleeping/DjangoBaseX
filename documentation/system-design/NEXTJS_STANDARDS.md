@@ -217,9 +217,26 @@ author meets:
   - No literal locale, timezone or currency anywhere. They come from bootstrap `localization` (or
     the platform's, signed out).
   - Money is the API's decimal string plus the record's ISO code.
-- **Logical direction, not left/right**, in shared components, shells and modules (`ms-`, `me-`,
-  `ps-`, `pe-`, `start-`, `end-`, `text-start`/`text-end`), so a right-to-left locale needs no
-  rewrite (§ 22). ESLint enforces it there.
+- **Logical direction, not left/right**, everywhere under `src/core/` UI and `src/app/` (`ms-`,
+  `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`/`text-end`), so a right-to-left locale needs no
+  rewrite (§ 22). ESLint enforces it.
+- **Every string a user reads comes from the catalogue**
+  ([`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md) § 22), `src/core/messages/en.json`:
+  - In a client component: `const t = useT("users.show")`, then `t("title")`,
+    `t("activateTitle", { name })` or `t.rich("expires", { date: () => <DateTime … /> })`.
+  - In a server component or `generateMetadata`: `const t = await getServerT("users.index")`. It
+    translates in the PLATFORM's locale; never call next-intl's server hooks (they need a plugin
+    this app does not install). ESLint refuses importing `next-intl` outside `src/core/lib/i18n/`.
+  - ICU only: `{count, plural, one {…} other {…}}`, `{n, number}`. Never concatenate translated
+    fragments or pluralise by hand.
+  - String-literal namespaces and keys, in the file's own namespace (`messages.test.ts` checks both
+    ways: every key used exists, and every key exists because something uses it).
+  - Validation messages too: build the zod schema from translated copy (see
+    `src/core/modules/users/fields.ts`), never as a module-scope constant holding English.
+  - Lint refuses copy literals (text between tags, `aria-label`/`title`/`label`/`placeholder`…,
+    `toast("…")`, `{ title: "…" }`) in `src/core/` shells, components, modules, shell and theme.
+    Pages under `src/app/` are held by a ratchet (`untranslated-pages.test.ts`) until translated: a
+    new page must not join its list.
 
 ---
 

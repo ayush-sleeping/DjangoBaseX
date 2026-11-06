@@ -21,7 +21,7 @@ export default async function Home() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 p-8 font-sans">
       {/* Until the shell's header lands (BUILD_ORDER 8.3b), the status page carries the theme choice. */}
-      <div className="absolute right-4 top-4">
+      <div className="absolute end-4 top-4">
         <ThemeToggle />
       </div>
       <div className="text-center">

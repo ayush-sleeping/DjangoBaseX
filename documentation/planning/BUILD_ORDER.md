@@ -969,8 +969,12 @@ timezone (never currency); `src/core/lib/format/` is the one formatter home (`fo
 decimal strings, date-only values never shifted, datetimes always with an explicit timezone),
 `<DateTime>`/`<DateOnly>`/`<Money>`/`<Bytes>`; ESLint refuses a formatter or `Intl.*Format`/`toLocale*`
 anywhere else (acceptance 2, proven live) and physical left/right classes in shells, components and
-modules; the shared components moved to logical CSS. **8.4c ⬜:** the translation layer (next-intl,
-owner-approved 2026-11-06), per-plugin catalogues, `jsx-no-literals`, the untranslated-pages ratchet.
+modules; the shared components moved to logical CSS. **8.4c ✅ (2026-11-06, Dev 2, manager review):** the
+translation layer (next-intl 4.14.9, owner-approved), `src/core/lib/i18n/` as its only importer, the
+ICU catalogue `en.json` with lazy per-key-fallback languages, the shells/primitives/Users module
+extracted, `jsx-no-literals` + a scoped copy ban, the untranslated-pages ratchet (16 pages). **8.4d ⬜:**
+per-plugin catalogues (namespace = plugin name, augmentable `PluginMessages`, plugin-lane tests),
+the load-time argument/tag guard for translations, the server-side missing-key warning.
 A translation layer with per-plugin catalogues; formatters driven by bootstrap locale/currency/timezone;
 OpenAPI → TypeScript types plus exported enums and permission codes, each with a drift check. Closes **DB-4**.
 

@@ -35,7 +35,7 @@ describe("applyServerErrors", () => {
         { path: "email", message: "Taken." },
         { path: "lines.0.qty", message: "Too many." },
         { path: "secret_field", message: "Bad." },
-      ], ["Try later."]));
+      ], ["Try later."]), "unused");
     });
     expect(applied).toBe(2);
     expect(form.getFieldState("email").error?.message).toBe("Taken.");
@@ -45,7 +45,7 @@ describe("applyServerErrors", () => {
 
   it("turns a non-validation failure into a form-level message", () => {
     const { result } = renderHook(() => useForm({ defaultValues: { name: "" } }));
-    act(() => void applyServerErrors(result.current, new Error("network")));
+    act(() => void applyServerErrors(result.current, new Error("network"), "Something went wrong. Try again."));
     expect(rootError(result.current)).toMatch(/Something went wrong/);
   });
 

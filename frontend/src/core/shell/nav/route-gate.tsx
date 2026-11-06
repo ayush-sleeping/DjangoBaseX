@@ -19,6 +19,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { useBootstrap } from "@/core/lib/bootstrap";
+import { useT } from "@/core/lib/i18n";
 import { DeniedCard, type PermissionCode, type Permissions, usePermissions } from "@/core/lib/permissions";
 
 import { MANIFEST_ENTRIES } from "./manifest";
@@ -58,27 +59,29 @@ export function useRouteGate(): GateDecision & { retry: () => Promise<void> } {
 }
 
 export function RouteGate({ children }: { children: ReactNode }) {
+  const t = useT("shell.gate");
+  const common = useT("common");
   const gate = useRouteGate();
   switch (gate.kind) {
     case "allow":
       return <>{children}</>;
     case "loading":
-      return <p className="p-8 text-sm text-muted-foreground">Checking your session…</p>;
+      return <p className="p-8 text-sm text-muted-foreground">{t("checking")}</p>;
     case "signed-out":
       return (
         <section className="p-8 text-sm">
-          <p>Sign in to continue.</p>
+          <p>{t("signInPrompt")}</p>
           <Link className="underline" href="/login">
-            Sign in
+            {t("signIn")}
           </Link>
         </section>
       );
     case "error":
       return (
         <section role="alert" className="p-8 text-sm text-destructive">
-          <p>Could not load your permissions, so nothing is shown.</p>
+          <p>{t("permissionsFailed")}</p>
           <button type="button" className="underline" onClick={() => void gate.retry()}>
-            Try again
+            {common("tryAgain")}
           </button>
         </section>
       );
@@ -86,7 +89,7 @@ export function RouteGate({ children }: { children: ReactNode }) {
     case "denied":
       return (
         <section className="p-8">
-          <DeniedCard what="open this page" />
+          <DeniedCard what={t("openThisPage")} />
         </section>
       );
   }

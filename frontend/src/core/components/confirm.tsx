@@ -12,6 +12,8 @@
  */
 import { type ReactNode, useSyncExternalStore } from "react";
 
+import { useT } from "@/core/lib/i18n";
+
 import { Button } from "./Button";
 import { Modal } from "./Modal";
 
@@ -57,6 +59,7 @@ function subscribe(listener: () => void) {
 }
 
 export function ConfirmHost() {
+  const t = useT();
   const pending = useSyncExternalStore(subscribe, () => current, () => null);
   return (
     <Modal
@@ -67,10 +70,10 @@ export function ConfirmHost() {
       footer={
         <>
           <Button variant="secondary" onClick={() => settle(false)}>
-            {pending?.cancelLabel ?? "Cancel"}
+            {pending?.cancelLabel ?? t("common.cancel")}
           </Button>
           <Button variant={pending?.tone === "danger" ? "destructive" : "primary"} onClick={() => settle(true)} autoFocus>
-            {pending?.confirmLabel ?? "Confirm"}
+            {pending?.confirmLabel ?? t("components.confirm.confirm")}
           </Button>
         </>
       }

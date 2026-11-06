@@ -32,8 +32,15 @@ const RAW_FETCH =
 const RAW_TANSTACK =
   "Use useApiQuery / useApiList / useApiMutation from @/core/lib/query, not TanStack's hooks " +
   "directly (FRONTEND_PLATFORM § 4).";
+// One translation entry (FRONTEND_PLATFORM § 22): useT and getServerT from src/core/lib/i18n, which
+// alone import next-intl. Its server hooks need a plugin this app does not install, and one entry
+// keeps the typed catalogue and the missing-key policy in one place.
+const RAW_I18N =
+  "Translate with useT (client) or getServerT (server) from @/core/lib/i18n, never next-intl or " +
+  "use-intl directly (FRONTEND_PLATFORM § 22).";
+const I18N = { regex: "^(next-intl|use-intl)(/|$)", message: RAW_I18N };
 // ESLint flat config: a later block REPLACES a rule's options, so every block that configures
-// no-restricted-imports must carry these paths itself.
+// no-restricted-imports must carry these paths and patterns itself.
 const AXIOS = { name: "axios", message: RAW_FETCH };
 const TANSTACK = {
   name: "@tanstack/react-query",
@@ -47,6 +54,7 @@ const CORE_PATTERNS = [
   { regex: "^\\.{1,2}/(.*/)?(project|\\(project\\))(/|$)", message: CORE_IMPORTS_PROJECT },
   { regex: "^@/plugins(/|$)", message: CORE_IMPORTS_PLUGIN },
   { regex: "^\\.{1,2}/(.*/)?plugins(/|$)", message: CORE_IMPORTS_PLUGIN },
+  I18N,
 ];
 
 // The mandatory primitives (FRONTEND_PLATFORM § 13, BUILD_ORDER 8.3a): each ban names the ONE place
@@ -59,6 +67,34 @@ const PALETTE =
 // left/right utilities and the bare words "left"/"right" used as a direction value.
 const PHYSICAL =
   "(^|\\s|:)-?(m[lr]|p[lr]|left|right|border-[lr]|rounded-[lr][tb]?|text-(left|right)|float-(left|right)|scroll-[mp][lr])(-|\\s|$)";
+// The directories whose copy is fully in the catalogue (BUILD_ORDER 8.4c).
+const TRANSLATED = ["src/core/shells/", "src/core/components/", "src/core/modules/", "src/core/shell/", "src/core/theme/"];
+// Props and object keys that carry text a user reads, and the calls that show one.
+const COPY_PROPS =
+  "aria-label|aria-description|aria-placeholder|title|alt|placeholder|label|pendingLabel|submitLabel|confirmLabel|cancelLabel|noun|resource|what|intro|description|hint|body|caption|emptyBody";
+const COPY_KEYS = "title|body|label|header|headerTooltip|confirmLabel|cancelLabel|message|error|description|hint|placeholder";
+const WORDS = "/[A-Za-z]/";
+const COPY_SELECTORS = [
+  `JSXAttribute[name.name=/^(${COPY_PROPS})$/] > Literal[value=${WORDS}]`,
+  `JSXAttribute[name.name=/^(${COPY_PROPS})$/] > JSXExpressionContainer > Literal[value=${WORDS}]`,
+  `JSXAttribute[name.name=/^(${COPY_PROPS})$/] > JSXExpressionContainer > ConditionalExpression > Literal[value=${WORDS}]`,
+  `JSXAttribute[name.name=/^(${COPY_PROPS})$/] > JSXExpressionContainer > TemplateLiteral > TemplateElement[value.raw=${WORDS}]`,
+  `Property[key.name=/^(${COPY_KEYS})$/] > Literal[value=${WORDS}]`,
+  `Property[key.name=/^(${COPY_KEYS})$/] > ConditionalExpression > Literal[value=${WORDS}]`,
+  `Property[key.name=/^(${COPY_KEYS})$/] > TemplateLiteral > TemplateElement[value.raw=${WORDS}]`,
+  `CallExpression[callee.name='toast'] > Literal[value=${WORDS}]`,
+  `CallExpression[callee.name='toast'] > TemplateLiteral > TemplateElement[value.raw=${WORDS}]`,
+  `AssignmentPattern[left.name=/^(${COPY_PROPS})$/] > Literal[value=${WORDS}]`,
+  // Text computed between tags, which jsx-no-literals does not see.
+  `:matches(JSXElement, JSXFragment) > JSXExpressionContainer > TemplateLiteral > TemplateElement[value.raw=${WORDS}]`,
+  `:matches(JSXElement, JSXFragment) > JSXExpressionContainer > :matches(ConditionalExpression, LogicalExpression) > Literal[value=${WORDS}]`,
+  `:matches(JSXElement, JSXFragment) > JSXExpressionContainer > :matches(ConditionalExpression, LogicalExpression) > TemplateLiteral > TemplateElement[value.raw=${WORDS}]`,
+];
+const JSX_NO_LITERALS = {
+  noStrings: true,
+  ignoreProps: true,
+  allowedStrings: ["—", "–", "·", "…", "*", "(", ")", ":", "/", "|", "×", "+", "-", ","],
+};
 const UI_BANS = [
   {
     key: "table",
@@ -121,20 +157,30 @@ const UI_BANS = [
   {
     key: "physical",
     home: [],
-    // Only where the code is already direction-neutral; src/app pages follow when they are translated.
-    scope: ["src/core/shells/", "src/core/components/", "src/core/modules/"],
+    scope: [...TRANSLATED, "src/app/"],
     message:
       "Use logical direction (ms/me/ps/pe, start/end, text-start/end, border-s/e, rounded-s/e), not left/right: a right-to-left locale is then a catalogue, not a rewrite (FRONTEND_PLATFORM § 22).",
     selectors: [`Literal[value=/${PHYSICAL}/]`, `TemplateElement[value.raw=/${PHYSICAL}/]`],
   },
+  {
+    key: "copy",
+    home: [],
+    // Where every string a user reads comes from the catalogue. src/app/** is held by a ratchet
+    // instead (tests/architecture/untranslated-pages.test.ts) until its pages are translated.
+    scope: TRANSLATED,
+    message:
+      "User-facing copy comes from the catalogue: t(\"key\") from useT/getServerT, with the text in src/core/messages/en.json (FRONTEND_PLATFORM § 22). A literal here is English for every locale.",
+    selectors: COPY_SELECTORS,
+  },
 ];
-// A scoped ban (ban.scope) applies only inside its scope; `inScope` says whether a block's files are.
-const uiBans = (except, inScope = false) =>
-  UI_BANS.filter((ban) => ban.key !== except && (!ban.scope || inScope)).flatMap((ban) =>
+// A scoped ban (ban.scope) applies only to files inside its scope: `globs` are a block's files.
+const applies = (ban, globs) => !ban.scope || (globs.length > 0 && globs.every((glob) => ban.scope.some((prefix) => glob.startsWith(prefix))));
+const uiBans = (except, globs = []) =>
+  UI_BANS.filter((ban) => ban.key !== except && applies(ban, globs)).flatMap((ban) =>
     ban.selectors.map((selector) => ({ selector, message: ban.message })),
   );
 const SCOPED = [...new Set(UI_BANS.flatMap((ban) => ban.scope ?? []))];
-const withinScope = (globs) => globs.every((glob) => SCOPED.some((prefix) => glob.startsWith(prefix)));
+const sourcesUnder = (prefix) => [`${prefix}**/*.ts`, `${prefix}**/*.tsx`];
 const UI_SOURCES = ["src/**/*.ts", "src/**/*.tsx"];
 const UI_TESTS = ["src/**/*.test.ts", "src/**/*.test.tsx"];
 
@@ -150,7 +196,7 @@ const eslintConfig = defineConfig([
         { name: "fetch", message: RAW_FETCH },
         { name: "XMLHttpRequest", message: RAW_FETCH },
       ],
-      "no-restricted-imports": ["error", { paths: [AXIOS, TANSTACK] }],
+      "no-restricted-imports": ["error", { paths: [AXIOS, TANSTACK], patterns: [I18N] }],
     },
   },
   {
@@ -166,6 +212,18 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": ["error", { paths: [AXIOS], patterns: CORE_PATTERNS }],
     },
   },
+  {
+    // The one place next-intl is imported: the translation entry, and the tests' source-catalogue
+    // provider (which must not read bootstrap).
+    files: ["src/core/lib/i18n/**"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: [AXIOS, TANSTACK], patterns: CORE_PATTERNS.filter((p) => p !== I18N) }],
+    },
+  },
+  {
+    files: ["tests/i18n.tsx"],
+    rules: { "no-restricted-imports": ["error", { paths: [AXIOS, TANSTACK] }] },
+  },
   // One block per directory depth inside a plugin, so `../` is refused only when it climbs out of
   // the plugin's own root: src/plugins/<name>/a.ts may not use ../, but …/<name>/x/b.ts may use
   // ../a. Files nested more than six directories deep are not checked for ../; keep plugins flatter.
@@ -179,22 +237,29 @@ const eslintConfig = defineConfig([
           patterns: [
             { regex: "^@/(project|plugins|app)(/|$)", message: PLUGIN_IMPORTS_OUTWARD },
             { regex: `^(\\.\\./){${depth + 1},}`, message: PLUGIN_IMPORTS_OUTWARD },
+            I18N,
           ],
         },
       ],
     },
   })),
   { files: UI_SOURCES, ignores: UI_TESTS, rules: { "no-restricted-syntax": ["error", ...uiBans(null)] } },
-  {
-    files: SCOPED.flatMap((prefix) => [`${prefix}**/*.ts`, `${prefix}**/*.tsx`]),
+  ...SCOPED.map((prefix) => ({
+    files: sourcesUnder(prefix),
     ignores: UI_TESTS,
-    rules: { "no-restricted-syntax": ["error", ...uiBans(null, true)] },
-  },
+    rules: { "no-restricted-syntax": ["error", ...uiBans(null, [prefix])] },
+  })),
   ...UI_BANS.filter((ban) => ban.home.length).map((ban) => ({
     files: ban.home,
     ignores: UI_TESTS,
-    rules: { "no-restricted-syntax": ["error", ...uiBans(ban.key, withinScope(ban.home))] },
+    rules: { "no-restricted-syntax": ["error", ...uiBans(ban.key, ban.home)] },
   })),
+  {
+    // Text between tags comes from the catalogue too; punctuation and the empty marker are not copy.
+    files: TRANSLATED.flatMap(sourcesUnder),
+    ignores: UI_TESTS,
+    rules: { "react/jsx-no-literals": ["error", JSX_NO_LITERALS] },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -204,5 +269,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
 ]);
+
+// The copy rules, for the untranslated-pages ratchet (tests/architecture/untranslated-pages.test.ts).
+export { COPY_SELECTORS, JSX_NO_LITERALS };
 
 export default eslintConfig;

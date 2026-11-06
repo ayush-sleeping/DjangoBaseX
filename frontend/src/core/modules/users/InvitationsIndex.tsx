@@ -8,13 +8,14 @@ import { Button } from "@/core/components/Button";
 import { confirm } from "@/core/components/confirm";
 import { toast } from "@/core/components/toast";
 import { type Invitation, invitationErrorMessage, listInvitations, revokeInvitation } from "@/core/lib/invitations";
+import { useT } from "@/core/lib/i18n";
 import { useListState } from "@/core/lib/list-state";
 import { usePermissions } from "@/core/lib/permissions";
 import { useApiList, useApiMutation } from "@/core/lib/query";
 import { ResourceIndex } from "@/core/shells";
 
 import { USER_ACTIONS } from "./actions";
-import { invitationColumns } from "./columns";
+import { useInvitationColumns } from "./columns";
 import { InvitationForm } from "./InvitationForm";
 import { invitationKeys } from "./keys";
 
@@ -22,6 +23,7 @@ const getRowId = (i: Invitation) => i.public_id;
 const getRowLabel = (i: Invitation) => i.email;
 
 export function InvitationsIndex() {
+  const t = useT("users.invitations");
   const perms = usePermissions();
   const state = useListState();
   const [sending, setSending] = useState(false);
@@ -32,15 +34,15 @@ export function InvitationsIndex() {
 
   async function handleRevoke(invitation: Invitation) {
     const ok = await confirm({
-      title: `Revoke the invitation to ${invitation.email}?`,
-      body: "The link stops working at once. You can send a new invitation later.",
-      confirmLabel: "Revoke",
+      title: t("revokeTitle", { email: invitation.email }),
+      body: t("revokeBody"),
+      confirmLabel: t("revoke"),
       tone: "danger",
     });
     if (!ok) return;
     try {
       await revoke.mutateAsync(invitation);
-      toast("Invitation revoked.", { tone: "ok" });
+      toast(t("revoked"), { tone: "ok" });
     } catch (error) {
       toast(invitationErrorMessage(error), { tone: "err" });
     }
@@ -48,10 +50,10 @@ export function InvitationsIndex() {
 
   const send = canInvite ? (
     <Button onClick={() => setSending(true)}>
-      <Send aria-hidden className="size-4" /> Send invitation
+      <Send aria-hidden className="size-4" /> {t("send")}
     </Button>
   ) : null;
-  const columns = invitationColumns({
+  const columns = useInvitationColumns({
     onRevoke: perms.can(USER_ACTIONS.revokeInvitation.permission) ? (i) => void handleRevoke(i) : undefined,
     revoking: revoke.isPending ? revoke.variables?.public_id : undefined,
   });
@@ -59,9 +61,9 @@ export function InvitationsIndex() {
   return (
     <ResourceIndex<Invitation>
       pageKey="users.invitation.index"
-      title="Invitations"
-      noun="invitations"
-      description="An invitation lets someone set their own password and starts them with a role."
+      title={t("title")}
+      noun={t("noun")}
+      description={t("description")}
       actions={send}
       columns={columns}
       list={list}

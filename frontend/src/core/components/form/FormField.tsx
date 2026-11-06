@@ -12,6 +12,8 @@
 import { type ReactNode, useId } from "react";
 import { type Control, type FieldPath, type FieldValues, useController } from "react-hook-form";
 
+import { useT } from "@/core/lib/i18n";
+
 import { MultiSelect, type Option, Select } from "../Select";
 import { Switch } from "../Switch";
 import { inputClass, textareaClass } from "./styles";
@@ -162,6 +164,7 @@ export function FormField<T extends FieldValues>({
   options?: readonly Option[];
   autoComplete?: string;
 }) {
+  const t = useT("common");
   const render = KINDS.get(kind);
   if (!render) throw new Error(`FormField: unknown kind "${kind}" (known: ${fieldKinds().join(", ")})`);
   const { field, fieldState } = useController({ control, name });
@@ -179,7 +182,7 @@ export function FormField<T extends FieldValues>({
           {required ? (
             <>
               <span aria-hidden className="text-destructive"> *</span>
-              <span className="sr-only"> (required)</span>
+              <span className="sr-only"> {t("required")}</span>
             </>
           ) : null}
         </label>

@@ -10,6 +10,7 @@ import { confirm } from "@/core/components/confirm";
 import { DateTime } from "@/core/components/format";
 import { StatusPill } from "@/core/components/StatusPill";
 import { toast } from "@/core/components/toast";
+import { useT } from "@/core/lib/i18n";
 import { usePermissions } from "@/core/lib/permissions";
 import { useApiMutation, useApiQuery } from "@/core/lib/query";
 import { activateUser, getUser, type User, usersErrorMessage } from "@/core/lib/users";
@@ -23,6 +24,8 @@ import { userKeys } from "./keys";
 import { RolesCard, SessionsCard } from "./show-sections";
 
 export function UserShow({ publicId }: { publicId: string }) {
+  const t = useT("users.show");
+  const columnsCopy = useT("users.columns");
   const router = useRouter();
   const perms = usePermissions();
   const query = useApiQuery<User>(userKeys.detail(publicId), (signal) => getUser(publicId, signal));
@@ -33,10 +36,10 @@ export function UserShow({ publicId }: { publicId: string }) {
   const self = perms.user?.public_id === publicId;
 
   async function handleActivate() {
-    if (!user || !(await confirm({ title: `Activate ${userLabel(user)}?`, body: "They can sign in again.", confirmLabel: "Activate" }))) return;
+    if (!user || !(await confirm({ title: t("activateTitle", { name: userLabel(user) }), body: t("activateBody"), confirmLabel: t("activate") }))) return;
     try {
       await activate.mutateAsync();
-      toast("Account activated.", { tone: "ok" });
+      toast(t("activated"), { tone: "ok" });
     } catch (error) {
       toast(usersErrorMessage(error), { tone: "err" });
     }
@@ -45,15 +48,15 @@ export function UserShow({ publicId }: { publicId: string }) {
   return (
     <ResourceShow
       pageKey="users.user.show"
-      noun="user"
+      noun={t("noun")}
       state={{ isLoading: query.isLoading, showError: query.showError, error: query.error, refetch: query.refetch }}
       title={user?.email}
-      subtitle={user ? [user.full_name, self ? "This is your account." : ""].filter(Boolean).join(" · ") : undefined}
+      subtitle={user ? [user.full_name, self ? t("self") : ""].filter(Boolean).join(" · ") : undefined}
       badges={
         user ? (
           <>
             <StatusPill status={user.is_active ? "users.user.active" : "users.user.deactivated"} />
-            {user.is_superuser ? <StatusPill status="users.user.superuser" title="Bypasses every permission check." /> : null}
+            {user.is_superuser ? <StatusPill status="users.user.superuser" title={columnsCopy("superuser")} /> : null}
             {user.mfa_enabled ? <StatusPill status="users.user.mfa_on" /> : null}
           </>
         ) : null
@@ -63,17 +66,17 @@ export function UserShow({ publicId }: { publicId: string }) {
           <>
             {perms.can(USER_ACTIONS.edit.permission) ? (
               <Button variant="secondary" onClick={() => setEditing(true)}>
-                <Pencil aria-hidden className="size-4" /> Edit
+                <Pencil aria-hidden className="size-4" /> {t("edit")}
               </Button>
             ) : null}
             {perms.can(USER_ACTIONS.deactivate.permission) && !self ? (
               user.is_active ? (
                 <Button variant="destructive" onClick={() => setDeactivating(true)}>
-                  <UserX aria-hidden className="size-4" /> Deactivate
+                  <UserX aria-hidden className="size-4" /> {t("deactivate")}
                 </Button>
               ) : (
-                <Button onClick={() => void handleActivate()} pending={activate.isPending} pendingLabel="Activating…">
-                  <UserCheck aria-hidden className="size-4" /> Activate
+                <Button onClick={() => void handleActivate()} pending={activate.isPending} pendingLabel={t("activating")}>
+                  <UserCheck aria-hidden className="size-4" /> {t("activate")}
                 </Button>
               )
             ) : null}
@@ -84,18 +87,17 @@ export function UserShow({ publicId }: { publicId: string }) {
         user ? (
           <MetaCard
             items={[
-              { label: "Created", value: <DateTime value={user.created_at} /> },
-              { label: "Last sign-in", value: <DateTime value={user.last_login} /> },
+              { label: t("created"), value: <DateTime value={user.created_at} /> },
+              { label: t("lastSignIn"), value: <DateTime value={user.last_login} /> },
               ...(user.is_active
                 ? []
                 : [
                     {
-                      label: "Deactivated",
-                      value: (
-                        <>
-                          <DateTime value={user.deactivated_at} />
-                          {user.deactivated_reason ? ` — ${user.deactivated_reason}` : ""}
-                        </>
+                      label: t("deactivated"),
+                      value: user.deactivated_reason ? (
+                        t.rich("deactivatedBecause", { date: () => <DateTime value={user.deactivated_at} />, reason: user.deactivated_reason })
+                      ) : (
+                        <DateTime value={user.deactivated_at} />
                       ),
                     },
                   ]),

@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 
+import { getServerT } from "@/core/lib/i18n/server";
 import { UserShow } from "@/core/modules/users/Show";
 
-export const metadata: Metadata = { title: "User", robots: { index: false, follow: false } };
+// The title is the platform locale's (server rendering; FRONTEND_PLATFORM § 22).
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT("users.show");
+  return { title: t("title"), robots: { index: false, follow: false } };
+}
 
 // params is a promise in Next.js 16. Only the id is read here: the user is authenticated data,
 // fetched from the browser (NEXTJS_STANDARDS § 3).

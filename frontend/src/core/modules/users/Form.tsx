@@ -8,10 +8,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 
 import { buttonClass } from "@/core/components/Button";
 import { FormField } from "@/core/components/form/FormField";
+import { useT } from "@/core/lib/i18n";
 import { INVITATION_CODES } from "@/core/lib/invitations";
 import { usePermissions } from "@/core/lib/permissions";
 import { useApiMutation } from "@/core/lib/query";
@@ -19,7 +21,7 @@ import { createUser, updateUser, type User } from "@/core/lib/users";
 import { FormGrid, FormSection, ResourceForm } from "@/core/shells";
 
 import { userLabel } from "./columns";
-import { type UserCreateValues, userCreateSchema, type UserEditValues, userEditSchema } from "./fields";
+import { type UserCreateValues, userCreateSchema, type UserEditValues, userEditSchema, useValidationCopy } from "./fields";
 
 type Common = { onSaved: (user: User) => void; layout?: "page" | "modal"; open?: boolean; onClose?: () => void };
 
@@ -28,8 +30,12 @@ export function UserForm(props: Common & { user?: User }) {
 }
 
 function CreateUserForm({ onSaved, layout = "page", open, onClose }: Common) {
+  const t = useT("users.form");
+  const common = useT("common");
+  const copy = useValidationCopy();
+  const schema = useMemo(() => userCreateSchema(copy), [copy]);
   const perms = usePermissions();
-  const form = useForm<UserCreateValues>({ resolver: zodResolver(userCreateSchema), defaultValues: { email: "", full_name: "" } });
+  const form = useForm<UserCreateValues>({ resolver: zodResolver(schema), defaultValues: { email: "", full_name: "" } });
   const create = useApiMutation({
     mutationFn: (values: UserCreateValues) => createUser(values.email, values.full_name),
     invalidates: ["users"],
@@ -38,23 +44,24 @@ function CreateUserForm({ onSaved, layout = "page", open, onClose }: Common) {
     <ResourceForm
       pageKey="users.user.form"
       form={form}
-      resource="user"
+      resource={t("resource")}
       layout={layout}
       open={open}
       onClose={onClose}
-      cancel={layout === "page" ? <Link href="/users" className={buttonClass("secondary")}>Cancel</Link> : undefined}
+      cancel={layout === "page" ? <Link href="/users" className={buttonClass("secondary")}>{common("cancel")}</Link> : undefined}
       intro={
         <>
-          The account is created active, with no password: we email the address a link to set one. It holds no role until
-          you assign one.
+          {t("createIntro")}
           {perms.can(INVITATION_CODES.send) ? (
             <>
               {" "}
-              To give someone a role from the start,{" "}
-              <Link className="underline" href="/users/invitations">
-                send an invitation
-              </Link>{" "}
-              instead.
+              {t.rich("inviteInstead", {
+                link: (chunks) => (
+                  <Link className="underline" href="/users/invitations">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </>
           ) : null}
         </>
@@ -67,8 +74,8 @@ function CreateUserForm({ onSaved, layout = "page", open, onClose }: Common) {
     >
       <FormSection>
         <FormGrid>
-          <FormField control={form.control} name="email" kind="email" label="Email" required autoComplete="off" />
-          <FormField control={form.control} name="full_name" kind="text" label="Full name" hint="Optional." autoComplete="off" />
+          <FormField control={form.control} name="email" kind="email" label={t("email")} required autoComplete="off" />
+          <FormField control={form.control} name="full_name" kind="text" label={t("fullName")} hint={t("optional")} autoComplete="off" />
         </FormGrid>
       </FormSection>
     </ResourceForm>
@@ -76,7 +83,10 @@ function CreateUserForm({ onSaved, layout = "page", open, onClose }: Common) {
 }
 
 function EditUserForm({ user, onSaved, layout = "modal", open, onClose }: Common & { user: User }) {
-  const form = useForm<UserEditValues>({ resolver: zodResolver(userEditSchema), values: { full_name: user.full_name }, resetOptions: { keepDirtyValues: true } });
+  const t = useT("users.form");
+  const copy = useValidationCopy();
+  const schema = useMemo(() => userEditSchema(copy), [copy]);
+  const form = useForm<UserEditValues>({ resolver: zodResolver(schema), values: { full_name: user.full_name }, resetOptions: { keepDirtyValues: true } });
   const update = useApiMutation({
     mutationFn: (fullName: string) => updateUser(user.public_id, fullName),
     invalidates: ["users"],
@@ -85,7 +95,7 @@ function EditUserForm({ user, onSaved, layout = "modal", open, onClose }: Common
     <ResourceForm
       pageKey="users.user.form"
       form={form}
-      resource="user"
+      resource={t("resource")}
       record={{ name: userLabel(user) }}
       layout={layout}
       open={open}
@@ -98,7 +108,7 @@ function EditUserForm({ user, onSaved, layout = "modal", open, onClose }: Common
       }}
     >
       <FormSection>
-        <FormField control={form.control} name="full_name" kind="text" label="Full name" autoComplete="off" />
+        <FormField control={form.control} name="full_name" kind="text" label={t("fullName")} autoComplete="off" />
       </FormSection>
     </ResourceForm>
   );

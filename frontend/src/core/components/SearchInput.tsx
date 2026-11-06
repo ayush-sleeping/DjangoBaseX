@@ -7,6 +7,8 @@
 import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { useT } from "@/core/lib/i18n";
+
 import { inputClass } from "./form/styles";
 
 export const SEARCH_DEBOUNCE_MS = 300;
@@ -15,8 +17,8 @@ export const SEARCH_MIN_LENGTH = 2;
 export function SearchInput({
   value,
   onSearch,
-  label = "Search",
-  placeholder = "Search…",
+  label,
+  placeholder,
   debounceMs = SEARCH_DEBOUNCE_MS,
   minLength = SEARCH_MIN_LENGTH,
 }: {
@@ -24,11 +26,13 @@ export function SearchInput({
   value: string;
   /** Called with the trimmed term once typing settles; "" when it drops below minLength. */
   onSearch: (term: string) => void;
+  /** Already translated; "Search" when omitted. */
   label?: string;
   placeholder?: string;
   debounceMs?: number;
   minLength?: number;
 }) {
+  const t = useT("components.search");
   const [draft, setDraft] = useState(value);
   const applied = useRef(value);
 
@@ -45,9 +49,9 @@ export function SearchInput({
 
   return (
     <label className="relative block w-full max-w-xs">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t("label")}</span>
       <Search aria-hidden className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <input type="search" value={draft} placeholder={placeholder} onChange={(e) => setDraft(e.target.value)} className={`${inputClass} ps-8`} />
+      <input type="search" value={draft} placeholder={placeholder ?? t("placeholder")} onChange={(e) => setDraft(e.target.value)} className={`${inputClass} ps-8`} />
     </label>
   );
 }

@@ -8,6 +8,7 @@
 import { X } from "lucide-react";
 import { useEffect, useSyncExternalStore } from "react";
 
+import { useT } from "@/core/lib/i18n";
 import { subscribeRefreshFailed } from "@/core/lib/query/refresh-failed";
 import { TONE_SOLID, type Tone } from "@/core/lib/status-tone";
 
@@ -49,6 +50,7 @@ const subscribe = (l: () => void) => {
 const EMPTY: Toast[] = [];
 
 export function Toaster() {
+  const copy = useT("components.toast");
   const items = useSyncExternalStore(subscribe, () => toasts, () => EMPTY);
   useEffect(() => subscribeRefreshFailed((event) => void toast(event.message, { tone: "warn" })), []);
   return (
@@ -56,7 +58,7 @@ export function Toaster() {
       {items.map((t) => (
         <div key={t.id} role={t.tone === "err" ? "alert" : "status"} className={`pointer-events-auto flex items-start gap-2 rounded-md px-3 py-2 text-sm shadow-md ${TONE_SOLID[t.tone]}`}>
           <p className="min-w-0 flex-1">{t.message}</p>
-          <IconButton icon={X} label="Dismiss" variant="link" className="text-inherit" onClick={() => dismissToast(t.id)} />
+          <IconButton icon={X} label={copy("dismiss")} variant="link" className="text-inherit" onClick={() => dismissToast(t.id)} />
         </div>
       ))}
     </div>

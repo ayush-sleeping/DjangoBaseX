@@ -1660,11 +1660,64 @@ every `en` key is referenced (orphans fail); every plugin's keys are under its n
     and `text-start/end`.
   - DataTable's `sticky` and `align` take `"start" | "end"`. Its inset-shadow seams, which have a
     physical side, mirror themselves with `rtl:`.
-  - ESLint's `physical` ban (scoped to those three directories) refuses left/right utilities, with
-    positive controls. `src/app/**` joins when its pages are translated (8.4c).
-- **8.4c, waiting on the owner's approval of `next-intl` 4.14.9 in `package.json`:**
-  `NextIntlClientProvider`, `src/core/messages/en.json`, server `createTranslator`, `t()`
-  extraction, `messages.test.ts`, `react/jsx-no-literals` and the `src/app` ratchet.
+  - ESLint's `physical` ban refuses left/right utilities, with positive controls. 8.4c extended it
+    to `src/core/shell`, `src/core/theme` and `src/app/**`.
+
+**As built (BUILD_ORDER 8.4c): the catalogue and the extraction.**
+- **Dependency:** `next-intl` 4.14.9, pinned exactly. Its extractor brings `@swc/core`, which an npm
+  `overrides` entry pins to 1.16.20 because the version the range resolved was under 14 days old.
+  The override can go once the newer release is old enough.
+- **Pieces, in `src/core/lib/i18n/` (the only importer of `next-intl`, by lint):**
+  - `messages.ts`: the SOURCE catalogue, `src/core/messages/en.json`, bundled. `en` is the language
+    the copy is written in, not a default locale. Other languages go in `CATALOGUES`, loaded lazily
+    and merged over the source KEY BY KEY: a half-translated catalogue shows the source copy for its
+    gaps, never a key path. A catalogue that fails to load falls back to the source.
+  - `I18nProvider`: `NextIntlClientProvider` inside `LocalizationProvider`, fed by
+    `useLocalization()`. The copy, ICU numbers and plural rules therefore follow the same viewer as
+    the formatters (bootstrap, then platform, then shipped). A missing key renders its path and
+    warns in development.
+  - `useT(namespace)`: next-intl's `useTranslations`, with keys typed from `en.json` (`AppConfig`),
+    so an unknown key is a compile error.
+  - `getServerT(namespace)`: `createTranslator` with the platform locale from public config. The
+    Users pages' `generateMetadata` uses it, and those routes stay static.
+- **Extracted:** the shells, DataTable/BulkBar/Pager, every primitive, the Users module, the nav
+  menu, the route gate, the theme toggle and `DeniedCard`.
+  - Copy that used to be glued together is now one ICU message each: plurals (`fieldsNeedAttention`,
+    `signedOut`), numbers (`{total, number}` groups "1,337" by locale) and rich text
+    (`Sent <date></date> by {email}`).
+  - Validation copy: zod schemas are built from translated copy (`useValidationCopy`).
+  - Callers translate the nouns they pass to the shells (`noun`, `resource`, `what`).
+- **Enforced by:**
+  - **ESLint, scoped to the translated directories** (`src/core/shells`, `components`, `modules`,
+    `shell`, `theme`):
+    - `react/jsx-no-literals` (punctuation allowed).
+    - A `copy` ban for literal `aria-label`/`title`/`label`/`placeholder`…, `{ title: "…" }`,
+      `toast("…")`, default copy parameters and computed text between tags.
+    - Positive controls in `lint-smoke.test.ts`.
+  - **`messages.test.ts`, two-way:**
+    - Every key used exists.
+    - No orphans.
+    - Keys are literals.
+    - Each top-level namespace has an owning directory, and only that directory uses it.
+  - **`i18n.test.tsx`:**
+    - The per-key fallback.
+    - ICU plurals in the source and in another language's own plural forms.
+    - Locale-grouped numbers.
+    - The provider following bootstrap, then the platform.
+  - **`untranslated-pages.test.ts`:** a two-way ratchet over `src/app/**` running the same copy
+    rules. It lists 16 auth, account and settings pages. A new page cannot join, and a translated
+    one must leave.
+- **Tests render in the real source catalogue:** `tests/setup.ts` wraps every `render`/`renderHook`
+  in a source-catalogue `NextIntlClientProvider` (`tests/i18n.tsx`), not the app's provider, so a
+  test that never stubs bootstrap does not fetch it.
+- **Not yet (recorded):**
+  - The `src/app` pages on the ratchet's list.
+  - `errors.<code>` copy from the backend error catalogue (BUILD_ORDER 9.2).
+  - Backend-provided labels (status labels, navigation labels, API error messages): they are the
+    backend's copy, in its language.
+  - Plugin catalogues merged through the plugin manifest.
+  - A second shipped language.
+  - Per-user server rendering (the owner decision above).
 
 ---
 
