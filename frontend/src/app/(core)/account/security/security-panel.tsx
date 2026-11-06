@@ -125,16 +125,16 @@ export function SecurityPanel() {
   }
 
   const card =
-    "w-full max-w-md space-y-4 rounded-xl border border-zinc-200 p-6 dark:border-zinc-800";
+    "w-full max-w-md space-y-4 rounded-xl border border-border p-6";
   const input =
-    "mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900";
+    "mt-1 w-full rounded-md border border-input px-3 py-2";
   const button =
-    "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900";
-  const quiet = "block w-full text-center text-xs text-zinc-500 underline";
+    "w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50";
+  const quiet = "block w-full text-center text-xs text-muted-foreground underline";
 
   switch (view.status) {
     case "loading":
-      return <p className="text-sm text-zinc-500">Checking your session…</p>;
+      return <p className="text-sm text-muted-foreground">Checking your session…</p>;
 
     case "signed-out":
       return (
@@ -148,7 +148,7 @@ export function SecurityPanel() {
 
     case "unavailable":
       return (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           Could not reach the server. Reload the page to try again.
         </p>
       );
@@ -159,7 +159,7 @@ export function SecurityPanel() {
         <section className={card}>
           <h2 className="text-sm font-semibold">Two-factor authentication</h2>
           {view.notice ? (
-            <p role="status" className="text-sm text-green-600">
+            <p role="status" className="text-sm text-ok-text">
               {view.notice}
             </p>
           ) : null}
@@ -173,13 +173,13 @@ export function SecurityPanel() {
             </p>
           )}
           {me.mfa_enforced && !me.mfa_enabled ? (
-            <p role="alert" className="text-sm text-amber-600">
+            <p role="alert" className="text-sm text-warn-text">
               Your role requires two-factor authentication. Until it is set up, the rest of the
               application is unavailable to you.
             </p>
           ) : null}
           {view.error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-destructive">
               {view.error}
             </p>
           ) : null}
@@ -213,17 +213,17 @@ export function SecurityPanel() {
           <ol className="list-decimal space-y-3 pl-5 text-sm">
             <li>
               In your authenticator app, add an account and enter this key:
-              <code className="mt-1 block select-all rounded bg-zinc-100 px-2 py-1 font-mono tracking-wider dark:bg-zinc-900">
+              <code className="mt-1 block select-all rounded bg-muted px-2 py-1 font-mono tracking-wider">
                 {formatSecret(setup.secret)}
               </code>
-              <span className="mt-1 block text-xs text-zinc-500">
+              <span className="mt-1 block text-xs text-muted-foreground">
                 On this device, you can{" "}
                 <a className="underline" href={setup.otpauth_uri}>
                   open it in your authenticator app
                 </a>{" "}
                 instead, or copy the setup link:
               </span>
-              <code className="mt-1 block select-all break-all rounded bg-zinc-100 px-2 py-1 font-mono text-xs dark:bg-zinc-900">
+              <code className="mt-1 block select-all break-all rounded bg-muted px-2 py-1 font-mono text-xs">
                 {setup.otpauth_uri}
               </code>
             </li>
@@ -242,7 +242,7 @@ export function SecurityPanel() {
             </li>
           </ol>
           {view.error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-destructive">
               {view.error}
             </p>
           ) : null}
@@ -261,11 +261,11 @@ export function SecurityPanel() {
       return (
         <section className={card}>
           <h2 className="text-sm font-semibold">Two-factor is on. Save your recovery codes now.</h2>
-          <p role="alert" className="text-sm text-amber-600">
+          <p role="alert" className="text-sm text-warn-text">
             Each code signs you in once if you lose your authenticator. They are shown only this
             once: store them somewhere safe, such as a password manager, before you leave.
           </p>
-          <ul className="grid select-all grid-cols-2 gap-1 rounded bg-zinc-100 p-3 font-mono text-sm dark:bg-zinc-900">
+          <ul className="grid select-all grid-cols-2 gap-1 rounded bg-muted p-3 font-mono text-sm">
             {codes.map((code) => (
               <li key={code}>{code}</li>
             ))}
@@ -274,11 +274,11 @@ export function SecurityPanel() {
             Copy all codes
           </button>
           {view.copy === "copied" ? (
-            <p role="status" className="text-sm text-green-600">
+            <p role="status" className="text-sm text-ok-text">
               Copied.
             </p>
           ) : view.copy === "failed" ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-destructive">
               Could not copy. Select the codes above and copy them by hand.
             </p>
           ) : null}
@@ -315,7 +315,7 @@ export function SecurityPanel() {
               />
             </label>
             {view.error ? (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-destructive">
                 {view.error}
               </p>
             ) : null}
@@ -333,7 +333,7 @@ export function SecurityPanel() {
           <h2 className="text-sm font-semibold">Turn off two-factor?</h2>
           <p className="text-sm">Anyone with your password will be able to sign in as you.</p>
           {view.error ? (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-destructive">
               {view.error}
             </p>
           ) : null}

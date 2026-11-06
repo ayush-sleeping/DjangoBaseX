@@ -24,12 +24,12 @@ import {
 
 import { RoleBadges } from "../role-badges";
 
-const card = "w-full max-w-3xl space-y-4 rounded-xl border border-zinc-200 p-6 dark:border-zinc-800";
+const card = "w-full max-w-3xl space-y-4 rounded-xl border border-border p-6";
 const input =
-  "mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900";
+  "mt-1 w-full rounded-md border border-input px-3 py-2 disabled:opacity-60";
 const button =
-  "rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900";
-const danger = "rounded-md bg-red-600 px-3 py-2 text-sm text-white disabled:opacity-50";
+  "rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50";
+const danger = "rounded-md bg-destructive px-3 py-2 text-sm text-destructive-foreground disabled:opacity-50";
 
 const SYSTEM_REASON =
   "This is a system role: its name, its permissions and its existence are fixed by the seed.";
@@ -68,10 +68,10 @@ export function RoleEditor({ publicId }: { publicId: string }) {
     };
   }, [allowed, canSeeCatalog, publicId, router]);
 
-  if (perms.status === "loading") return <p className="text-sm text-zinc-500">Checking your session…</p>;
+  if (perms.status === "loading") return <p className="text-sm text-muted-foreground">Checking your session…</p>;
   if (perms.permissionsError && !perms.signedOut) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-destructive">
         Could not reach the server. Reload the page to try again.
       </p>
     );
@@ -89,9 +89,9 @@ export function RoleEditor({ publicId }: { publicId: string }) {
   if (!allowed) return <p className="text-sm">You don&apos;t have permission to view roles.</p>;
   if ("status" in state) {
     return state.status === "loading" ? (
-      <p className="text-sm text-zinc-500">Loading role…</p>
+      <p className="text-sm text-muted-foreground">Loading role…</p>
     ) : (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-destructive">
         {state.message}
       </p>
     );
@@ -100,7 +100,7 @@ export function RoleEditor({ publicId }: { publicId: string }) {
   const { role, catalog } = state;
   // Every write answers with the new role; keep the catalog, which a write never changes.
   const replaceRole = (next: Role) => setState({ role: next, catalog });
-  const elevatedLock = role.is_elevated && !perms.user?.is_superuser === true;
+  const elevatedLock = role.is_elevated && perms.user?.is_superuser !== true;
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
@@ -108,12 +108,12 @@ export function RoleEditor({ publicId }: { publicId: string }) {
         <h1 className="text-2xl font-bold tracking-tight">
           {role.name} <RoleBadges role={role} />
         </h1>
-        <p className="font-mono text-xs text-zinc-500">{role.slug}</p>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="font-mono text-xs text-muted-foreground">{role.slug}</p>
+        <p className="text-sm text-muted-foreground">
           Held by {role.user_count} user{role.user_count === 1 ? "" : "s"}.
         </p>
-        {role.is_system ? <p className="text-sm text-zinc-500">🔒 {SYSTEM_REASON}</p> : null}
-        {elevatedLock ? <p className="text-sm text-zinc-500">🔒 {ELEVATED_REASON}</p> : null}
+        {role.is_system ? <p className="text-sm text-muted-foreground">🔒 {SYSTEM_REASON}</p> : null}
+        {elevatedLock ? <p className="text-sm text-muted-foreground">🔒 {ELEVATED_REASON}</p> : null}
       </header>
 
       {perms.can(ROLE_CODES.update) ? (
@@ -205,13 +205,13 @@ function DetailsForm({
 
   const fieldError = (field: string) =>
     fields[field]?.length ? (
-      <span className="mt-1 block text-xs text-red-600">{fields[field].join(" ")}</span>
+      <span className="mt-1 block text-xs text-destructive">{fields[field].join(" ")}</span>
     ) : null;
 
   return (
     <form onSubmit={handleSubmit} className={card} noValidate>
       <h2 className="text-sm font-semibold">Details</h2>
-      {locked ? <p className="text-xs text-zinc-500">🔒 {ELEVATED_REASON}</p> : null}
+      {locked ? <p className="text-xs text-muted-foreground">🔒 {ELEVATED_REASON}</p> : null}
       <fieldset disabled={locked} className="space-y-4">
         <label className="block text-sm">
           Name
@@ -223,7 +223,7 @@ function DetailsForm({
             className={input}
           />
           {role.is_system ? (
-            <span className="mt-1 block text-xs text-zinc-500">System roles keep their name.</span>
+            <span className="mt-1 block text-xs text-muted-foreground">System roles keep their name.</span>
           ) : null}
           {fieldError("name")}
         </label>
@@ -249,13 +249,13 @@ function DetailsForm({
             disabled={!superuser}
           />
           Elevated: only a superuser can change or assign it
-          {!superuser ? <span className="text-xs text-zinc-500">(superusers only)</span> : null}
+          {!superuser ? <span className="text-xs text-muted-foreground">(superusers only)</span> : null}
         </label>
       </fieldset>
       {message ? (
         <p
           role={message.ok ? "status" : "alert"}
-          className={`text-sm ${message.ok ? "text-zinc-500" : "text-red-600"}`}
+          className={`text-sm ${message.ok ? "text-muted-foreground" : "text-destructive"}`}
         >
           {message.text}
         </p>
@@ -321,11 +321,11 @@ function GrantsSection({
     <section className={card}>
       <h2 className="text-sm font-semibold">Permissions</h2>
       {lockReason ? (
-        <p className="text-xs text-zinc-500">🔒 {lockReason}</p>
+        <p className="text-xs text-muted-foreground">🔒 {lockReason}</p>
       ) : !editable ? (
-        <p className="text-xs text-zinc-500">Read only.</p>
+        <p className="text-xs text-muted-foreground">Read only.</p>
       ) : (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           Saving replaces the role&apos;s permissions with exactly the boxes ticked here.
         </p>
       )}
@@ -335,7 +335,7 @@ function GrantsSection({
           <fieldset key={group.code} className="space-y-1" disabled={!editable || pending}>
             <legend className="text-sm font-medium">
               {group.label}{" "}
-              <span className="text-xs font-normal text-zinc-500">
+              <span className="text-xs font-normal text-muted-foreground">
                 {grantedIn(group, selected)} of {group.permissions.length}
               </span>
             </legend>
@@ -352,9 +352,9 @@ function GrantsSection({
                   />
                   <span>
                     {permission.label}{" "}
-                    <code className="text-xs text-zinc-500">{permission.code}</code>
+                    <code className="text-xs text-muted-foreground">{permission.code}</code>
                     {permission.is_deprecated ? (
-                      <span className="ml-1 text-xs text-amber-600">deprecated</span>
+                      <span className="ml-1 text-xs text-warn-text">deprecated</span>
                     ) : null}
                   </span>
                 </label>
@@ -369,13 +369,13 @@ function GrantsSection({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-zinc-500">This role holds no permissions.</p>
+        <p className="text-sm text-muted-foreground">This role holds no permissions.</p>
       )}
 
       {message ? (
         <p
           role={message.ok ? "status" : "alert"}
-          className={`text-sm ${message.ok ? "text-green-600" : "text-red-600"}`}
+          className={`text-sm ${message.ok ? "text-ok-text" : "text-destructive"}`}
         >
           {message.text}
         </p>
@@ -418,11 +418,11 @@ function DeleteSection({
     <section className={card}>
       <h2 className="text-sm font-semibold">Delete role</h2>
       {role.is_system ? (
-        <p className="text-sm text-zinc-500">🔒 System roles cannot be deleted.</p>
+        <p className="text-sm text-muted-foreground">🔒 System roles cannot be deleted.</p>
       ) : locked ? (
-        <p className="text-sm text-zinc-500">🔒 {ELEVATED_REASON}</p>
+        <p className="text-sm text-muted-foreground">🔒 {ELEVATED_REASON}</p>
       ) : role.user_count > 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           {role.user_count} user{role.user_count === 1 ? "" : "s"} still hold this role. Remove it
           from them before deleting it.
         </p>
@@ -434,7 +434,7 @@ function DeleteSection({
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="text-sm text-zinc-500 underline"
+            className="text-sm text-muted-foreground underline"
           >
             Cancel
           </button>
@@ -445,7 +445,7 @@ function DeleteSection({
         </button>
       )}
       {error ? (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       ) : null}

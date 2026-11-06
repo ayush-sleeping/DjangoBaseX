@@ -37,19 +37,19 @@ export function NewUserForm() {
 
   const fieldError = (field: string) =>
     fields[field]?.length ? (
-      <span className="mt-1 block text-xs text-red-600">{fields[field].join(" ")}</span>
+      <span className="mt-1 block text-xs text-destructive">{fields[field].join(" ")}</span>
     ) : null;
 
   return (
     <Gate perms={perms} code={USER_CODES.create} what="create users">
       {() => (
         <form onSubmit={handleSubmit} className={ui.card} noValidate>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             The account is created active, with no password. We email the address a link to set
             one. It holds no role until you assign one on the next screen.
           </p>
           {perms.can(INVITATION_CODES.send) ? (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               To give someone a role from the start, and let them choose their own name,{" "}
               <Link className="underline" href="/users/invitations">
                 send an invitation
@@ -63,7 +63,7 @@ export function NewUserForm() {
             {fieldError("email")}
           </label>
           <label className="block text-sm">
-            Full name <span className="text-xs text-zinc-500">(optional)</span>
+            Full name <span className="text-xs text-muted-foreground">(optional)</span>
             <input name="full_name" autoComplete="off" className={ui.input} />
             {fieldError("full_name")}
           </label>

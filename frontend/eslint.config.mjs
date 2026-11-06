@@ -49,6 +49,72 @@ const CORE_PATTERNS = [
   { regex: "^\\.{1,2}/(.*/)?plugins(/|$)", message: CORE_IMPORTS_PLUGIN },
 ];
 
+// The mandatory primitives (FRONTEND_PLATFORM § 13, BUILD_ORDER 8.3a): each ban names the ONE place
+// the banned thing may live. All of them are one no-restricted-syntax list, because a later block
+// replaces a rule's options: each home's block re-lists every ban except its own.
+const PALETTE =
+  "(bg|text|border|ring|fill|stroke|from|to|via|divide|outline|placeholder|decoration|shadow|accent|caret)-" +
+  "(white|black|(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|" +
+  "indigo|violet|purple|fuchsia|pink|rose)-\\d{2,3})";
+const UI_BANS = [
+  {
+    key: "table",
+    home: [
+      "src/core/components/data-table/**",
+      // TEMPORARY (BUILD_ORDER 8.3a → 8.3b): the three lists that move onto the DataTable in 8.3b.
+      // 8.3b deletes these lines; nothing may be added here.
+      "src/app/(core)/users/users-panel.tsx",
+      "src/app/(core)/users/invitations/invitations-panel.tsx",
+      "src/app/(core)/settings/roles/roles-panel.tsx",
+    ],
+    message: "Lists render through the DataTable (src/core/components/data-table/), never a hand-written <table> (FRONTEND_PLATFORM § 12).",
+    selectors: ["JSXOpeningElement[name.name='table']"],
+  },
+  {
+    key: "select",
+    home: [],
+    message: "Use Select / MultiSelect / AsyncSelect from @/core/components/Select: searchable, styled, async — never a native <select> (§ 13).",
+    selectors: ["JSXOpeningElement[name.name='select']"],
+  },
+  {
+    key: "html",
+    home: ["src/core/theme/ThemeScript.tsx"],
+    message: "dangerouslySetInnerHTML is an XSS sink: render text, or use SafeHtml once it exists (FRONTEND_PLATFORM § 18).",
+    selectors: ["JSXAttribute[name.name='dangerouslySetInnerHTML']"],
+  },
+  {
+    key: "overlay",
+    home: ["src/core/components/Modal.tsx"],
+    message: "A hand-rolled overlay (`fixed inset-0`) skips the focus trap, Escape and scroll lock: use Modal (§ 13).",
+    selectors: ["Literal[value=/fixed inset-0/]", "TemplateElement[value.raw=/fixed inset-0/]"],
+  },
+  {
+    key: "dialogs",
+    home: [],
+    message: "window.confirm/alert/prompt block the page and cannot be styled or tested: use confirm() or toast() from @/core/components (§ 13).",
+    selectors: [
+      "CallExpression[callee.object.name=/^(window|globalThis)$/][callee.property.name=/^(confirm|alert|prompt)$/]",
+      "CallExpression[callee.name=/^(alert|prompt)$/]",
+    ],
+  },
+  {
+    key: "palette",
+    home: ["src/core/styles/**", "src/core/lib/status-tone.ts"],
+    message: "A raw palette colour breaks dark mode and re-branding: use a semantic token (bg-primary text-primary-foreground, bg-err-tint text-err-text…) from src/core/styles/tokens.css (§ 16).",
+    selectors: [`Literal[value=/\\b${PALETTE}\\b/]`, `TemplateElement[value.raw=/\\b${PALETTE}\\b/]`],
+  },
+  {
+    key: "storage",
+    home: ["src/core/lib/storage/**"],
+    message: "localStorage/sessionStorage throw in private modes and break SSR: go through src/core/lib/storage/ (§ 13).",
+    selectors: ["Identifier[name=/^(localStorage|sessionStorage)$/]"],
+  },
+];
+const uiBans = (except) =>
+  UI_BANS.filter((ban) => ban.key !== except).flatMap((ban) => ban.selectors.map((selector) => ({ selector, message: ban.message })));
+const UI_SOURCES = ["src/**/*.ts", "src/**/*.tsx"];
+const UI_TESTS = ["src/**/*.test.ts", "src/**/*.test.tsx"];
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -94,6 +160,12 @@ const eslintConfig = defineConfig([
         },
       ],
     },
+  })),
+  { files: UI_SOURCES, ignores: UI_TESTS, rules: { "no-restricted-syntax": ["error", ...uiBans(null)] } },
+  ...UI_BANS.filter((ban) => ban.home.length).map((ban) => ({
+    files: ban.home,
+    ignores: UI_TESTS,
+    rules: { "no-restricted-syntax": ["error", ...uiBans(ban.key)] },
   })),
   // Override default ignores of eslint-config-next.
   globalIgnores([

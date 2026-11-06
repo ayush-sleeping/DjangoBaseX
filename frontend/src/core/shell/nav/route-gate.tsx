@@ -61,7 +61,7 @@ export function RouteGate({ children }: { children: ReactNode }) {
     case "allow":
       return <>{children}</>;
     case "loading":
-      return <p className="p-8 text-sm text-zinc-500">Checking your session…</p>;
+      return <p className="p-8 text-sm text-muted-foreground">Checking your session…</p>;
     case "signed-out":
       return (
         <section className="p-8 text-sm">
@@ -73,7 +73,7 @@ export function RouteGate({ children }: { children: ReactNode }) {
       );
     case "error":
       return (
-        <section role="alert" className="p-8 text-sm text-red-600">
+        <section role="alert" className="p-8 text-sm text-destructive">
           <p>Could not load your permissions, so nothing is shown.</p>
           <button type="button" className="underline" onClick={() => void gate.retry()}>
             Try again

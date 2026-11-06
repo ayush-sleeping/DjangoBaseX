@@ -23,7 +23,7 @@ export default async function AcceptInvitationPage({
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 font-sans">
       <h1 className="text-2xl font-bold tracking-tight">Accept your invitation</h1>
       <AcceptInvitationForm token={token} />
-      <Link className="text-xs text-zinc-500 underline" href="/login">
+      <Link className="text-xs text-muted-foreground underline" href="/login">
         Already have an account? Sign in
       </Link>
     </main>

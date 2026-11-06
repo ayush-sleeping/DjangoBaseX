@@ -105,14 +105,14 @@ export function LoginPanel({ next }: { next?: string }) {
     }
   }
 
-  const card = "w-full max-w-sm rounded-xl border border-zinc-200 p-6 dark:border-zinc-800";
+  const card = "w-full max-w-sm rounded-xl border border-border p-6";
   const input =
-    "mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900";
+    "mt-1 w-full rounded-md border border-input px-3 py-2";
   const button =
-    "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900";
+    "w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50";
 
   if (state.status === "loading") {
-    return <p className="text-sm text-zinc-500">Checking your session…</p>;
+    return <p className="text-sm text-muted-foreground">Checking your session…</p>;
   }
 
   if (state.status === "signed-in") {
@@ -124,7 +124,7 @@ export function LoginPanel({ next }: { next?: string }) {
           {me.full_name ? ` (${me.full_name})` : ""}
         </p>
         {me.mfa_enforced && !me.mfa_enabled ? (
-          <p role="alert" className="mt-3 text-sm text-amber-600">
+          <p role="alert" className="mt-3 text-sm text-warn-text">
             Your role requires two-factor authentication. Set it up before you continue.
           </p>
         ) : null}
@@ -171,7 +171,7 @@ export function LoginPanel({ next }: { next?: string }) {
           />
         </label>
         {state.error ? (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-destructive">
             {state.error}
           </p>
         ) : null}
@@ -181,7 +181,7 @@ export function LoginPanel({ next }: { next?: string }) {
         <button
           type="button"
           onClick={() => setState({ status: "signed-out" })}
-          className="block w-full text-center text-xs text-zinc-500 underline"
+          className="block w-full text-center text-xs text-muted-foreground underline"
         >
           Start again
         </button>
@@ -206,14 +206,14 @@ export function LoginPanel({ next }: { next?: string }) {
         />
       </label>
       {state.error ? (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           {state.error}
         </p>
       ) : null}
       <button type="submit" disabled={pending} className={button}>
         {pending ? "Signing in…" : "Sign in"}
       </button>
-      <Link className="block text-center text-xs text-zinc-500 underline" href="/forgot-password">
+      <Link className="block text-center text-xs text-muted-foreground underline" href="/forgot-password">
         Forgot password?
       </Link>
     </form>

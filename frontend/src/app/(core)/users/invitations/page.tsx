@@ -14,7 +14,7 @@ export default function InvitationsPage() {
     <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
       <h1 className="text-2xl font-bold tracking-tight">Invitations</h1>
       <InvitationsPanel />
-      <Link className="text-xs text-zinc-500 underline" href="/users">
+      <Link className="text-xs text-muted-foreground underline" href="/users">
         All users
       </Link>
     </main>

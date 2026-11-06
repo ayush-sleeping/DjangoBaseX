@@ -20,7 +20,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 font-sans">
       <h1 className="text-2xl font-bold tracking-tight">Reset password</h1>
       <ResetPasswordForm token={token} />
-      <Link className="text-xs text-zinc-500 underline" href="/login">
+      <Link className="text-xs text-muted-foreground underline" href="/login">
         Back to sign in
       </Link>
     </main>

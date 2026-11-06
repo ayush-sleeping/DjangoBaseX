@@ -11,12 +11,13 @@ export function ListLoadError({ error, retry, resource }: ListErrorProps & { res
   const message = isApiError(error) ? messageFor(error) : "Something went wrong.";
   const requestId = isApiError(error) ? error.requestId : undefined;
   return (
-    <div role="alert" className="rounded-md border border-red-300 p-4 text-sm">
+    <div role="alert" className="rounded-md border border-err-dot/40 bg-err-tint p-4 text-sm text-err-text">
       <p>
         Couldn&apos;t load {resource}. {message}
       </p>
-      {requestId && <p className="mt-1 text-xs text-zinc-500">Reference: {requestId}</p>}
-      <button type="button" className="mt-2 underline" onClick={() => void retry()}>
+      <p className="mt-1">This is a display problem — nothing has changed.</p>
+      {requestId && <p className="mt-1 text-xs opacity-80">Reference: {requestId}</p>}
+      <button type="button" className="mt-2 underline underline-offset-4" onClick={() => void retry()}>
         Try again
       </button>
     </div>

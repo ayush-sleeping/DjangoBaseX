@@ -40,6 +40,8 @@ next `next dev`. Commit it with your work to keep the tree clean. **Frontend rul
 | `src/app/` | Routes only. A folder with `page.tsx` is a route |
 | `src/core/lib/` | Everything that is not a route or a component — API client, helpers, types |
 | `src/core/lib/api.ts` | **The only module that makes HTTP calls** |
+| `src/core/components/` | The mandatory primitives (§ 5): Button, Modal, confirm/toast, Select family, FormField, StatusPill, … |
+| `src/core/styles/tokens.css` | Every colour, both themes; the only place a colour value is written |
 | `src/core/shell/` | The shell: the menu and the route gate (`nav/resolve-route.ts` is the one deepest-prefix function) |
 | `src/generated/` | Files generated from the backend (`nav-manifest.json`); never hand-edited |
 | `src/proxy.ts` | The page-navigation guard (session marker → render; none → `/login?next=`) |
@@ -176,6 +178,20 @@ author meets:
 - No inline `style={{}}` except for genuinely dynamic values (a computed width, a chart colour)
 - Extract a component when a class list repeats, not a `@apply` rule — `@apply` hides the styles from
   the place they are used
+- **Colour comes from tokens, never the palette** ([`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md) § 16):
+  - Write `bg-primary text-primary-foreground`, `border-border`, `text-muted-foreground`, and
+    `bg-err-tint text-err-text`. Never `bg-zinc-900`, `text-white` or `dark:` colour classes.
+  - `src/core/styles/tokens.css` holds both themes; ESLint refuses a raw palette class outside
+    `src/core/styles/` and `src/core/lib/status-tone.ts`.
+  - Pair every fill with its own `-foreground`.
+  - Spell a status's classes whole through `status-tone.ts` / `StatusPill`, never `bg-${tone}-tint`.
+- **Use the primitives** (§ 13 of the same doc), each enforced by ESLint:
+  - `Button`/`IconButton`;
+  - `Modal`, never a `fixed inset-0` overlay;
+  - `confirm()`/`toast()`, never `window.confirm`/`alert`;
+  - `Select`/`MultiSelect`/`AsyncSelect`, never a native `<select>`;
+  - `SearchInput`, `EmptyState`, `ListLoadError`/`PanelError`, `StatusPill`, and
+    `FormField kind=…`.
 
 ---
 

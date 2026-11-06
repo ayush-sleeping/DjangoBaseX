@@ -1,34 +1,24 @@
+import { StatusPill } from "@/core/components/StatusPill";
 import type { Role } from "@/core/lib/rbac";
 
-const badge = "rounded px-1.5 py-0.5 text-xs";
-
-/** System, elevated and MFA markers. Shared by the list and the editor; renders on either side. */
+/** System, elevated and MFA markers, through the one StatusPill. Shared by the list and the editor. */
 export function RoleBadges({ role }: { role: Role }) {
   return (
     <span className="inline-flex flex-wrap gap-1 align-middle">
       {role.is_system ? (
-        <span
-          className={`${badge} bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300`}
+        <StatusPill
+          status="role.system"
           title="Created by the system. It cannot be renamed, deleted, or have its grants changed."
-        >
-          🔒 System
-        </span>
+        />
       ) : null}
       {role.is_elevated ? (
-        <span
-          className={`${badge} bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300`}
-          title="Only a superuser can change or assign this role."
-        >
-          Elevated
-        </span>
+        <StatusPill status="role.elevated" title="Only a superuser can change or assign this role." />
       ) : null}
       {role.mfa_required ? (
-        <span
-          className={`${badge} bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300`}
+        <StatusPill
+          status="role.mfa_required"
           title="Everyone holding this role must use two-factor authentication."
-        >
-          Two-factor required
-        </span>
+        />
       ) : null}
     </span>
   );

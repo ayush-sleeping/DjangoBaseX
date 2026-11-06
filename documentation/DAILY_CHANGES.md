@@ -26,6 +26,37 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 8.3a: design tokens, dark mode and the mandatory primitives
+**What** (Dev 2 `djangobasex-a9`, manager review; the first half of 8.3, split by the manager):
+- **Tokens:** `src/core/styles/tokens.css` holds every semantic family in OKLCH for light and dark: status
+  `ok/warn/err/info/neutral` with `dot/text/tint/solid/solid-foreground`, charts, sidebar, and density. They're mapped
+  with `@theme inline`; `@custom-variant dark` follows `data-theme`.
+- **Theme:** an inline pre-paint script applies the `<prefix>_theme` cookie (accepting only `light`/`dark`, else the
+  system preference) before first paint, without making the root layout dynamic. Plus a Light/Dark/System toggle.
+- **Primitives** (`src/core/components/`): Button/IconButton, Card, Modal, `confirm()` + `ConfirmHost`, `toast()` +
+  `Toaster` (each mounted exactly once), EmptyState, PanelError/ListLoadError, SearchInput,
+  Select/MultiSelect/AsyncSelect, Switch, StatusPill with `status-tone.ts`, a FormField kind registry on
+  react-hook-form, and an icon registry.
+- **Lint bans, each with its one home:** `<table>`, `<select>`, `dangerouslySetInnerHTML`, hand-rolled overlays,
+  `window.confirm/alert/prompt`, raw palette classes, web storage. Each has a positive control in `lint-smoke.test.ts`.
+- **Palette migration:** 29 files, including the notes example. Badges go through StatusPill; native selects are now Select.
+- **Dependencies** (owner's picks, exact pins, each at least 14 days old): `@tanstack/react-table` 9.3.1,
+  `react-hook-form` 7.90.0, `zod` 4.6.7, `@hookform/resolvers` 5.9.2, `@headlessui/react` 2.2.10, `lucide-react` 1.61.0.
+**Why:** dark mode added late turns every hard-coded colour into a bug, and a fill without its foreground breaks the day
+a theme changes. One set of primitives means a fix reaches every product's every screen.
+**Files:** `frontend/{package.json,package-lock.json,eslint.config.mjs}`, `frontend/src/core/{styles,theme,icons,components}/`,
+`frontend/src/core/lib/status-tone.ts`, `frontend/src/core/providers/Providers.tsx`, `frontend/src/app/{layout.tsx,globals.css}`,
+the 29 migrated screens, `examples/plugins/notes/frontend/notes-page.tsx`, the frontend tests (`tokens`, `theme`,
+`primitives`, `lint-smoke`, `confirm-host`, `no-raw-colour-on-tokens`, `tests/setup.ts`); `FRONTEND_PLATFORM.md`
+§ 12/§ 13/§ 15/§ 16, `NEXTJS_STANDARDS.md` § 1/§ 5, `BUILD_ORDER.md`.
+**Verification:** Dev 2: lint clean, typecheck ✓, vitest 135 passed (18 files), with and without the notes plugin linked.
+Manager re-ran lint, typecheck and vitest (135 passed). Backend unchanged. `npm run build` not run.
+**Notes:**
+- `@hookform/resolvers` 6.0.0 was skipped: its optional peers conflict (`effect` ^4 directly vs ^3 through
+  `@typeschema/main`), and installing with `--force` would push the flag onto every product's `npm ci`.
+- The three existing list `<table>`s keep a temporary lint exemption until 8.3b. The theme isn't SSR-rendered, by
+  decision. `STATUSES` is a local table until 8.4's backend status metadata.
+
 ### ADR-0013/0014/0015: Sentry-only error tracking, SemVer for core, plugin docs in the plugin
 **What:** the repository owner settled `PLATFORM_BLUEPRINT.md` § 6 pending decisions #2, #4 and #5, so § 6 is now empty.
 Error tracking is Sentry-only, and `OBSERVABILITY.md` § 5's built-in tracker won't be built (ADR-0013). Core

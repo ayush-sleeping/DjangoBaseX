@@ -7,6 +7,7 @@ import { type FormEvent, useEffect, useState } from "react";
 
 import { fieldErrors, isMfaEnrollmentRequired } from "@/core/lib/api";
 import { MFA_ENROLMENT_PATH } from "@/core/lib/mfa";
+import { Select } from "@/core/components/Select";
 import { type Permissions, usePermissions } from "@/core/lib/permissions";
 import {
   assignableBy,
@@ -61,7 +62,7 @@ export function UserDetail({ publicId }: { publicId: string }) {
       {(me) => {
         if ("status" in state) {
           return state.status === "loading" ? (
-            <p className="text-sm text-zinc-500">Loading user…</p>
+            <p className="text-sm text-muted-foreground">Loading user…</p>
           ) : (
             <p role="alert" className={ui.error}>
               {state.message}
@@ -100,8 +101,8 @@ function Header({ user, self }: { user: User; self: boolean }) {
         {user.email} <UserBadges user={user} />
       </h1>
       {user.full_name ? <p className="text-sm">{user.full_name}</p> : null}
-      {self ? <p className="text-xs text-zinc-500">This is your account.</p> : null}
-      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 pt-2 text-xs text-zinc-500">
+      {self ? <p className="text-xs text-muted-foreground">This is your account.</p> : null}
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 pt-2 text-xs text-muted-foreground">
         <dt>Created</dt>
         <dd>{formatDateTime(user.created_at)}</dd>
         <dt>Last sign-in</dt>
@@ -152,7 +153,7 @@ function NameForm({ user, onSaved }: { user: User; onSaved: (user: User) => void
         Full name
         <input name="full_name" defaultValue={user.full_name} className={ui.input} />
         {fields.full_name?.length ? (
-          <span className="mt-1 block text-xs text-red-600">{fields.full_name.join(" ")}</span>
+          <span className="mt-1 block text-xs text-destructive">{fields.full_name.join(" ")}</span>
         ) : null}
       </label>
       {message ? (
@@ -182,6 +183,7 @@ function RolesSection({
   const [catalog, setCatalog] = useState<Role[] | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+  const [chosen, setChosen] = useState<string | null>(null);
 
   useEffect(() => {
     if (!canAssign) return;
@@ -232,11 +234,11 @@ function RolesSection({
     <section className={ui.card}>
       <h2 className="text-sm font-semibold">Roles</h2>
       {user.roles.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           No roles. This user can sign in and see nothing else.
         </p>
       ) : (
-        <ul className="divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+        <ul className="divide-y divide-border text-sm">
           {user.roles.map((role) => (
             <li key={role.public_id} className="flex items-center justify-between py-1.5">
               {perms.can(ROLE_CODES.view) ? (
@@ -259,7 +261,7 @@ function RolesSection({
                   Remove
                 </button>
               ) : canAssign ? (
-                <span className="text-xs text-zinc-500" title="Elevated role">
+                <span className="text-xs text-muted-foreground" title="Elevated role">
                   🔒 superusers only
                 </span>
               ) : null}
@@ -269,23 +271,28 @@ function RolesSection({
       )}
       {canAssign ? (
         catalog === null ? (
-          error ? null : <p className="text-xs text-zinc-500">Loading roles…</p>
+          error ? null : <p className="text-xs text-muted-foreground">Loading roles…</p>
         ) : offered.length > 0 ? (
           <form onSubmit={handleAssign} className="flex gap-2">
-            <select name="role" aria-label="Role to assign" className={`${ui.input} mt-0`}>
-              {offered.map((role) => (
-                <option key={role.public_id} value={role.public_id}>
-                  {role.name}
-                  {role.is_elevated ? " (elevated)" : ""}
-                </option>
-              ))}
-            </select>
+            <div className="min-w-0 flex-1">
+              <Select
+                name="role"
+                label="Role to assign"
+                options={offered.map((role) => ({
+                  value: role.public_id,
+                  label: role.name,
+                  hint: role.is_elevated ? "elevated" : undefined,
+                }))}
+                value={chosen ?? offered[0].public_id}
+                onChange={setChosen}
+              />
+            </div>
             <button type="submit" disabled={pending} className={ui.button}>
               Assign
             </button>
           </form>
         ) : (
-          <p className="text-xs text-zinc-500">No other role you can assign.</p>
+          <p className="text-xs text-muted-foreground">No other role you can assign.</p>
         )
       ) : null}
       {error ? (
@@ -407,11 +414,11 @@ function StatusSection({
         </>
       ) : self ? (
         // The API answers 409 self_deactivation: say so instead of offering the button.
-        <p className="text-sm text-zinc-500">You cannot deactivate your own account.</p>
+        <p className="text-sm text-muted-foreground">You cannot deactivate your own account.</p>
       ) : confirming ? (
         <form onSubmit={handleDeactivate} className="space-y-3" noValidate>
           <label className="block text-sm">
-            Reason <span className="text-xs text-zinc-500">(kept with the account)</span>
+            Reason <span className="text-xs text-muted-foreground">(kept with the account)</span>
             <textarea name="reason" rows={2} className={ui.input} />
           </label>
           <div className="flex items-center gap-3">

@@ -14,12 +14,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 font-sans">
       <div className="text-center">
-        <p className="text-sm font-semibold text-zinc-500">{product_name}</p>
+        <p className="text-sm font-semibold text-muted-foreground">{product_name}</p>
         <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
-        {tagline && <p className="mt-1 text-xs text-zinc-500">{tagline}</p>}
+        {tagline && <p className="mt-1 text-xs text-muted-foreground">{tagline}</p>}
       </div>
       <LoginPanel next={typeof next === "string" ? next : undefined} />
-      <Link className="text-xs text-zinc-500 underline" href="/">
+      <Link className="text-xs text-muted-foreground underline" href="/">
         Back to the status page
       </Link>
     </main>

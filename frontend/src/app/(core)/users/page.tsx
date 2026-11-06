@@ -20,7 +20,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
     <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
       <h1 className="text-2xl font-bold tracking-tight">Users</h1>
       <UsersPanel initialPage={pageFromSearchParams(query.page)} initialSearch={search ?? ""} />
-      <Link className="text-xs text-zinc-500 underline" href="/login">
+      <Link className="text-xs text-muted-foreground underline" href="/login">
         Back to your account
       </Link>
     </main>

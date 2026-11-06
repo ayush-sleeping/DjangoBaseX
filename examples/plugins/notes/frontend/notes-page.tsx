@@ -10,10 +10,10 @@ import { usePermissions } from "@/core/lib/permissions";
 import { createNote, deleteNote, listNotes, type Note, NOTE_CODES } from "./notes";
 
 const ui = {
-  card: "w-full max-w-xl space-y-3 rounded-xl border border-zinc-200 p-6 dark:border-zinc-800",
-  input: "w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900",
+  card: "w-full max-w-xl space-y-3 rounded-xl border border-border p-6",
+  input: "w-full rounded-md border border-input px-3 py-2",
   button:
-    "rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900",
+    "rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50",
 };
 
 export default function NotesPage() {
@@ -56,7 +56,7 @@ export default function NotesPage() {
   }
 
   let content;
-  if (perms.status === "loading") content = <p className="text-sm text-zinc-500">Checking your session…</p>;
+  if (perms.status === "loading") content = <p className="text-sm text-muted-foreground">Checking your session…</p>;
   else if (!perms.user)
     content = (
       <Link className="text-sm underline" href="/login">
@@ -77,18 +77,18 @@ export default function NotesPage() {
           </form>
         )}
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
         )}
         <ul className={ui.card}>
-          {notes === null && <li className="text-sm text-zinc-500">Loading…</li>}
-          {notes?.length === 0 && <li className="text-sm text-zinc-500">No notes yet.</li>}
+          {notes === null && <li className="text-sm text-muted-foreground">Loading…</li>}
+          {notes?.length === 0 && <li className="text-sm text-muted-foreground">No notes yet.</li>}
           {notes?.map((note) => (
             <li key={note.public_id} className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-medium">{note.title}</p>
-                {note.body && <p className="text-sm text-zinc-600 dark:text-zinc-400">{note.body}</p>}
+                {note.body && <p className="text-sm text-muted-foreground">{note.body}</p>}
               </div>
               {perms.can(NOTE_CODES.delete) && (
                 <button type="button" className="text-sm underline" onClick={() => handleDelete(note)}>
@@ -105,7 +105,7 @@ export default function NotesPage() {
     <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
       <h1 className="text-2xl font-bold tracking-tight">Notes</h1>
       {content}
-      <Link className="text-xs text-zinc-500 underline" href="/">
+      <Link className="text-xs text-muted-foreground underline" href="/">
         Home
       </Link>
     </main>

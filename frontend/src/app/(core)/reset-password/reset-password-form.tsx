@@ -25,7 +25,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     }
   }
 
-  const card = "w-full max-w-sm rounded-xl border border-zinc-200 p-6 dark:border-zinc-800";
+  const card = "w-full max-w-sm rounded-xl border border-border p-6";
   const link = "text-sm underline";
 
   if (state.status === "done") {
@@ -46,7 +46,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (!token || failure?.kind === "invalid-token") {
     return (
       <section className={card}>
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           {failure?.message ?? "This reset link is incomplete. Request a new one."}
         </p>
         <Link className={`${link} mt-4 block`} href="/forgot-password">
@@ -65,11 +65,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
           type="password"
           autoComplete="new-password"
           required
-          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="mt-1 w-full rounded-md border border-input px-3 py-2"
         />
       </label>
       {failure ? (
-        <div role="alert" className="text-sm text-red-600">
+        <div role="alert" className="text-sm text-destructive">
           <p>{failure.message}</p>
           {failure.kind === "invalid-password" && failure.details.length > 0 ? (
             <ul className="mt-1 list-disc pl-5">
@@ -83,7 +83,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+        className="w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
       >
         {pending ? "Saving…" : "Set new password"}
       </button>

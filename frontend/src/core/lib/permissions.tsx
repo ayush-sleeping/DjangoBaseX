@@ -114,7 +114,7 @@ export function Can({ perm, fallback, children }: { perm: string; fallback?: Rea
 
 export function DeniedCard({ what = "view this section" }: { what?: string }) {
   return (
-    <p role="status" className="rounded-md border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+    <p role="status" className="rounded-md border border-border p-4 text-sm">
       You don&apos;t have permission to {what}.
     </p>
   );

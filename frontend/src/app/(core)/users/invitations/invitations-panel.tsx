@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
+import { Select } from "@/core/components/Select";
 import { fieldErrors, isMfaEnrollmentRequired, type Page } from "@/core/lib/api";
 import {
   type Invitation,
@@ -82,14 +83,14 @@ export function InvitationsPanel() {
             <section className={ui.card}>
               <h2 className="text-sm font-semibold">Sent</h2>
               {loading && !invitations ? (
-                <p className="text-sm text-zinc-500">Loading invitations…</p>
+                <p className="text-sm text-muted-foreground">Loading invitations…</p>
               ) : listing?.error ? (
                 <p role="alert" className={ui.error}>
                   {listing.error}
                 </p>
               ) : invitations && invitations.results.length > 0 ? (
                 <table className="w-full text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wide text-zinc-500">
+                  <thead className="text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="pb-2 font-medium">Email</th>
                       <th className="pb-2 font-medium">Role</th>
@@ -97,12 +98,12 @@ export function InvitationsPanel() {
                       <th className="pb-2" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {invitations.results.map((invitation) => (
                       <tr key={invitation.public_id}>
                         <td className="py-2 pr-3">
                           {invitation.email}
-                          <span className="block text-xs text-zinc-500">
+                          <span className="block text-xs text-muted-foreground">
                             Sent {formatDateTime(invitation.created_at)}
                             {invitation.invited_by ? ` by ${invitation.invited_by.email}` : ""}
                           </span>
@@ -110,7 +111,7 @@ export function InvitationsPanel() {
                         <td className="py-2 pr-3">{invitation.role.name}</td>
                         <td className="py-2 pr-3 text-xs">
                           {STATUS_LABELS[invitation.status]}
-                          <span className="block text-zinc-500">{statusDetail(invitation)}</span>
+                          <span className="block text-muted-foreground">{statusDetail(invitation)}</span>
                         </td>
                         <td className="py-2 text-right">
                           {invitation.status === "pending" ? (
@@ -129,7 +130,7 @@ export function InvitationsPanel() {
                   </tbody>
                 </table>
               ) : (
-                <p className="text-sm text-zinc-500">No invitations yet.</p>
+                <p className="text-sm text-muted-foreground">No invitations yet.</p>
               )}
               {rowError ? (
                 <p role="alert" className={ui.error}>
@@ -146,7 +147,7 @@ export function InvitationsPanel() {
                   >
                     Previous
                   </button>
-                  <span className="text-zinc-500">
+                  <span className="text-muted-foreground">
                     Page {page} · {invitations.count} invitations
                   </span>
                   <button
@@ -191,6 +192,7 @@ function SendForm({
   onSent: () => void;
 }) {
   const [roles, setRoles] = useState<Role[] | null>(null);
+  const [chosenRole, setChosenRole] = useState<string | null>(null);
   const [rolesError, setRolesError] = useState<string>();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string }>();
@@ -223,6 +225,7 @@ function SendForm({
       setMessage({ ok: true, text: `Invitation sent to ${email}.` });
       setFields({});
       formElement.reset();
+      setChosenRole(null);
       onSent();
     } catch (error) {
       setMessage({ ok: false, text: invitationErrorMessage(error) });
@@ -235,7 +238,7 @@ function SendForm({
   if (!canListRoles) {
     return (
       <section className={ui.card}>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Sending an invitation means choosing a role, and you can&apos;t view roles. Ask someone
           who can.
         </p>
@@ -245,13 +248,13 @@ function SendForm({
 
   const fieldError = (field: string) =>
     fields[field]?.length ? (
-      <span className="mt-1 block text-xs text-red-600">{fields[field].join(" ")}</span>
+      <span className="mt-1 block text-xs text-destructive">{fields[field].join(" ")}</span>
     ) : null;
 
   return (
     <form onSubmit={handleSubmit} className={ui.card} noValidate>
       <h2 className="text-sm font-semibold">Invite someone</h2>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-muted-foreground">
         They get an email with a link to choose their name and password. They hold the role from
         the moment they accept.
       </p>
@@ -263,21 +266,25 @@ function SendForm({
       <label className="block text-sm">
         Role
         {roles === null ? (
-          <span className="mt-1 block text-xs text-zinc-500">
+          <span className="mt-1 block text-xs text-muted-foreground">
             {rolesError ?? "Loading roles…"}
           </span>
         ) : (
-          <select name="role" required className={ui.input} defaultValue="">
-            <option value="" disabled>
-              Choose a role
-            </option>
-            {roles.map((role) => (
-              <option key={role.public_id} value={role.public_id}>
-                {role.name}
-                {role.is_elevated ? " (elevated)" : ""}
-              </option>
-            ))}
-          </select>
+          <span className="mt-1 block">
+            <Select
+              name="role"
+              label="Role"
+              required
+              placeholder="Choose a role"
+              options={roles.map((role) => ({
+                value: role.public_id,
+                label: role.name,
+                hint: role.is_elevated ? "elevated" : undefined,
+              }))}
+              value={chosenRole}
+              onChange={setChosenRole}
+            />
+          </span>
         )}
         {fieldError("role")}
       </label>

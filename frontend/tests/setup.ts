@@ -8,6 +8,16 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 
 export const server = setupServer();
 
+// jsdom has no ResizeObserver; Headless UI's anchored popovers (Select, Modal) observe their size.
+// A no-op stub is enough: tests assert behaviour, not layout.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   server.resetHandlers();

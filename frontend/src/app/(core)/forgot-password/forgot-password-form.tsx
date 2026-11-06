@@ -24,7 +24,7 @@ export function ForgotPasswordForm() {
     }
   }
 
-  const card = "w-full max-w-sm rounded-xl border border-zinc-200 p-6 dark:border-zinc-800";
+  const card = "w-full max-w-sm rounded-xl border border-border p-6";
 
   if (state.status === "sent") {
     // The same words whether or not the address has an account (AUTH_BLUEPRINT § 6.6).
@@ -47,18 +47,18 @@ export function ForgotPasswordForm() {
           type="email"
           autoComplete="username"
           required
-          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+          className="mt-1 w-full rounded-md border border-input px-3 py-2"
         />
       </label>
       {state.error ? (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           {state.error}
         </p>
       ) : null}
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+        className="w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
       >
         {pending ? "Sending…" : "Send reset link"}
       </button>

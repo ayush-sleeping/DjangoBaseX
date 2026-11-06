@@ -96,7 +96,7 @@ export function UsersPanel({
                   defaultValue={query.search}
                   placeholder="Search by email or name"
                   aria-label="Search users"
-                  className="rounded-md border border-zinc-300 px-3 py-1.5 dark:border-zinc-700 dark:bg-zinc-900"
+                  className="rounded-md border border-input px-3 py-1.5"
                 />
                 <button type="submit" className={ui.button}>
                   Search
@@ -106,21 +106,21 @@ export function UsersPanel({
 
             <section className={ui.card}>
               {loading ? (
-                <p className="text-sm text-zinc-500">Loading users…</p>
+                <p className="text-sm text-muted-foreground">Loading users…</p>
               ) : listing.error ? (
                 <p role="alert" className={ui.error}>
                   {listing.error}
                 </p>
               ) : users && users.results.length > 0 ? (
                 <table className="w-full text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wide text-zinc-500">
+                  <thead className="text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="pb-2 font-medium">User</th>
                       <th className="pb-2 font-medium">Roles</th>
                       <th className="pb-2 font-medium">Last sign-in</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {users.results.map((user) => (
                       <tr key={user.public_id}>
                         <td className="py-2 pr-3">
@@ -132,13 +132,13 @@ export function UsersPanel({
                           </Link>{" "}
                           <UserBadges user={user} />
                           {user.full_name ? (
-                            <span className="block text-xs text-zinc-500">{user.full_name}</span>
+                            <span className="block text-xs text-muted-foreground">{user.full_name}</span>
                           ) : null}
                         </td>
                         <td className="py-2 pr-3 text-xs">
                           {user.roles.map((role) => role.name).join(", ") || "—"}
                         </td>
-                        <td className="py-2 text-xs text-zinc-500">
+                        <td className="py-2 text-xs text-muted-foreground">
                           {formatDateTime(user.last_login)}
                         </td>
                       </tr>
@@ -146,7 +146,7 @@ export function UsersPanel({
                   </tbody>
                 </table>
               ) : (
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-muted-foreground">
                   {query.search ? `No users match "${query.search}".` : "No users yet."}
                 </p>
               )}
@@ -160,7 +160,7 @@ export function UsersPanel({
                   >
                     Previous
                   </button>
-                  <span className="text-zinc-500">
+                  <span className="text-muted-foreground">
                     Page {query.page} · {users.count} users
                   </span>
                   <button

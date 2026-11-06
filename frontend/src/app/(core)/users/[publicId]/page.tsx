@@ -16,7 +16,7 @@ export default async function UserPage({ params }: PageProps<"/users/[publicId]"
   return (
     <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
       <UserDetail publicId={publicId} />
-      <Link className="text-xs text-zinc-500 underline" href="/users">
+      <Link className="text-xs text-muted-foreground underline" href="/users">
         All users
       </Link>
     </main>

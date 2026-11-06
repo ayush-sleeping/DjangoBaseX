@@ -904,7 +904,7 @@ module's shape is.
 
 ## 12. The DataTable standard — **Tier 1 · Core**
 
-**What.** `src/core/components/data-table/` on **TanStack Table v8** (headless), server-driven, the
+**What.** `src/core/components/data-table/` on **TanStack Table** (headless; **v9** — `@tanstack/react-table` 9.3.1, the owner's call in BUILD_ORDER 8.3, as v8 is superseded), server-driven, the
 only list renderer.
 
 **Why.** Every early module grows its own table with different pagination, URL behaviour and
@@ -1010,6 +1010,49 @@ a positive-control fixture per rule that must make ESLint fail (§ 26).
 
 **Configurable, not hard-coded.** Status metadata is backend data; tones are tokens.
 
+**As built (BUILD_ORDER 8.3a).**
+- **Where they live:** `src/core/components/`.
+  - `Button`/`IconButton`/`buttonClass` (token variants; an icon button requires `label`).
+  - `Card`, `StatusPill`, `EmptyState` (`none | filtered`), `PanelError`, `ListLoadError`
+    ("This is a display problem — nothing has changed", Retry, request id).
+  - `Modal` (on Headless UI's `Dialog`).
+  - `confirm()` + `ConfirmHost`, and `toast()` + `Toaster`, both module stores mounted once in
+    `Providers.tsx`. A `confirm()` with no host rejects; a newer question cancels the older one.
+    The query layer's "couldn't refresh" notice shows as a toast.
+  - `SearchInput` (300 ms debounce, minimum length 2), `Select`/`MultiSelect`/`AsyncSelect` (on
+    Headless UI's `Combobox`; searchable; `name` renders hidden inputs so a plain `<form>` still
+    works; `AsyncSelect` loads through `useApiQuery`), `Switch` (always labelled), and
+    `form/FormField` (react-hook-form `useController` plus a **kind registry**:
+    `text | email | password | number | textarea | select | multiselect | switch`;
+    `registerFieldKind()` refuses duplicates).
+  - The icon registry is `src/core/icons/registry.ts` (lucide-react 1.61.0): names → icons, and an
+    unknown name renders nothing.
+- **Status tones:** `src/core/lib/status-tone.ts` holds the literal recipes (`TONE_PILL`,
+  `TONE_DOT`, `TONE_SOLID`, `TONE_EMPTY`). `STATUSES` is a **local** table (user, invitation and
+  role statuses) until 8.4 exports the backend's per-choice status metadata.
+- **The ESLint bans** (`eslint.config.mjs` → `UI_BANS`) form one `no-restricted-syntax` list, each
+  with its home:
+  - `<table>` (home `data-table/`; ⚠️ the three existing lists are a **temporary** home until 8.3b
+    replaces them);
+  - `<select>`, and `window.confirm/alert/prompt` / `alert()` / `prompt()` (no home);
+  - `dangerouslySetInnerHTML` (home `src/core/theme/ThemeScript.tsx`);
+  - `fixed inset-0` (home `Modal.tsx`);
+  - raw palette classes (home `src/core/styles/`, `status-tone.ts`);
+  - `localStorage`/`sessionStorage` (home `src/core/lib/storage/`).
+
+  Test files are exempt. `tests/lint-smoke.test.ts` holds a positive control per ban, plus
+  home-exemption checks.
+- **Guards:**
+  - `tests/architecture/confirm-host.test.tsx`: exactly one `ConfirmHost` and one `Toaster`, by AST.
+  - `tests/architecture/no-raw-colour-on-tokens.test.ts`: no token fill with
+    `text-white/black`; no interpolated colour utility.
+  - `src/core/components/primitives.test.tsx`.
+- **Not yet built:**
+  - the date-input family, `DateTime`/`Money`/`Bytes` and the formatter bans (§ 14, BUILD_ORDER
+    8.4);
+  - `SafeLink`/`SafeHtml` (§ 18);
+  - `StatTile`/`Band`/`Meter`.
+
 ---
 
 ## 14. Formatters in one home — **Tier 1 · Core**
@@ -1100,6 +1143,14 @@ across a retried submission); ESLint bans importing `react-hook-form` outside
 
 **Configurable, not hard-coded.** Field kinds are a registry; the zod generator is a pending decision.
 
+**As built (BUILD_ORDER 8.3a — dependencies only; `ResourceForm` arrives in 8.3b).**
+- **Installed:** `react-hook-form` 7.90.0, `zod` 4.6.7, and `@hookform/resolvers` **5.9.2**.
+- **`@hookform/resolvers` 6.0.0 was skipped.** Its own optional peers conflict: it wants `effect`
+  `^4` directly and `^3` through `@typeschema/main`, so `npm install` fails with ERESOLVE. We do not
+  install with `--force` or `--legacy-peer-deps`, because every later `npm ci` would then need the
+  flag. **The next upgrade should check for a fixed 6.x/7.x.**
+- **Available now:** `FormField` (§ 13) binds to react-hook-form.
+
 ---
 
 ## 16. Design tokens — **Tier 1 · Core**
@@ -1155,6 +1206,35 @@ palette utilities. Another: white text on a tenant's pale brand colour, measured
 
 **Configurable, not hard-coded.** Tokens are the configuration surface; accents and densities are a
 curated list with matching CSS blocks.
+
+**As built (BUILD_ORDER 8.3a).**
+- **`src/core/styles/tokens.css`** (imported by `src/app/globals.css`) declares every family above,
+  the status families with `dot/text/tint/solid/solid-foreground`, and `chart-1…5`, in `@theme
+  inline`, `:root` and `[data-theme="dark"]`. Values are OKLCH. Layout tokens `--control-h` and
+  `--row-h` are in `:root` only.
+- **`@custom-variant dark`** aligns `dark:` with the attribute. Since tokens carry dark mode,
+  migrated code has **no** `dark:` colour classes.
+- **Theme:** `src/core/theme/`.
+  - `theme.ts`: the cookie `<NEXT_PUBLIC_AUTH_COOKIE_PREFIX>_theme` (`light | dark | system`) and
+    the store `chooseTheme`/`applyTheme`/`subscribeTheme`.
+  - `ThemeScript.tsx`: an inline pre-paint script in the root layout's `<head>`; `<html
+    suppressHydrationWarning>`.
+  - `ThemeToggle.tsx`: on the status page until the shell header lands.
+  - **Deviation from the rule above:** SSR does **not** read the cookie, because `cookies()` in the
+    root layout would make every route dynamic. The script applies the theme before first paint
+    instead. 8.5 adds its CSP nonce.
+- **Migrated:** every raw palette class in `src/**` and `examples/plugins/notes/frontend`. The
+  badges now go through `StatusPill`.
+- **`tokens.test.ts`** (BUILD_ORDER 8.3 acceptance part 1), in both themes:
+  - every family is declared;
+  - every colour `@theme` maps is declared;
+  - every fill has its foreground;
+  - `@theme` maps `--color-x` to `var(--x)`;
+  - no colour exists in only one theme;
+  - every `-foreground` pairs with a fill;
+  - no source uses `bg-*-foreground`.
+- **Not yet built:** per-user accent and density (no preferences API), page-scoped themes, the
+  Playwright contrast audit (no Playwright), and § 17 tenant overrides.
 
 ---
 

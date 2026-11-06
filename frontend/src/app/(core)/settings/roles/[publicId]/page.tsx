@@ -16,7 +16,7 @@ export default async function RolePage({ params }: PageProps<"/settings/roles/[p
   return (
     <main className="flex min-h-screen flex-col items-center gap-6 p-8 font-sans">
       <RoleEditor publicId={publicId} />
-      <Link className="text-xs text-zinc-500 underline" href="/settings/roles">
+      <Link className="text-xs text-muted-foreground underline" href="/settings/roles">
         All roles
       </Link>
     </main>
