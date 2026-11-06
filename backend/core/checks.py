@@ -39,6 +39,7 @@ def check_registry_seals(app_configs, **kwargs):
         ("audit_actions", registry.audit_actions.actions),
         ("guards", registry.guards.defs),
         ("jobs", registry.jobs.specs),
+        ("doctors", registry.doctors.doctors),
     ):
         try:
             read()

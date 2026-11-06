@@ -1078,6 +1078,87 @@ class JobRegistry(_Catalog):
         return tuple(self._specs[k] for k in sorted(self._specs))
 
 
+# --- Doctors (OBSERVABILITY.md § 12) ------------------------------------------------------------
+
+
+DOCTOR_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+FAILURE, ADVISORY = "failure", "advisory"
+
+
+@dataclass(frozen=True)
+class Finding:
+    """One problem a doctor found. The message names the fix, not just the fault."""
+
+    severity: str  # FAILURE | ADVISORY
+    code: str  # stable, greppable: "queue.stalled"
+    subject: str  # what it is about: a queue, a job, a row
+    message: str
+    remedy: str = ""
+
+    @property
+    def ledger_key(self) -> str:
+        """How a backlog ledger names this finding: "<code>:<subject>"."""
+        return f"{self.code}:{self.subject}"
+
+
+@dataclass(frozen=True)
+class Doctor:
+    """
+    A subsystem's "is this actually working?" check (§ 12). `fn() -> list[Finding]` must call the
+    real enforcement code, never a second model of it. `known` is the backlog ledger: findings
+    that already existed when the check arrived, by ledger_key. It may only shrink.
+    """
+
+    key: str
+    fn: Callable[[], object]
+    owner: str
+    description: str
+    requires_db: bool = True
+    known: frozenset[str] = frozenset()
+
+
+class DoctorRegistry(_Catalog):
+    """Registered doctors. `manage.py doctor` runs them all and names none (§ 12)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._doctors: dict[str, Doctor] = {}
+
+    def register(self, doctor: Doctor) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(doctor, Doctor):
+                raise RegistryError(f"expected a Doctor, got {type(doctor).__name__}")
+            name = f"doctor {doctor.key!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(doctor.key, str) or not DOCTOR_KEY_PATTERN.match(doctor.key):
+                raise RegistryError(f"{name}: key must be lowercase letters, digits and _")
+            if not callable(doctor.fn):
+                raise RegistryError(f"{name}: fn must be callable")
+            for field_name in ("owner", "description"):
+                value = getattr(doctor, field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            if not isinstance(doctor.known, frozenset):
+                raise RegistryError(f"{name}: known must be a frozenset literal (shrink-only)")
+            if doctor.key in self._doctors:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[doctor.key]}; "
+                    f"registered again by {owner}"
+                )
+            self._doctors[doctor.key] = doctor
+            self._owner_of[doctor.key] = owner
+
+    def get(self, key: str) -> Doctor:
+        self.seal()
+        return self._doctors[key]
+
+    def doctors(self) -> tuple[Doctor, ...]:
+        """In registration order, which follows INSTALLED_APPS."""
+        self.seal()
+        return tuple(self._doctors.values())
+
+
 def _caller_module() -> str:
     """The module that called register(), for naming both sides of a duplicate. Best effort."""
     try:
@@ -1107,6 +1188,7 @@ class Registry:
         self.lookups = LookupRegistry()
         self.guards = GuardRegistry()
         self.jobs = JobRegistry()
+        self.doctors = DoctorRegistry()
 
 
 # The process-wide instance. Tests build their own and never touch this one.

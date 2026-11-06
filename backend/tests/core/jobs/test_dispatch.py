@@ -22,7 +22,7 @@ def sent(monkeypatch):
 def test_outside_a_transaction_it_publishes_at_once(sent):
     enqueue("users.auth_cleanup")
     assert sent == [
-        {"name": "users.auth_cleanup", "kwargs": {"trigger": "enqueue"}, "queue": "bulk"}
+        {"name": "users.auth_cleanup", "kwargs": {"trigger": "on_demand"}, "queue": "bulk"}
     ]
 
 
@@ -39,7 +39,7 @@ def test_enqueue_inside_atomic_publishes_only_after_commit(
             enqueue("users.auth_cleanup", user_id=7)
             assert sent == []  # registered, not published
     assert len(callbacks) == 1
-    assert [call["kwargs"] for call in sent] == [{"trigger": "enqueue", "user_id": 7}]
+    assert [call["kwargs"] for call in sent] == [{"trigger": "on_demand", "user_id": 7}]
 
 
 @pytest.mark.django_db

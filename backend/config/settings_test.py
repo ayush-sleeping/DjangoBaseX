@@ -76,3 +76,11 @@ SILENCED_SYSTEM_CHECKS = ["dbx.E005"]
 
 # Hashing is deliberately slow; tests only need it to be correct.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# The recorder's "monitor" alias (JOBS_AND_INTEGRATIONS § 7). On SQLite :memory: a second alias is
+# either a second, unmigrated database or (mirrored) a second connection that the first one's open
+# test transaction locks out. So on SQLite the recorder writes through default, and the
+# rollback-survival test is PostgreSQL-only. On PostgreSQL it is a real second connection.
+if DATABASES["default"]["ENGINE"].endswith("sqlite3"):  # noqa: F405
+    DATABASES["monitor"] = {**DATABASES["default"], "TEST": {"MIRROR": "default"}}  # noqa: F405
+    JOB_RUN_DB_ALIAS = "default"

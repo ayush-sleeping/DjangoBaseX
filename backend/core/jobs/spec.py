@@ -34,7 +34,7 @@ class JobContext:
 
     run_id: str
     job_name: str
-    trigger: str = "schedule"  # "schedule" | "enqueue" | "manual"
+    trigger: str = "schedule"  # "schedule" | "on_demand" | "manual" | "retry"
     idempotency_key: str | None = None
     # The enqueue() kwargs: primitive ids and small scalars only (§ 4); the job re-reads its rows.
     params: dict[str, int | str | bool | None] = field(default_factory=dict)

@@ -836,7 +836,13 @@ in-process `run_worker` first ([ADR-0012](../adr/0012-celery-from-day-one.md)).
 **Done when:** a test fails if any declared queue has no worker in the compose file, or any beat entry names an
 unregistered task; `auth_cleanup` runs from beat, not cron.
 
-### 7.2 — Job-run monitor and the doctor umbrella ⬜
+### 7.2 — Job-run monitor and the doctor umbrella ✅
+*Done 2026-11-06* (Dev 1 `djangobasex-4e`, manager review). `core_job_run` is written from Celery's signals through its
+own `monitor` connection (a rolled-back job still records its failure, proven on PostgreSQL); `core.jobs.health`
+gives disabled › never_run › failing › overdue › ok plus queue stall and "worker seen recently"; `manage.py doctor`
+(`--json`, `--only/--skip`, `--strict`, exits 0/1/2/3) runs the dataplane, queue and schedule doctors. The Job
+Monitor **API and page are deferred** to the screen that needs them (shapes in `JOBS_AND_INTEGRATIONS.md` "As built —
+7.2").
 `JobRun` recorded from Celery signals (never raising, own connection); health states
 `disabled · never_run · failing · overdue · ok` and "worker seen recently"; `manage.py doctor` running every
 registered doctor with `--json` and exit codes.
@@ -860,6 +866,8 @@ one test recipient.
 POST gets 423 and no mail leaves the machine except to the test recipient.
 
 ### 7.5 — The retention engine ⬜
+*Includes (from 7.2):* `core_job_run` as a retention policy (completed ~14 days, failed ~90, with a row cap). It has no
+retention until then and grows fastest when something is wrong.
 `registry.retention` policies with age **and** row caps, batched deletes, opt-in for evidence tables, floors,
 `--status` / `--dry-run`. `auth_cleanup` becomes one caller.
 

@@ -18,3 +18,14 @@ def takes_nothing():
 
 def takes_two(ctx, extra):
     return 0
+
+
+def fails_with_a_secret(ctx):
+    raise ConnectionError("connect failed: password=hunter2 for postgres://app:s3cretpw@db/app")
+
+
+def writes_then_fails(ctx):
+    from users.models import LoginAttempt
+
+    LoginAttempt.objects.create(identifier="rolled-back@example.com", succeeded=False)
+    raise RuntimeError("after the write")

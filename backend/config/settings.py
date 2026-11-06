@@ -182,6 +182,11 @@ DATABASES = {
 if "postgresql" in DATABASES["default"]["ENGINE"]:
     DATABASES["default"].setdefault("OPTIONS", {})
     DATABASES["default"]["OPTIONS"].setdefault("connect_timeout", env("DB_CONNECT_TIMEOUT_SECONDS"))
+# The job-run recorder's own connection to the same database (JOBS_AND_INTEGRATIONS § 7): a queued
+# row is not rolled back with the caller's transaction, and a failed job's rollback does not erase
+# the record of its failure. Never used for anything else.
+DATABASES["monitor"] = {**DATABASES["default"], "ATOMIC_REQUESTS": False}
+JOB_RUN_DB_ALIAS = "monitor"  # the alias the recorder and the monitor read and write through
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

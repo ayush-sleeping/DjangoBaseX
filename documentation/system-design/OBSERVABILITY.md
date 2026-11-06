@@ -1041,6 +1041,31 @@ digit `0`.
 
 ## 12. Doctors — **Tier 1 · Core**
 
+> ✅ **As built (BUILD_ORDER 7.2).** The umbrella and its registry exist: `core/doctors.py` (the
+> runner, which names no subsystem), `core/management/commands/doctor.py` (the CLI) and
+> `registry.doctors` in `core/registry.py`. A doctor is
+> `Doctor(key, fn, owner, description, requires_db=True, known=frozenset())`, and `fn()` returns
+> `Finding(severity, code, subject, message, remedy)`.
+>
+> - **Flags and exit codes:** `--json`, `--only`/`--skip`, `--strict` and `--fatal-only` (print
+>   failures only) are built, with exit codes 0 · 1 · 2 · 3 as below. A doctor that raises, or
+>   returns anything but Findings, is reported as `doctor.crashed`, and the run exits 2.
+> - **JSON:** `{"exit_code", "doctors": [{doctor, status, findings[], backlog{size, entries,
+>   entries_fixed[]}, duration_ms}]}`.
+> - **Ledgers:** a ledger is the doctor's `known` frozenset of `"<code>:<subject>"` keys. The rules
+>   below hold: an entry that no longer reproduces fails as `doctor.ledger_entry_fixed`, a doctor
+>   with backlog reports "N known issues remain", and `--strict` fails on any backlog.
+> - **`DOCTOR_STRICT_KEYS`** is a code constant in `core/doctors.py` (empty), not env.
+> - **Registered today:** `dataplane` (wraps `core.dataplane.evaluate`: fatal → failure, warn →
+>   advisory; `manage.py dataplane` remains), and `queue` and `schedule`
+>   ([`JOBS_AND_INTEGRATIONS.md`](JOBS_AND_INTEGRATIONS.md), "As built — BUILD_ORDER 7.2").
+> - **Not built yet:** the `permissions` doctor (no § 9.4 check code exists yet), and `migrations`,
+>   `settings`, `observability`, `connections`, `retention`, `plugins`, `search` and `docs`.
+>   `scripts/ledger_guard.py` (the CI shrink-only guard) is not built either; there are no ledgers
+>   yet for it to guard.
+> - **Tests:** `tests/core/test_doctor_umbrella.py` (exit codes, JSON schema, strict, ledgers,
+>   registry refusals, and `test_umbrella_names_no_subsystem`).
+
 **What.** `manage.py doctor` — an umbrella that runs every registered doctor, reports findings
 with severities and remedies, supports `--json` for CI and the deploy driver, and exits with a
 meaningful code. Individual doctors arrive with their subsystems; the umbrella and its registry

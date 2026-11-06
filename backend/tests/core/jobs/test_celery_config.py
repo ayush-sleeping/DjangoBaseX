@@ -78,9 +78,11 @@ def test_the_generated_task_runs_the_job_with_its_params():
         ),
     )
     fakes.CALLS.clear()
-    result = task.apply(kwargs={"trigger": "enqueue", "invoice_id": 42}, task_id="run-1")
+    result = task.apply(kwargs={"trigger": "on_demand", "invoice_id": 42}, task_id="run-1")
     assert result.get() == 3
-    assert fakes.CALLS == [{"run_id": "run-1", "params": {"invoice_id": 42}, "trigger": "enqueue"}]
+    assert fakes.CALLS == [
+        {"run_id": "run-1", "params": {"invoice_id": 42}, "trigger": "on_demand"}
+    ]
 
 
 def test_a_job_that_returns_a_non_int_fails():
@@ -208,3 +210,16 @@ def test_worker_hygiene_closes_stale_connections_between_tasks(monkeypatch):
     monkeypatch.setattr(jobs_celery, "close_old_connections", lambda: closed.append(True))
     jobs_celery._close_connections()  # no transaction: a worker between tasks
     assert closed == [True]
+
+
+def test_install_drops_a_publisher_built_before_the_recorder_connected():
+    """Celery's cached publisher captures after_task_publish's receivers when it is built; one
+    built before install() would never record "queued"."""
+    from core.jobs.celery import install
+    from core.registry import JobRegistry
+
+    local = Celery("test", set_as_current=False)
+    local.conf.task_default_queue = "default"
+    assert local.amqp.send_task_message  # built early, as a publish before finalize would
+    install(local, jobs=JobRegistry())
+    assert "send_task_message" not in local.amqp.__dict__

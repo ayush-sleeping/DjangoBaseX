@@ -27,6 +27,7 @@ class CoreConfig(AppConfig):
 
         register_locale_settings(registry)
         register_core_actions(registry)
+        _register_jobs_monitoring(registry)
         from .crypto import self_test
 
         # A process that cannot encrypt must refuse to start, not store plaintext (§ 25). An empty
@@ -35,6 +36,51 @@ class CoreConfig(AppConfig):
         post_migrate.connect(_report_settings, sender=self, dispatch_uid="core.settings_report")
         post_migrate.connect(_seed_lookups, sender=self, dispatch_uid="core.seed_lookups")
         post_migrate.connect(_sync_schedules, sender=self, dispatch_uid="core.sync_schedules")
+
+
+def _register_jobs_monitoring(registry) -> None:
+    """The run monitor's settings, its non-critical health check and the doctors (BUILD_ORDER 7.2;
+    JOBS_AND_INTEGRATIONS § 8, OBSERVABILITY § 12)."""
+    from .dataplane import doctor_findings
+    from .jobs import doctors as job_doctors
+    from .jobs.health import GREEN, QueuePolicy, report
+    from .registry import Doctor, HealthCheck
+
+    registry.settings.register_group(
+        QueuePolicy, prefix="operations.queue", module="operations", group="Background jobs"
+    )
+    # Not critical: a stalled queue must never take the web tier out of the load balancer.
+    registry.health.register(
+        HealthCheck(
+            key="jobs",
+            label="Background jobs",
+            check=lambda: report().status == GREEN,
+            critical=False,
+        )
+    )
+    for doctor in (
+        Doctor(
+            key="dataplane",
+            fn=doctor_findings,
+            owner="core",
+            description="Required rows exist and make sense (OBSERVABILITY.md § 7).",
+        ),
+        Doctor(
+            key="queue",
+            fn=job_doctors.queue_doctor,
+            owner="core",
+            description="Celery settings, stalled queues, queues with no consumer, dead and "
+            "unregistered tasks (JOBS_AND_INTEGRATIONS.md § 8).",
+        ),
+        Doctor(
+            key="schedule",
+            fn=job_doctors.schedule_doctor,
+            owner="core",
+            description="Beat in sync with the registry; scheduled jobs failing, overdue or never "
+            "run; unowned beat rows (JOBS_AND_INTEGRATIONS.md § 6, § 8).",
+        ),
+    ):
+        registry.doctors.register(doctor)
 
 
 def _report_settings(sender, **kwargs):

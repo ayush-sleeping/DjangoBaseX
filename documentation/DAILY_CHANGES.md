@@ -26,6 +26,40 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 7.2: the job-run monitor and the doctor umbrella
+**What** (Dev 1 `djangobasex-4e`, manager review):
+- **Run record:** every Celery run is recorded in `core_job_run` (core 0006) from Celery's signals (publish → queued
+  … success/failure/retry/revoked; unknown/rejected → dead). The recorder never raises, upserts by task id so signals
+  may arrive in any order, and writes through its own `monitor` connection (`settings.JOB_RUN_DB_ALIAS`), so a
+  rolled-back job still records its failure. Errors are type + scrubbed message, never a traceback.
+- **Health:** `core.jobs.health.report()` gives each job disabled › never_run › failing › overdue › ok, each queue its
+  liveness and stall, plus "worker seen recently" and a red/green status, exposed as the non-critical `jobs` health
+  check. New settings `operations.queue.{stall_threshold_minutes,worker_seen_window_minutes}`.
+- **`manage.py doctor`:** runs every registered doctor (`--json`, `--only/--skip`, `--strict`, `--fatal-only`; exit 0
+  clean, 1 a failure, 2 a doctor crashed, 3 usage), with backlog ledgers. It ships `dataplane`, `queue` and
+  `schedule` (§ 8's `queue_doctor`/`schedule_doctor` are `doctor --only`). `enqueue()` records its trigger as `on_demand`.
+**Why:** a stopped worker looks exactly like a quiet, healthy system: nothing fails, so a failed-jobs view stays empty
+(BC-33). The monitor turns that red within three intervals, and one command answers CI, the deploy driver and an operator.
+**Files:** `backend/core/jobs/{recorder,health,doctors}.py`, `backend/core/doctors.py`,
+`backend/core/management/commands/doctor.py`, `backend/core/{models,registry,checks,apps,dataplane}.py`,
+`backend/core/migrations/0006_jobrun.py`, `backend/core/jobs/{celery,dispatch,spec,schedules}.py`,
+`backend/config/{settings,settings_test}.py`, `backend/tests/core/jobs/`, `backend/tests/core/test_doctor_umbrella.py`,
+`backend/tests/setting_defaults.json`; `JOBS_AND_INTEGRATIONS.md`, `OBSERVABILITY.md` § 12, `OPERATIONS.md`,
+`DEPLOYMENT.md`, `UPGRADING.md`, `BUILD_ORDER.md`, `TECH_DEBT.md`.
+**Verification:** ruff, `manage.py check`, `makemigrations --check` and the scripts/examples ruff all clean. pytest:
+SQLite 1462 passed, 5 skipped; **PostgreSQL 16 1464 passed, 3 skipped (manager's run)**, where
+`test_a_rolled_back_job_still_records_its_failure` runs and passes, with no teardown warning.
+**Notes:**
+- Manager review found a lost-write race (a worker state losing the INSERT race to the publisher was dropped as a
+  WARNING), fixed with one retry-as-update and a deterministic test, proven to fail without the fix.
+- The first PostgreSQL pass failed the rollback guarantee test. Cause: `apply(throw=True)` re-raises in Celery's
+  tracer **before** `task_failure` is sent (`celery/app/trace.py` `on_error`), a path no worker takes. The test now
+  runs as a worker does; `test_eager_propagate_never_sends_task_failure` pins that behaviour. A session fixture now
+  closes the monitor connection, so the test DB drops cleanly.
+- The `monitor` alias doubles DB connections per process (`DEPLOYMENT.md`, `UPGRADING.md`).
+- Deferred: the Job Monitor API and page; `core_job_run` retention (7.5); further doctors (permissions, migrations,
+  settings, …); `scripts/ledger_guard.py`. New debt: DB-51 (scrubber, next), DB-52, DB-53.
+
 ### BUILD_ORDER 8.3a: design tokens, dark mode and the mandatory primitives
 **What** (Dev 2 `djangobasex-a9`, manager review; the first half of 8.3, split by the manager):
 - **Tokens:** `src/core/styles/tokens.css` holds every semantic family in OKLCH for light and dark: status

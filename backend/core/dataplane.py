@@ -161,3 +161,22 @@ CORE_CHECKS = (
 def register_core_checks() -> None:
     for check in CORE_CHECKS:
         registry.dataplane.register(check)
+
+
+def doctor_findings() -> list:
+    """The dataplane doctor (OBSERVABILITY § 12): a fresh evaluate(), fatal → failure, warn →
+    advisory. The same checks `manage.py dataplane` and the health endpoint run."""
+    from .registry import ADVISORY, FAILURE, Finding
+
+    severity = {FATAL: FAILURE, WARN: ADVISORY}
+    return [
+        Finding(
+            severity[r.status],
+            f"dataplane.{r.status}",
+            r.key,
+            r.detail or r.description,
+            remedy=r.remedy,
+        )
+        for r in evaluate(fresh=True)
+        if r.status in severity
+    ]

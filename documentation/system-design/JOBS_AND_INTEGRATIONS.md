@@ -14,8 +14,12 @@ outbound guard.**
 > ✅ **Built in BUILD_ORDER 7.1:** the registry (§ 1), the Celery configuration (§ 3), `enqueue()`
 > (§ 4), the queue topology (§ 5) and the schedule sync (§ 6), on Celery + django-celery-beat
 > ([ADR-0012](../adr/0012-celery-from-day-one.md)). How they work, and where 7.1 differs from the
-> text below: [**As built — BUILD_ORDER 7.1**](#as-built--build_order-71). Everything else here is
-> still blueprint.
+> text below: [**As built — BUILD_ORDER 7.1**](#as-built--build_order-71).
+>
+> ✅ **Built in BUILD_ORDER 7.2:** the run record (§ 7), job health and the monitor (§ 8), and the
+> queue and schedule doctors (§ 8) under `manage.py doctor`. See
+> [**As built — BUILD_ORDER 7.2**](#as-built--build_order-72). Everything else here is still
+> blueprint.
 
 ---
 
@@ -187,6 +191,98 @@ seal list.
 The failure shows up only in the Postgres CI job. Test `on_commit` behaviour with pytest-django's
 `django_capture_on_commit_callbacks(execute=True)` inside the normal test transaction. A rollback is
 an inner `transaction.atomic()` that raises, then the test asserts nothing was captured.
+
+---
+
+## As built — BUILD_ORDER 7.2
+
+The run record (§ 7), health (§ 8) and the job doctors. Like the 7.1 section, this records reality.
+
+**Where it lives.**
+
+| Piece | File |
+|---|---|
+| `JobRun` → `core_job_run` (migration `core/0006`), with `JobRunQuerySet` | `backend/core/models.py` |
+| The recorder: one guarded handler per Celery signal | `backend/core/jobs/recorder.py` |
+| `report(now)`, `job_health()`, `queue_health()`, `QueuePolicy` | `backend/core/jobs/health.py` |
+| `queue_doctor()`, `schedule_doctor()` | `backend/core/jobs/doctors.py` |
+| The `monitor` alias and `JOB_RUN_DB_ALIAS` | `backend/config/settings.py` |
+| Registration: `operations.queue.*`, the `jobs` health check, the doctors | `backend/core/apps.py` |
+
+**The run record.**
+
+- **Signals → status:** `after_task_publish` → `queued`, `task_prerun` → `started`, `task_success`
+  → `succeeded` with the returned count, `task_failure` → `failed`, `task_retry` → `retrying`,
+  `task_revoked` → `revoked`, and `task_unknown` / `task_rejected` → `dead`. `task_postrun` writes
+  `duration_ms`, measured with `time.perf_counter()` in the worker and keyed by task id. Celery's own
+  `celery.*` tasks are not recorded.
+- **Never raises.** Every handler is wrapped: a failure is logged at WARNING as
+  `core.job.record_failed` and dropped, and the job carries on.
+- **Order-independent.** Signals come from different processes, and the worker can start a task
+  before the publisher has written `queued`. Every write is an upsert by task id, and a late
+  `queued` fills in `queued_at` and `trigger` without overwriting a later status.
+- **Its own connection.** It writes through `settings.JOB_RUN_DB_ALIAS`, which is `"monitor"`: the
+  same database on a second connection with `ATOMIC_REQUESTS=False`. A failed job's rollback cannot
+  erase the record of its failure.
+  `test_a_rolled_back_job_still_records_its_failure` proves this. It **runs on PostgreSQL only**: on
+  SQLite `:memory:` a second alias is either a separate, unmigrated database or a connection locked
+  out by the test transaction, so `config/settings_test.py` points the recorder at `default` there
+  (the same precedent as the audit-trigger test).
+- **Error = type + message.** The message is scrubbed by `core.observability.scrub`, truncated to
+  2 000 characters, and never includes a traceback.
+- **Trigger:** `enqueue()` now sends `trigger="on_demand"` (7.1 sent `"enqueue"`). Beat sends none,
+  which records as `schedule`. A retry records as `retry`.
+- **Connected at finalize, then the cached publisher is dropped.** `install()` connects the
+  recorder and then discards Celery's cached `send_task_message`. That object captures
+  `after_task_publish`'s receivers when it is built, so one built earlier would never record
+  `queued`. `test_install_drops_a_publisher_built_before_the_recorder_connected` guards it.
+- **Not built:** retention. `core_job_run` grows until **BUILD_ORDER 7.5** (the retention engine)
+  gives it a policy: 14 days for completed runs, 90 for failed, with a row cap. No separate prune
+  job, so the table has one retention pattern. The `monitoring` queue doesn't exist, so the "never
+  record it" rule has nothing to apply to yet.
+
+**Health** (`core.jobs.health.report(now)`, one function behind every rendering):
+
+- **Per job, in precedence order:** `disabled` (the owned beat row's switch, else
+  `enabled_by_default`) > `never_run` (no start ever) > `failing` (the last terminal run failed or
+  was dead) > `overdue` > `ok`. An `Interval` job is overdue when its last start is more than
+  3 × the interval ago. A cron job is overdue when it last started before its previous fire and
+  that fire is more than `operations.queue.stall_threshold_minutes` old. On-demand jobs are never
+  overdue.
+- **Queues:** a queue is alive when a job started within `worker_seen_window_minutes` or it has no
+  backlog. It is stalled when its oldest queued run is older than `stall_threshold_minutes`.
+- **`worker_seen_recently`:** any start within the window.
+- **`status`:** `red` with reasons when any job is failing or overdue, or any queue is stalled or
+  has no consumer. `never_run` alone is not red: a new deploy is not an incident, and the schedule
+  doctor escalates it after a period plus the grace.
+- **The monitor's own settings:** `operations.queue.stall_threshold_minutes` (15) and
+  `operations.queue.worker_seen_window_minutes` (15), in the settings registry.
+- **Health check:** it is registered as the `jobs` check, which is **not critical**. It shows on
+  `/api/health/components/` and never takes the web tier out of rotation.
+
+**Doctors.** There are no separate `queue_doctor` / `schedule_doctor` commands. The checks are
+`manage.py doctor --only queue|schedule`, one implementation under the umbrella
+([`OBSERVABILITY.md`](OBSERVABILITY.md) § 12).
+
+| Doctor | Failures | Advisories |
+|---|---|---|
+| `queue` | `queue.config.<check id>`, delegated to the real `check_celery_config`; `queue.stalled`; `queue.no_consumer`; `queue.dead_task` (a dead run in the window); `queue.unregistered_waiting` (Redis: up to 100 waiting messages per queue, read with `LRANGE`, never consumed) | `queue.not_inspected` on a non-Redis broker |
+| `schedule` | `schedule.conflict` and `schedule.not_synced` (from a dry-run of the real sync); `schedule.failing`; `schedule.overdue`; `schedule.never_run` (a beat row older than one period plus the grace that never started) | `schedule.unowned` (a beat row the registry doesn't own) |
+
+**The API is not built in 7.2.** No screen consumes it yet; the endpoints land with the Job Monitor
+page. Planned shapes: `GET /api/core/jobs/` (each job's health, last run, next due and last error,
+plus `status`, `worker_seen_recently` and queues), `GET /api/core/jobs/runs/?job=&status=`,
+`GET /api/core/jobs/runs/<id>/`, and `POST /api/core/jobs/<name>/run/` (manual, audited,
+`202 {"job_run_id"}`). Permissions: `core.jobs.view` and `core.jobs.run`.
+
+**Tests.**
+
+| Invariant | Test |
+|---|---|
+| Signals → rows; never raises; duration from `perf_counter`; scrubbed, truncated errors with no traceback; publish → `queued`; late `queued` never overwrites; dead tasks; the PostgreSQL-only rollback survival | `tests/core/jobs/test_recorder.py` |
+| Every state and precedence pair; queue liveness and stall; quiet-but-dead is red; **acceptance: a stopped worker is red within three intervals with zero failures** | `tests/core/jobs/test_health.py` |
+| Planted problems make `doctor --only queue|schedule` exit 1; a fresh install is clean; the Redis peek; the `jobs` health check | `tests/core/jobs/test_job_doctors.py` |
+| A test touching runs uses `tests/core/jobs/dbs.py::DATABASES` | (the alias differs by engine) |
 
 ---
 

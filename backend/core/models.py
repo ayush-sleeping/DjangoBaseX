@@ -273,3 +273,77 @@ class JobSchedule(models.Model):
 
     def __str__(self):
         return self.job_name
+
+
+class JobRunQuerySet(models.QuerySet):
+    def for_job(self, name: str):
+        return self.filter(job_name=name)
+
+    def terminal(self):
+        return self.filter(status__in=JobRun.TERMINAL)
+
+    def queued(self):
+        return self.filter(status=JobRun.Status.QUEUED)
+
+    def started_since(self, moment):
+        return self.filter(started_at__gte=moment)
+
+    def failed(self):
+        return self.filter(status=JobRun.Status.FAILED)
+
+
+class JobRun(models.Model):
+    """
+    One execution of one job, from queued to a terminal state (JOBS_AND_INTEGRATIONS.md § 7).
+    Written only by core.jobs.recorder, through the "monitor" database alias, and never raising.
+    The error is type + scrubbed message, never a traceback.
+    """
+
+    class Trigger(models.TextChoices):
+        SCHEDULE = "schedule"
+        ON_DEMAND = "on_demand"
+        MANUAL = "manual"
+        RETRY = "retry"
+
+    class Status(models.TextChoices):
+        QUEUED = "queued"
+        STARTED = "started"
+        SUCCEEDED = "succeeded"
+        FAILED = "failed"
+        RETRYING = "retrying"
+        REVOKED = "revoked"
+        DEAD = "dead"  # an unknown or unregistered task name: it can only fail
+
+    TERMINAL = ("succeeded", "failed", "revoked", "dead")
+
+    task_id = models.CharField(max_length=64, unique=True)
+    job_name = models.CharField(max_length=150, db_index=True)
+    queue = models.CharField(max_length=64, blank=True, default="")
+    trigger = models.CharField(max_length=16, choices=Trigger.choices, default=Trigger.SCHEDULE)
+    status = models.CharField(max_length=16, choices=Status.choices)
+    attempt = models.PositiveSmallIntegerField(default=0)
+    queued_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)  # perf_counter, in the worker
+    count = models.IntegerField(null=True, blank=True)
+    unit = models.CharField(max_length=32, blank=True, default="")
+    error_type = models.CharField(max_length=200, blank=True, default="")
+    error_message = models.TextField(blank=True, default="")  # ≤ 2 000 characters, scrubbed
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    idempotency_key = models.CharField(max_length=200, blank=True, default="")
+
+    objects = JobRunQuerySet.as_manager()
+
+    class Meta:
+        db_table = "core_job_run"
+        ordering = ["-id"]
+        indexes = [
+            models.Index(fields=["job_name", "-started_at"], name="core_jobrun_job_started"),
+            models.Index(fields=["status", "queued_at"], name="core_jobrun_status_queued"),
+        ]
+
+    def __str__(self):
+        return f"{self.job_name} {self.status} #{self.pk}"

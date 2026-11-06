@@ -96,6 +96,16 @@ Sketch, for when the topology is decided:
    - **Exactly one beat** (`celery -A config beat`). (The development compose starts it only with
      `--profile scheduler`; a deployment always runs it.) Two double every scheduled job; when you
      replace it, stop the old one before starting the new one.
+   - **Size database connections for 2 × (web + worker + beat processes).** The job-run recorder
+     writes through its own `monitor` alias (JOBS_AND_INTEGRATIONS § 7), so every process that
+     publishes or runs a job holds a second connection, kept open for `CONN_MAX_AGE`. Set Postgres
+     `max_connections` and any PgBouncer pool to match, or they run out under load.
+   - **Check them with `manage.py doctor --json`** (BUILD_ORDER 7.2) after the deploy: exit 0 is
+     clean, 1 is a finding, 2 means a doctor crashed. `--only queue` finds stalled queues, queues no
+     worker consumes and unregistered task names waiting in Redis. `--only schedule` finds a beat
+     schedule out of sync with the registry, and scheduled jobs that are failing, overdue or never
+     ran. A stopped worker makes the non-critical `jobs` check on `/api/health/components/` red
+     within three intervals, even though nothing "failed".
    - Without them, the auth retention sweep (`users.auth_cleanup`, formerly a cron entry) never
      runs, and `users_login_attempt` grows with attack traffic. No crontab entry is needed any more.
 

@@ -4,7 +4,8 @@ Celery, generated from the registry (JOBS_AND_INTEGRATIONS.md § 3, § 5).
 install(app) is called once, when the app finalizes. It registers one task per JobSpec
 (modules never hand-write @shared_task wrappers for registered jobs), declares the queue set and
 the routes from the same specs (so CELERY_TASK_CREATE_MISSING_QUEUES=False has teeth), and
-connects the worker's connection hygiene. The settings themselves are in config/settings.py.
+connects the worker's connection hygiene and the run recorder. The settings themselves are in
+config/settings.py.
 """
 
 from django.db import close_old_connections, connections
@@ -22,10 +23,15 @@ def install(app, jobs=None) -> None:
     jobs = registry.jobs if jobs is None else jobs
     app.conf.task_queues = [Queue(name, routing_key=name) for name in sorted(declared_queues(jobs))]
     app.conf.task_routes = routes(jobs)
-    _forget_cached_topology(app)
     for spec in jobs.specs():
         register_task(app, spec)
     _connect_worker_hygiene()
+    from .recorder import connect as connect_recorder
+
+    connect_recorder()  # the run record (§ 7): in web, beat and worker alike
+    # Last: the publisher Celery caches also captures after_task_publish's receivers, so one
+    # built before the recorder connected would never record "queued".
+    _forget_cached_topology(app)
 
 
 def _forget_cached_topology(app) -> None:
@@ -35,7 +41,7 @@ def _forget_cached_topology(app) -> None:
     # test_install_replaces_a_topology_celery_already_cached passes.
     if "amqp" not in app.__dict__:
         return
-    for name in ("queues", "default_queue", "router"):
+    for name in ("queues", "default_queue", "router", "send_task_message"):
         app.amqp.__dict__.pop(name, None)
     app.amqp.flush_routes()
 

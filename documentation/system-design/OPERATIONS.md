@@ -405,6 +405,15 @@ application-side "wait until the schema is at head" gate was considered and reje
 | 10 | **Verify** | See below. A failed verify is a failed deploy, reported as such |
 | 11 | **Record** | Deploy log line, `app_build_info` flips, Sentry release marked deployed. **The tag is the rollback target; a deploy without one is unfinished** |
 
+> ✅ **As built (BUILD_ORDER 7.2):** `manage.py doctor` exists, with `--json`, `--only`/`--skip`,
+> `--strict`, `--fatal-only` and exit codes 0 clean · 1 failure · 2 a doctor crashed · 3 usage.
+> Today's doctors are `dataplane`, `queue` and `schedule`; `observability`, `settings`,
+> `migrations` and `connections` are not built yet. Until they are, the validate step (1) runs
+> `manage.py doctor --json --only dataplane,schedule`, and **verify** (10) adds
+> `manage.py doctor --json --only queue` once the workers are up. That catches stalled queues, queues
+> nobody consumes, unregistered task names waiting in Redis, and a beat schedule out of sync. Step 4
+> needs the `migrations` doctor and stays manual until it exists.
+
 **Rules — verify.**
 
 - Every expected container is running and `healthy`.

@@ -87,6 +87,21 @@ def period_seconds(schedule: Interval | Cron) -> int:
     return shortest
 
 
+def previous_fire(cron: Cron, now: datetime) -> datetime:
+    """The latest firing at or before `now`, as an aware UTC datetime (cron specs run in UTC)."""
+    utc_now = now.astimezone(UTC).replace(tzinfo=None)
+    lookback = timedelta(seconds=period_seconds(cron)) + timedelta(days=2)
+    start = (utc_now - lookback).date()
+    latest = None
+    for fire in cron_fire_times(cron, start, lookback.days + 2):
+        if fire > utc_now:
+            break
+        latest = fire
+    if latest is None:
+        raise ValueError(f"cron {cron.expression!r} has no firing before {now.isoformat()}")
+    return latest.replace(tzinfo=UTC)
+
+
 def expire_seconds(spec: JobSpec) -> int:
     """`expires`, or 90% of the period: a run that waited longer is dropped, not run late."""
     return spec.expires or max(1, period_seconds(spec.schedule) * 9 // 10)

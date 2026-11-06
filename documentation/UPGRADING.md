@@ -149,3 +149,19 @@ git revert <the-commit-you-do-not-want>
 ```
 
 You stay on the shared history, and the next update still merges.
+
+---
+
+## Upgrade notes, by change
+
+*Until `CHANGELOG.md` exists (BUILD_ORDER 9.6), each core change that alters a setting default, a contract or a
+required process records its note here, newest first.*
+
+- **2026-11-06, BUILD_ORDER 7.2:** two new settings, `operations.queue.stall_threshold_minutes` (15) and
+  `operations.queue.worker_seen_window_minutes` (15). Neither changes existing behaviour; they tune when the job
+  monitor reports a stalled queue or an unseen worker. `DATABASES["monitor"]` is new: every process that publishes
+  or runs jobs now holds a **second** database connection, so size `max_connections` or the pool for twice the
+  process count (`DEPLOYMENT.md`).
+- **2026-11-06, BUILD_ORDER 7.1:** background jobs run on Celery. A deployment needs workers consuming every
+  declared queue (`default,bulk` today) and exactly one beat. `auth_cleanup` is no longer a cron entry, so remove it
+  from crontab.

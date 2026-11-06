@@ -42,7 +42,7 @@ def enqueue(name: str, /, **kwargs: int | str | bool | None) -> None:
     def send() -> None:
         # A named function, not functools.partial: Django logs a failed robust callback by its
         # __qualname__, which a partial does not have.
-        app.send_task(name, kwargs={"trigger": "enqueue", **kwargs}, queue=spec.queue)
+        app.send_task(name, kwargs={"trigger": "on_demand", **kwargs}, queue=spec.queue)
 
     if connection.in_atomic_block:
         # robust: a broker that is down never breaks the save that already committed.
