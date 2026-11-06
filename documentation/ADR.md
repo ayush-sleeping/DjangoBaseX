@@ -29,6 +29,9 @@ Template: [`adr/0000-template.md`](adr/0000-template.md).
 | [0010](adr/0010-platform-layer-is-logical.md) | The platform is a logical layer (`core`, `users`, `rbac`); product code lives in `project/` | Accepted | 2026-10-11 |
 | [0011](adr/0011-no-organisation-in-core.md) | No organisation model in the core; scoping lives behind `visible_to()` | Accepted | 2026-10-11 |
 | [0012](adr/0012-celery-from-day-one.md) | Celery and beat run registered jobs from the first job onward | Accepted | 2026-11-06 |
+| [0013](adr/0013-sentry-only-error-tracking.md) | Error tracking is Sentry-only; core builds no error tracker | Accepted | 2026-11-06 |
+| [0014](adr/0014-semver-for-core-releases.md) | Core releases are versioned with SemVer | Accepted | 2026-11-06 |
+| [0015](adr/0015-plugin-docs-live-in-the-plugin.md) | A plugin documents itself; core documents only the contract | Accepted | 2026-11-06 |
 
 ---
 

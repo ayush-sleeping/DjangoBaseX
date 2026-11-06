@@ -458,6 +458,10 @@ literals in `next.config.ts`).
 
 ## 5. The built-in error tracker — **Tier 2 · Core**
 
+> **Not built — [ADR-0013](../adr/0013-sentry-only-error-tracking.md), 2026-11-06.** Error tracking is Sentry-only
+> (optional `SENTRY_DSN`, the shared scrubber in `before_send`/`before_breadcrumb`). This section is kept for the
+> reasoning, and as the starting point if a product ever has to build its own.
+
 **What.** A small `core.observability` error tracker that records unhandled exceptions from
 requests, tasks and commands into two tables, with triage states, regression detection and a
 permission-gated admin screen — so a product with **no** monitoring vendor still gets grouped,

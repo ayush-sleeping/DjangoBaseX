@@ -1403,6 +1403,8 @@ audit's findings go through the protocol in [§ 41](#41-auditing-an-ai-audit--pr
 
 ## 35. Where plugin documentation lives — Process
 
+> **Decided 2026-11-06 — [ADR-0015](../adr/0015-plugin-docs-live-in-the-plugin.md):** the recommendation below is accepted.
+
 **What.** The answer to `PLATFORM_BLUEPRINT.md` § 6 pending decision 4. **Recommended: a plugin documents itself in
 its own repository**, as [`../planning/CORE_ARCHITECTURE_PLAN.md`](../planning/CORE_ARCHITECTURE_PLAN.md) already
 argues, with a required minimum that the core checks.

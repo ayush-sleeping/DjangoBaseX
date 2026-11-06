@@ -1117,7 +1117,7 @@ production" is no longer a git question. And a deploy without a tag has no rollb
   squash, so the ancestry invariant survives.
 - **Every production deploy is an annotated tag** — CalVer `vYYYY.MM.DD[.N]` for products (a product
   release is a point in time), SemVer `vMAJOR.MINOR.PATCH` for the core (a core release is a
-  compatibility promise). The tag is the rollback target (§ 6).
+  compatibility promise; [ADR-0014](../adr/0014-semver-for-core-releases.md)). The tag is the rollback target (§ 6).
 - **SemVer for a platform:** **major** — taking the update needs work (a seam changed shape, a
   config key moved, a contract migration, § 8); **minor** — new capability, merge freely;
   **patch** — a fix or hardening, take promptly.

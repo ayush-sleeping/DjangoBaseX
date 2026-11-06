@@ -301,10 +301,10 @@ endpoint is built.
 Beyond § 5, the specs raise these. None blocks Phases 1–2.
 
 1. ~~**One frontend data layer** — TanStack Query (recommended) or RTK Query.~~ **Decided 2026-10-24: TanStack Query v5** (BUILD_ORDER 8.1). `FRONTEND_PLATFORM.md`.
-2. **Built-in error tracking or Sentry-only.** `OBSERVABILITY.md`.
+2. ~~**Built-in error tracking or Sentry-only.**~~ **Decided 2026-11-06: Sentry-only** ([ADR-0013](../adr/0013-sentry-only-error-tracking.md)). `OBSERVABILITY.md`.
 3. ~~**Celery from day one, or an in-process worker first** (the monitor design works for both).~~ **Decided 2026-11-06: Celery from day one** ([ADR-0012](../adr/0012-celery-from-day-one.md)). `JOBS_AND_INTEGRATIONS.md`.
-4. **Where plugin documentation lives** — in each plugin repo, or all in core. `ENGINEERING_PRACTICES.md`.
-5. **Release versioning** — SemVer (recommended for a platform) or CalVer tags. `OPERATIONS.md`.
+4. ~~**Where plugin documentation lives** — in each plugin repo, or all in core.~~ **Decided 2026-11-06: in each plugin** ([ADR-0015](../adr/0015-plugin-docs-live-in-the-plugin.md)). `ENGINEERING_PRACTICES.md`.
+5. ~~**Release versioning** — SemVer (recommended for a platform) or CalVer tags.~~ **Decided 2026-11-06: SemVer for core releases** ([ADR-0014](../adr/0014-semver-for-core-releases.md)). `OPERATIONS.md`.
 
 ---
 

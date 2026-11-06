@@ -26,6 +26,15 @@ Newest first.
 
 ## 2026-11-06
 
+### ADR-0013/0014/0015: Sentry-only error tracking, SemVer for core, plugin docs in the plugin
+**What:** the repository owner settled `PLATFORM_BLUEPRINT.md` § 6 pending decisions #2, #4 and #5, so § 6 is now empty.
+Error tracking is Sentry-only, and `OBSERVABILITY.md` § 5's built-in tracker won't be built (ADR-0013). Core
+releases use SemVer (ADR-0014). Each plugin documents itself (ADR-0015).
+**Why:** settled before Phases 7–9 reach them, so no task stalls on a question and none settles one by starting to code.
+**Files:** `documentation/adr/{0013,0014,0015}-*.md`, `documentation/ADR.md`, `documentation/planning/PLATFORM_BLUEPRINT.md`,
+`documentation/system-design/{OBSERVABILITY,OPERATIONS,ENGINEERING_PRACTICES}.md`.
+**Verification:** docs only. Every added link was checked against the file it names.
+
 ### Untrack a committed `.pyc`; regenerate the core manifest
 **What:** `scripts/lib/__pycache__/envfile.cpython-312.pyc`, committed in c7d1f55, is removed from the
 index, and `.gitignore` now covers `scripts/**/__pycache__/` and `examples/**/__pycache__/`.
