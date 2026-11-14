@@ -16,6 +16,8 @@ dependencies = [
     "django-environ>=0.14.0",
     "djangorestframework>=3.18.1",
     "drf-spectacular>=0.30.0",
+    # The production WSGI server: backend/Dockerfile.prod runs it (OPERATIONS § 5, BUILD_ORDER 9.5).
+    "gunicorn>=23.0,<24",
     # <0.29: core/http/transport.py swaps HTTPTransport's private pool to pin vetted IPs (§ 18).
     "httpx>=0.28,<0.29",
     "psycopg[binary]>=3.2",

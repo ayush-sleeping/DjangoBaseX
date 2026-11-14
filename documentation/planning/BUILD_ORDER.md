@@ -1059,12 +1059,14 @@ import/export registry.
 **Done when:** two concurrent reservations on a fresh database mint different numbers; a bulk action over "all
 matching" touches exactly the rows the list shows.
 
-### 9.5 — Operations ⬜
+### 9.5 — Operations ✅
 Release images, the deploy driver, verified backups, restore with `config_snapshot`, infrastructure policy tests,
 the first-run wizard.
 
 **Done when:** a deploy whose backup fails stops before migrating; a restored dump from another environment comes
 up with its schedules and integrations disabled.
+
+*Proved by:* `backend/tests/infra/test_deploy_driver.py::test_a_deploy_whose_backup_fails_stops_before_migrating`; `backend/tests/infra/test_backup_restore.py::test_a_restored_dump_from_another_environment_comes_up_with_its_schedules_and_integrations_disabled`. Built: the deploy driver, verified backups, restore with the hold, release images, the setup API. Deferred to TECH_DEBT DB-115 to DB-122 (the wizard page, the edge proxy, sanitisers, real-Postgres and Docker proof).
 
 ### 9.6 — Engineering practice ✅
 `BUG_CLASSES.md` in the PR template; the upgraded ADR template; generated folder indexes and a doc link test;

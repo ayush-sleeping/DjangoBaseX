@@ -1,0 +1,102 @@
+# Production application tier (OPERATIONS.md §§ 5, 15): versioned images only. The stateful tier
+# (PostgreSQL, Redis) and the edge proxy (§ 14, not built yet: TECH_DEBT DB-118) are NOT here; this
+# file is run by scripts/deploy.py's swap hooks, e.g.
+#   docker compose -f docker-compose.prod.yml up -d --no-deps backend worker frontend
+#
+# No `build:`, no `:latest`, no source mounts, no reload, no `runserver`, no `next dev`. Every secret
+# is ${VAR:?}: compose refuses to start without it. Nothing publishes a port: the edge proxy will.
+
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: ["/tmp"]
+  restart: unless-stopped
+  logging:
+    driver: journald
+
+x-backend-env: &backend-env
+  APP_ENV: ${APP_ENV:?set APP_ENV (production or staging)}
+  SECRET_KEY: ${SECRET_KEY:?}
+  JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?}
+  FIELD_ENCRYPTION_KEYS: ${FIELD_ENCRYPTION_KEYS:?}
+  DATABASE_URL: ${DATABASE_URL:?}
+  CACHE_URL: ${CACHE_URL:?}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:?}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:?}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?}
+  FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?}
+  LOG_FORMAT: json
+
+services:
+  backend:
+    <<: *hardening
+    image: ${IMAGE_PREFIX:?}/backend:${APP_VERSION:?}
+    environment: *backend-env
+    expose: ["8000"]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 256
+    stop_grace_period: 40s
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready/', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    <<: *hardening
+    image: ${IMAGE_PREFIX:?}/backend:${APP_VERSION:?}
+    environment: *backend-env
+    command: ["celery", "-A", "config", "worker", "-Q", "default,bulk,outbox", "-n", "default@%h", "--concurrency=2", "--loglevel=INFO"]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 256
+    stop_grace_period: 900s
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d default@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 60s
+
+  # Exactly one beat; stop the old before starting the new (two double-fire every schedule).
+  beat:
+    <<: *hardening
+    image: ${IMAGE_PREFIX:?}/backend:${APP_VERSION:?}
+    environment: *backend-env
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO"]
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    <<: *hardening
+    image: ${IMAGE_PREFIX:?}/frontend:${APP_VERSION:?}
+    environment:
+      INTERNAL_API_URL: ${INTERNAL_API_URL:?}
+    tmpfs: ["/tmp", "/repo/frontend/.next/cache"]
+    expose: ["3000"]
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

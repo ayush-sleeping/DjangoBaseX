@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .setup_views import SetupCompleteView, SetupStatusView
 from .views import PermissionCatalogView, RoleViewSet, UserRoleViewSet
 
 app_name = "rbac"
@@ -14,6 +15,9 @@ user_role_detail = UserRoleViewSet.as_view({"delete": "destroy"})
 
 # Mounted at /api/rbac/ (AUTH_BLUEPRINT § 10.3).
 urlpatterns = [
+    # First-run setup: public only while no administrator exists (rbac/setup.py).
+    path("setup/status/", SetupStatusView.as_view(), name="setup-status"),
+    path("setup/complete/", SetupCompleteView.as_view(), name="setup-complete"),
     path("permissions/", PermissionCatalogView.as_view(), name="permissions"),
     path("roles/", role_list, name="roles"),
     path("roles/<uuid:public_id>/", role_detail, name="role"),

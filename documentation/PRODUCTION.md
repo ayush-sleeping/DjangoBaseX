@@ -70,4 +70,11 @@ Not built: `permissions`, `migrations`, `settings`, `observability`, `connection
 | Email not sent | Outbox first: `doctor --only outbox`; then the worker on queue `outbox`; outside production every message goes only to `NONPROD_TEST_RECIPIENT`, and with none set only console/file backends send (`backend/core/mail/backends.py`, `GuardedEmailBackend`) |
 | Wrong number | Reproduce with the same role and data; check the figure's formatter and empty/zero handling (`OBSERVABILITY.md` § 11); locale from bootstrap `localization`; then [`TRAPS.md`](system-design/TRAPS.md) |
 
-See also [`system-design/OBSERVABILITY.md`](system-design/OBSERVABILITY.md), [`system-design/OPERATIONS.md`](system-design/OPERATIONS.md) (§ 6 deploy driver, § 9 backups: designed, tooling is BUILD_ORDER 9.5 🔜), [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) § 3 health checks, [`TESTING.md`](TESTING.md), [`SECURITY.md`](SECURITY.md).
+## Backup and restore
+
+- **Back up:** `manage.py backup [--label L] [--dir D]`. The default directory is `backend/backups/` (mode 0700). It writes `<name>.dump` (PostgreSQL custom format) and `<name>.dump.meta.json` (source environment, version, migration leaves, checksum), verified before the final name appears; exit 3 means the dump failed, 4 means verification failed. A `.partial` file is never a backup. `scripts/deploy.py` runs it before every migrate.
+- **Restore:** stop web, workers and beat, then `manage.py restore <dump> --yes`. The source environment comes from the `.meta.json` (or `--source-env`); with neither, restore refuses. Start beat only after the command has finished.
+- **Another environment's dump:** every schedule, webhook endpoint, notification route and notification setting is turned off (not deleted), and `config_snapshot-<timestamp>.json` (mode 0600) is written beside the backups. Turn them back on deliberately with `manage.py restore --reenable <that file>`. A production dump into a non-production target also needs `--allow-unsanitised` (no sanitisers exist: DB-120).
+- Not yet proven against a real PostgreSQL, and no off-box copy or retention exists: TECH_DEBT DB-115.
+
+See also [`system-design/OBSERVABILITY.md`](system-design/OBSERVABILITY.md), [`system-design/OPERATIONS.md`](system-design/OPERATIONS.md) (§ 6 deploy driver, § 9 backups: built in 9.5), [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) § 3 health checks, [`TESTING.md`](TESTING.md), [`SECURITY.md`](SECURITY.md).

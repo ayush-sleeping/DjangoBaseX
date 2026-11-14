@@ -1,6 +1,6 @@
 # DjangoBaseX — releasing the core
 
-> **Status:** Hub — checked 2026-11-14 · Core versioning, the manifest and its guard are built; `VERSION` is `0.1.0`, no git tag exists yet, and per-release upgrade notes and release tooling (BUILD_ORDER 9.5, 9.6) are 🔜. This doc releases **this boilerplate**; a product built on it deploys per `system-design/OPERATIONS.md`.
+> **Status:** Hub — checked 2026-11-14 · Core versioning, the manifest and its guard are built; `VERSION` is `0.1.0`, no git tag exists yet, and per-release upgrade notes (BUILD_ORDER 9.6) are done; the product deploy driver, backups and release images exist since 9.5 but have not been run against a real server. This doc releases **this boilerplate**; a product built on it deploys per `system-design/OPERATIONS.md`.
 
 Context: [`PURPOSE.md`](PURPOSE.md), [`INVARIANTS.md`](INVARIANTS.md), [`TESTING.md`](TESTING.md).
 
@@ -50,7 +50,12 @@ Never commit or push without the owner's explicit yes, every time (`AGENTS.md` �
 
 ## Releasing a product built on this
 
-Not this doc's job. A product deploys by tag with its own versioning: [`system-design/OPERATIONS.md`](system-design/OPERATIONS.md) § 5 release images, § 6 deploy driver, § 19 git flow; [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) § 2. Release images, deploy driver, backups and restore tooling are BUILD_ORDER 9.5 🔜; today `DEPLOYMENT.md` § 0 applies: no production topology exists. Taking a core update: [`UPGRADING.md`](UPGRADING.md). Diagnosing it afterwards: [`PRODUCTION.md`](PRODUCTION.md).
+Not this doc's job beyond the commands below. A product deploys by tag with its own versioning: [`system-design/OPERATIONS.md`](system-design/OPERATIONS.md) § 5 release images, § 6 deploy driver, § 19 git flow; [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) § 2 (§ 0: the topology is written, not proven). Taking a core update: [`UPGRADING.md`](UPGRADING.md). Diagnosing it afterwards: [`PRODUCTION.md`](PRODUCTION.md).
+
+- **Deploy:** `python3 scripts/deploy.py <version> --env production --current-version <old> --swap-cmd "<restart command>" --health-url <ready url>`. Other flags: `--swap-cmd` (repeatable), `--health-tries`, `--health-interval`, `--backup-dir`, `--no-backup` (refused outside development), `--dry-run` (prints the plan). The backup runs before `migrate`; a failed backup ends the deploy. Exit codes: 0 deployed, 2 configuration, 3 backup failed, 4 migrate failed, 5 swap failed, 6 health check failed, 7 validation failed.
+- **Rollback:** re-run with the previous version (migrations are expand-only). Restoring the database is the last resort.
+- **Backups:** `manage.py backup [--label L] [--dir D]` writes a verified dump. `manage.py restore DUMP --yes` restores; a dump from another environment comes up with schedules, webhooks and notification routes off, and `manage.py restore --reenable <config_snapshot file>` turns them back on. See [`PRODUCTION.md`](PRODUCTION.md) § Backup and restore.
+- **Images:** `backend/Dockerfile.prod` and `frontend/Dockerfile.prod` (build from the repository root; the build commands are in each file's header) and `docker-compose.prod.yml` (application tier only; no edge proxy yet, DB-118; `gunicorn` must be added to `pyproject.toml`, DB-116).
 
 ## Rollback — what is possible today
 
@@ -60,4 +65,4 @@ Not this doc's job. A product deploys by tag with its own versioning: [`system-d
 | A bad released core version | Cut a new PATCH forward. No tag exists yet, so there is no tagged rollback target |
 | A product that took a bad update | It reverts its own merge commit on its branch; `python3 scripts/core_doctor.py` then shows the drift |
 | Migrations | Core migrations are never squashed or renamed once a product exists; rollback by "previous tag" is only valid for expand/contract migrations (`OPERATIONS.md` § 6, § 8) |
-| Image / deploy rollback ("re-run with the previous tag") | 🔜 BUILD_ORDER 9.5; designed in `OPERATIONS.md` § 6, not built |
+| Image / deploy rollback ("re-run with the previous tag") | Re-run `scripts/deploy.py` with the previous version (built in 9.5; not exercised against a real deploy) |

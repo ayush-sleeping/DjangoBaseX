@@ -28,6 +28,7 @@
   "platform.time_style": "locale",
   "platform.timezone": "UTC",
   "platform.week_start": "locale",
+  "rbac.setup.token_hash": "",
   "retention.core_activity_log.days": 365,
   "retention.core_activity_log.enabled": false,
   "retention.core_inbound_webhook_event.days": 90,

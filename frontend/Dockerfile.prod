@@ -1,0 +1,44 @@
+# Release image for the Next.js frontend (OPERATIONS.md §§ 5, 17). Build from the repository root:
+#
+#   docker build -f frontend/Dockerfile.prod --build-arg APP_VERSION=1.4.0 \
+#       --build-arg NEXT_PUBLIC_API_URL=https://api.example.com \
+#       --build-arg NEXT_PUBLIC_AUTH_COOKIE_PREFIX=app -t "$IMAGE_PREFIX/frontend:1.4.0" .
+#
+# NEXT_PUBLIC_* is baked at build, so this image is per environment. These ARGs are public by
+# design; a secret never goes through ARG or ENV. The /repo layout mirrors the checkout because
+# next.config.ts roots Turbopack at the repository and plugin frontends are symlinks into
+# backend/plugins (the same reason frontend/Dockerfile.dev uses it).
+# TECH_DEBT DB-117: `output: "standalone"` and `deploymentId` need a protected next.config.ts edit;
+# until then the runtime carries node_modules and runs `next start`.
+
+ARG NODE_IMAGE=node:22.21.0-slim
+
+FROM ${NODE_IMAGE} AS builder
+ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_AUTH_COOKIE_PREFIX
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    NEXT_PUBLIC_AUTH_COOKIE_PREFIX=${NEXT_PUBLIC_AUTH_COOKIE_PREFIX}
+WORKDIR /repo/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+COPY backend/plugins /repo/backend/plugins
+# A persistent fetch cache from an earlier build can replay empty responses (§ 17).
+RUN rm -rf .next/cache/fetch-cache \
+    && test -n "$NEXT_PUBLIC_API_URL" \
+    && npm run build \
+    && npm prune --omit=dev
+
+FROM ${NODE_IMAGE} AS runtime
+ARG APP_VERSION=0.0.0-dev
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    APP_VERSION=${APP_VERSION}
+COPY --from=builder --chown=10001:10001 /repo /repo
+WORKDIR /repo/frontend
+USER 10001:10001
+EXPOSE 3000
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 --start-period=30s \
+    CMD ["node", "-e", "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+CMD ["npm", "run", "start", "--", "--hostname", "0.0.0.0"]

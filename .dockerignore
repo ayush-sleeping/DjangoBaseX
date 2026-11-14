@@ -1,0 +1,23 @@
+# Release image build context is the repository root (OPERATIONS.md § 5). Nothing secret, local or
+# bulky enters it.
+.git/
+.github/
+.claude/
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+**/logs/
+**/node_modules/
+**/.venv/
+**/__pycache__/
+**/db.sqlite3
+**/media/
+**/staticfiles/
+**/backups/
+**/.next/
+documentation/

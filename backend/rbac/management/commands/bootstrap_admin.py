@@ -19,10 +19,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.validators import validate_email
 from django.db import transaction
 
-from core.audit import log_activity
-from rbac import services
-from rbac.models import Permission, Role
-from rbac.seeding import sync_catalog
+from rbac import setup
 
 PASSWORD_ENV = "BOOTSTRAP_ADMIN_PASSWORD"
 
@@ -62,16 +59,9 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             self._refuse_if_any_user(user_model)
-            if not Permission.objects.exists():
-                sync_catalog()
-            # Both idempotent: they make sure administrator exists and holds every permission.
-            services.ensure_system_roles()
-            services.recompute_administrator()
-
-            user = user_model.objects.create_superuser(email, password, full_name=full_name)
-            administrator = Role.objects.get(slug=services.ADMINISTRATOR)
-            services.assign_role(actor=None, user=user, role=administrator)
-            log_activity("users.user.bootstrapped", target=user)
+            # The same service the browser wizard calls (OPERATIONS.md § 3): whichever runs
+            # first seals the other.
+            user = setup.create_first_admin(email, password, full_name)
 
         self.stdout.write(
             self.style.SUCCESS(

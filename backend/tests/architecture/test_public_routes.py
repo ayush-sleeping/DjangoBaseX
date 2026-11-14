@@ -21,6 +21,8 @@ EXPECTED_PUBLIC = {
     "users:password-reset",
     "users:mfa-verify",
     "users:invitation-accept",
+    "rbac:setup-status",
+    "rbac:setup-complete",
 }
 
 

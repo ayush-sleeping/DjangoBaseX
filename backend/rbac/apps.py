@@ -12,6 +12,9 @@ class RbacConfig(AppConfig):
         from .permissions import GROUP
 
         registry.permissions.register(GROUP)
+        from .setup import register as register_setup
+
+        register_setup(registry)
         from .navigation import register as register_navigation
 
         register_navigation()

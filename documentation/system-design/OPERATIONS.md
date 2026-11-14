@@ -459,6 +459,14 @@ the `--dry-run` plan snapshot asserts the step order above; `test_remote_uses_pi
 
 ---
 
+## As built (9.5)
+
+**Files.** `scripts/deploy.py`; `backend/core/operations/{backup,restore}.py` and the `backup` / `restore` commands in `backend/core/management/commands/`; `backend/rbac/{setup,setup_views}.py` and `manage.py setup_token`; `backend/Dockerfile.prod`, `frontend/Dockerfile.prod`, `docker-compose.prod.yml`, `.dockerignore`; tests `backend/tests/infra/{test_deploy_driver,test_backup_restore,test_prod_policy}.py` and `backend/tests/test_first_run_setup.py`.
+
+**Built.** The deploy driver (§ 6, minus the gaps below); verified backups (§ 9: `pg_dump -Fc`, `pg_restore --list` plus a table-data count, atomic rename, `.meta.json`); restore with the integration hold and `config_snapshot` (§ 10); the two release images and the application-tier Compose file (§ 5, § 15); the first-run setup API (§ 3), sealed while an active superuser exists and opened by a hashed one-time token, with the setup routes in the public-route ledger.
+
+**Deferred.** DB-115 (never run against real Postgres or a Docker build; off-box copy, retention, metrics, `--verify-only`), DB-116 (gunicorn dependency), DB-117 (Next standalone/`deploymentId`), DB-118 (edge proxy, digests, logging anchor), DB-119 (driver gaps), DB-120 (sanitisers), DB-121 (restore hooks), DB-122 (wizard page and the rest of § 3).
+
 ## 7. The zero-downtime rolling swap — **Tier 2 · Core**
 
 **What.** How step 7 of § 6 replaces a web (or frontend) instance without dropping requests, on a
@@ -1203,6 +1211,8 @@ foreign key).
 6. **Where backups run:** host cron on the database host (simplest; the § 9 script) or a job in the
    application scheduler (visible in the run monitor, but the scheduler then depends on the thing it
    backs up). Recommendation: host cron, with freshness watched by metrics either way.
+
+**Applied in 9.5 (2026-11-14):** #1 partly (setup API built; wizard page and `SETUP_WIZARD_ENABLED` not — DB-122) and #6 partly (the deploy driver takes a verified backup; routine backup scheduling is not built). #2 and #3 are outside 9.5 and were not re-verified.
 
 ---
 
