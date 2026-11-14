@@ -160,7 +160,7 @@ class SoftDeletableModel(models.Model):
 
 > Deliberately **not** in the core: anything a product would name. No `Client`, no `Order`, no
 > `Ticket`. If you are adding a model and can name the industry it belongs to, it is product or
-> plugin code ([`../VISION.md`](../VISION.md) § What DjangoBaseX is not).
+> plugin code ([`../PURPOSE.md`](../PURPOSE.md) § What DjangoBaseX is not).
 
 ---
 

@@ -1068,7 +1068,7 @@ generic credential store that had **zero** registered consumers.
   you search for, and what did you find?"*
 - **Extract a shared primitive at the third genuine consumer**, not the second — and never before the first (a
   speculative primitive with no consumer is how the unused credential store happened). This is
-  [`../VISION.md`](../VISION.md) principle 4 applied inside the codebase.
+  [`../PURPOSE.md`](../PURPOSE.md) principle 4 applied inside the codebase.
 - **Identical names never hide different semantics.** If two functions must differ, their names say how.
 - **One home per formatter, primitive and client namespace**, enforced by the ESLint rules in
   [§ 20](#20-eslint-as-an-architecture-tool--process) and the duplicate-definition guard in [§ 2](#2-architecture-tests-ast-source-scans-with-two-way-ratchets--tier-1--core).
@@ -1741,7 +1741,7 @@ project | <plugin>), tier, flag, notes` — referenced from [`../NEW_PROJECT.md`
 mapping each requirement to core, project or a named plugin at that moment is what keeps product code out of the
 core.
 
-**Rules.** A requirement whose owner is `core` needs the [`../VISION.md`](../VISION.md) test ("would the next product
+**Rules.** A requirement whose owner is `core` needs the [`../PURPOSE.md`](../PURPOSE.md) test ("would the next product
 want this?") answered in its notes; otherwise it is `project` or a plugin.
 
 **Enforced by.** Convention.

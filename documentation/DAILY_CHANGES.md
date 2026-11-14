@@ -24,6 +24,29 @@ Newest first.
 
 ---
 
+## 2026-11-14
+
+### Docs plan phase 1: PURPOSE and INVARIANTS — the two docs every session reads first
+**What:**
+- `VISION.md` renamed `PURPOSE.md`; content kept, template sections added (problem it solves, where it sits,
+  priorities when trade-offs appear, current focus). Links repointed everywhere except this log's history.
+- New `INVARIANTS.md`: 37 hard rules, one line each, each citing an Accepted ADR or `AGENTS.md`, and the
+  architecture test that goes red when it breaks.
+- New `planning/DOCS_PLAN.md`: the multi-session plan, its six decisions and its phases.
+
+**Why:** an agent arriving cold had no single page of "what must never break", and the rules were scattered
+across 15 ADRs, `AGENTS.md` and 32 architecture tests. `PURPOSE.md` is the name every session's protocol now
+looks for.
+**Files:** `documentation/PURPOSE.md` (was `VISION.md`), `documentation/INVARIANTS.md`,
+`documentation/planning/DOCS_PLAN.md`, link updates in `README.md`, `documentation/INDEX.md`,
+`documentation/planning/PLATFORM_BLUEPRINT.md` and nine `documentation/system-design/` files.
+**Verification:** a script resolved every relative link and every cited test path in the new files — 0
+missing; `rg` confirmed `visible_to`, `core.audit.record`, `core.jobs.enqueue` and `RetryPolicy` exist.
+**Notes:** ADR-0013 (Sentry) is Accepted but unbuilt — no code reads `SENTRY_DSN` — so invariant 29 states
+only what is true today: the core builds no error tracker.
+
+---
+
 ## 2026-11-06
 
 ### BUILD_ORDER 8.4d: per-plugin catalogues, and translations that are present but wrong

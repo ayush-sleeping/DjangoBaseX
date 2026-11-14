@@ -143,7 +143,7 @@ address has a registered sanitiser or an explicit exemption with a reason).
 
 **What.** `scripts/setup.sh` ([`BUILD_ORDER.md`](../planning/BUILD_ORDER.md) **4.1**): from a fresh
 clone to a signed-in application in one command, on Docker, with a non-Docker path for machines
-without it. [`VISION.md`](../VISION.md)'s first test is *"clone it, run one script, sign in"*; this
+without it. [`PURPOSE.md`](../PURPOSE.md)'s first test is *"clone it, run one script, sign in"*; this
 is that script.
 
 **Why.** First-run failures are where evaluations end. The common ones are known: a port already in

@@ -1994,7 +1994,7 @@ These docs were not edited. Each row is a fix for the owner to apply.
 | C7 | `AGENTS.md` § 3 (Frontend data row) — **protected**; `NEXTJS_STANDARDS.md` §§ 1–2 | "Through `src/core/lib/api.ts`"; "`src/core/lib/api.ts` — the only module that makes HTTP calls" | One file becomes the god-file that every team edits; the plan puts platform code under `src/core/` | "Through `src/core/lib/api/`" — a directory, one module per namespace, lint-enforced. `AGENTS.md` needs the owner's confirmation to edit |
 | C8 | `NEXTJS_STANDARDS.md` § 6; `DEPLOYMENT.md` § 1 (Frontend) and § 2 (Both) | `NEXT_PUBLIC_API_URL` is the backend base, baked at build | Baking the API origin makes a rebuild per environment and breaks white-label hosts | Browser uses relative `/api` on one origin; server uses runtime `INTERNAL_API_URL`; retire `NEXT_PUBLIC_API_URL` (§ 19) |
 | C9 | `AUTH_BLUEPRINT.md` §§ 17.1–17.2 | Frontend and API on separate same-site hosts, with CORS configured for it | Works, but leaves the marker cookie, `Path=/api/` and per-host white-label cookies needing a shared `Domain` | Make **same-origin** (`/api` reverse-proxied) the default topology; same-site-with-CORS becomes the documented alternative (pending decision 1) |
-| C10 | `VISION.md` § Non-goals | "Not multi-language or multi-region on day one" | § 22 requires i18n plumbing from day one | Reword the non-goal to "no translations shipped on day one" — plumbing is in, catalogues beyond `en` are out (pending decision 5) |
+| C10 | `PURPOSE.md` § Non-goals | "Not multi-language or multi-region on day one" | § 22 requires i18n plumbing from day one | Reword the non-goal to "no translations shipped on day one" — plumbing is in, catalogues beyond `en` are out (pending decision 5) |
 | C11 | `API_DESIGN.md` § Errors | `fields` is a flat map `{ "email": ["…"] }` | A flat map cannot address `lines[2].quantity`, so nested and list errors collapse to the form level | `fields: [{path, message, code}]` with dotted paths, plus `request_id` — [`API_PLATFORM.md`](API_PLATFORM.md) owns the envelope |
 | C12 | `NEXTJS_STANDARDS.md` § 1 | "A `src/components/` directory is not yet present; add it when the second component appears" | The mandatory primitives (§ 13) are platform code from Phase 1 | `src/core/components/` exists from the first frontend module |
 | C13 | `DEPLOYMENT.md` § 2 (Frontend, step 3) | "`npm run start`, or a static/edge target if the app allows it" | A per-request CSP nonce needs dynamic rendering and the Node proxy | Remove the static/edge option (§ 18) |
@@ -2009,7 +2009,7 @@ These docs were not edited. Each row is a fix for the owner to apply.
    Pick one; both is the "second way of doing something" `AGENTS.md` § 3 forbids.
 4. **Zod generation:** orval, openapi-zod-client, or hand-written zod over generated types. Types are
    generated regardless.
-5. **i18n plumbing on day one** versus the current `VISION.md` non-goal (C10).
+5. **i18n plumbing on day one** versus the current `PURPOSE.md` non-goal (C10).
 6. **Column order** (§ 11): actions sticky on the right, as specified, or first after the identifier.
 7. **Impersonation session model:** browser-wide cookie session (as specified) or a tab-scoped design.
 8. **Service worker and offline shell:** in core, or a small module.

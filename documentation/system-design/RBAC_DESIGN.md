@@ -115,7 +115,7 @@ def get_queryset(self):
 
 ## Fail closed, everywhere
 
-From [`../VISION.md`](../VISION.md) § principle 3 — the default answer is no.
+From [`../PURPOSE.md`](../PURPOSE.md) § principle 3 — the default answer is no.
 
 | Situation | Answer |
 |-----------|--------|

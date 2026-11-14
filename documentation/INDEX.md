@@ -21,7 +21,7 @@ your task below, read the **Start Here** file, and stop.
 | **Why the auth model is cookie JWT (decided)** | [`adr/0009-jwt-in-httponly-cookies.md`](adr/0009-jwt-in-httponly-cookies.md) — reasoning in [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
 | **Understand what auth/RBAC designs get wrong** | [`system-design/AUTH_FAILURE_MODES.md`](system-design/AUTH_FAILURE_MODES.md) — the failure catalogue + design checklist |
 | **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
-| **Understand what this is FOR — read this first** | [`VISION.md`](VISION.md) |
+| **Understand what this is FOR — read this first** | [`PURPOSE.md`](PURPOSE.md) |
 | **See every capability a strong base must have — the master map** | [`planning/PLATFORM_BLUEPRINT.md`](planning/PLATFORM_BLUEPRINT.md) |
 | **Make something configurable / avoid hard-coding a value** | [`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md) |
 | **Declare or read a runtime setting; rename the product** | [`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md) § 7 (identity, built) and § 9 (settings registry, built) |
@@ -65,7 +65,7 @@ your task below, read the **Start Here** file, and stop.
 ```
 documentation/
 ├── INDEX.md              ← you are here
-├── VISION.md             what this is for, and the priority order when designs conflict
+├── PURPOSE.md             what this is for, and the priority order when designs conflict
 ├── ONBOARDING.md         first day, end to end
 ├── NEW_PROJECT.md        starting a product from this boilerplate
 ├── UPGRADING.md          taking a core update into a product

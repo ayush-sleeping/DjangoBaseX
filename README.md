@@ -204,7 +204,7 @@ DjangoBaseX/
 │   ├── UPGRADING.md             # Taking a core update into a product
 │   ├── ADR.md + adr/            # Architecture decisions, numbered and immutable
 │   ├── core/                    # How built subsystems work
-│   ├── VISION.md                # What this is for; the tie-breaker when designs conflict
+│   ├── PURPOSE.md                # What this is for; the tie-breaker when designs conflict
 │   ├── system-design/           # Data model, RBAC, API, security, Django/Next.js, deployment
 │   └── planning/                # Intent: build order, architecture plan, tech debt, R&D
 ├── AGENTS.md                    # Operating contract — rules, gate, boundaries
@@ -231,7 +231,7 @@ which single file to read for the area you are working on rather than making you
 
 | I want to… | Read |
 |------------|------|
-| **Understand what this is for, and why** | [`documentation/VISION.md`](documentation/VISION.md) |
+| **Understand what this is for, and why** | [`documentation/PURPOSE.md`](documentation/PURPOSE.md) |
 | Understand the repo end to end, day one | [`documentation/ONBOARDING.md`](documentation/ONBOARDING.md) |
 | **Start a new product from this boilerplate** | [`documentation/NEW_PROJECT.md`](documentation/NEW_PROJECT.md) |
 | Take a core update into my product | [`documentation/UPGRADING.md`](documentation/UPGRADING.md) |

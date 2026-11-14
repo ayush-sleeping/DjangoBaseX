@@ -10,7 +10,7 @@ The conventions are in `documentation/system-design/DJANGO_STANDARDS.md` § 2 an
 "Where new code goes". This is the procedure.
 
 1. **Decide whether it belongs here at all.** Ask: *would a product copied from this boilerplate want it?* If it
-   serves only one product, it does not go in this repository (`AGENTS.md` § 3; `documentation/VISION.md`).
+   serves only one product, it does not go in this repository (`AGENTS.md` § 3; `documentation/PURPOSE.md`).
    If it is genuinely shared, check whether it belongs in `backend/core/` rather than in a new app.
 2. **Check the plan.** `documentation/planning/BUILD_ORDER.md` and
    `documentation/planning/CORE_ARCHITECTURE_PLAN.md` may already name this app, its files and its seams. Follow
