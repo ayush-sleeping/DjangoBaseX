@@ -146,7 +146,7 @@ const UI_BANS = [
   {
     key: "storage",
     home: ["src/core/lib/storage/**"],
-    message: "localStorage/sessionStorage throw in private modes and break SSR: go through src/core/lib/storage/ (§ 13).",
+    message: "localStorage/sessionStorage throw in private modes and break SSR: there is no storage wrapper yet, so read and write browser storage only inside a client-side effect or event handler wrapped in try/catch, with a working fallback (§ 13).",
     selectors: ["Identifier[name=/^(localStorage|sessionStorage)$/]"],
   },
   {

@@ -22,6 +22,7 @@ Classify honestly: a breaking change shipped as MINOR breaks the promise. A remo
 2. **Docs in the same change** (`AGENTS.md` § 1 rule 8):
    - [`DAILY_CHANGES.md`](DAILY_CHANGES.md): one entry per task (What / Why / Files / Verification), newest first.
    - [`VERSION_SUMMARY.md`](VERSION_SUMMARY.md): a capability that did not exist before goes under `## Unreleased`, then moves under the version heading at release. Refactors and unnoticed fixes get no entry.
+   - [`CHANGELOG.md`](../CHANGELOG.md): one line under `## Unreleased` per shipped change, with its **Upgrade notes** (env keys added or removed, `set_setting`, migration order); `## Unreleased` becomes the version heading at release.
    - [`UPGRADING.md`](UPGRADING.md): add any step a product must take when merging (new env key, `set_setting`, migration order).
 3. **Bump `VERSION`** (plain `MAJOR.MINOR.PATCH`, currently `0.1.0`).
 4. **Regenerate the manifest** — core repository only:

@@ -56,6 +56,8 @@ Pattern: AST/source scans with **two-way ratchets** (`backend/tests/architecture
 | `test_no_float_money.py`, `test_no_locale_literals.py`, `test_no_role_name_literals.py` | No float money, no hard-coded currency/timezone, roles classified by column |
 | `test_settings_are_read.py`, `test_no_expired_flags.py`, `test_no_boilerplate_identity.py` | Settings are consumed; expired flags fail; core never spells the boilerplate's name |
 
+| `test_doc_links.py` | Every relative Markdown link in `documentation/`, `AGENTS.md`, `README.md` and `.claude/` resolves (a zero-file scan fails; a synthetic broken link proves the scanner can fail); `scripts/doc_index.py --check` finds every folder index (`documentation/{adr,core,planning,system-design}/README.md`) current |
+
 Frontend (`frontend/tests/architecture/`): `no-effect-fetch`, `hand-typed-contracts`, `contracts`, `query-keys`, `route-manifest`, `module-contract`, `table-engine-boundary`, `messages`, `plugin-messages`, `untranslated-pages`, `no-false-empty`, `no-raw-colour-on-tokens`, `sortable-has-key`, `confirm-host`. Config: [`frontend/vitest.config.ts`](../frontend/vitest.config.ts) (jsdom, `TZ=UTC`, forked isolated processes, non-watch `vitest run`).
 
 ## 4. Fixtures that build state through the real path
@@ -69,6 +71,7 @@ Config: `backend/pyproject.toml` (`DJANGO_SETTINGS_MODULE = config.settings_test
 | `setting_override(key, value)` — real `set_value` writer, audited, rolled back | `backend/conftest.py` | `tests/test_settings_service.py` |
 | `audit_rows(action=None)` — activity-log rows since requested | `backend/conftest.py` | `tests/test_config_audit.py` |
 | `UserFactory` (`DEFAULT_PASSWORD`) | `backend/tests/factories.py` | `users/tests/test_users_api.py` |
+| `manage.py seed_demo` (idempotent, through services, refused when production-like) | `backend/core/management/commands/seed_demo.py`, per-app `demo.py` | `tests/test_seed_demo.py` runs it twice and asserts each row exists once; use it to build a realistic local database |
 | `session(*codes, superuser=)` — a user with a role built via `rbac.services`, logged in through `/api/auth/login/` | defined in `users/tests/test_users_api.py` | copy it; never force-login or bypass permissions |
 
 Rule: build state with services and the real login, not by writing rows, and not as a superuser unless the test is about superusers (a check run as admin proves nothing about real users).

@@ -50,12 +50,21 @@ def test_ttl_expires_after_a_killed_holder(store):
     assert store.acquire("k", "next", 5_000)
 
 
+def _remaining_ms(store, key):
+    """The key's remaining TTL, read from the store itself so no test has to sleep past a TTL."""
+    if isinstance(store, RedisStore):
+        return store._client.pttl(key)
+    return (store._held[key][1] - store._clock()) * 1000
+
+
 def test_extend_checks_the_token(store):
-    assert store.acquire("k", "mine", 60)
-    assert store.extend("k", "someone-else", 5_000) is False
-    assert store.extend("k", "mine", 5_000) is True
-    time.sleep(0.1)
-    assert store.acquire("k", "other", 5_000) is False  # renewed past the original TTL
+    # A TTL far above scheduler jitter: the assertions read the remaining TTL, never a race with it.
+    assert store.acquire("k", "mine", 1_000)
+    assert store.extend("k", "someone-else", 60_000) is False
+    assert _remaining_ms(store, "k") <= 1_000  # the wrong token renewed nothing
+    assert store.extend("k", "mine", 60_000) is True
+    assert _remaining_ms(store, "k") > 1_000  # renewed past the original TTL
+    assert store.acquire("k", "other", 5_000) is False
 
 
 def test_single_flight_lets_one_holder_in_and_releases_on_the_way_out(store):

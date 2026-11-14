@@ -21,10 +21,12 @@ procedure.
 2. **Number it**: one higher than the highest above, zero-padded to four digits. Name the file
    `documentation/adr/NNNN-<kebab-title>.md`.
 3. **Copy `documentation/adr/0000-template.md`** and fill in every section:
+   - **Invariant**: one line, written as an instruction ("Never ...") an agent can obey without reading further.
+   - **Where it bites**: the symptom when the rule is broken, especially when it fails silently.
    - **Context**: the pressure that forced the choice, written for someone who wasn't there.
    - **Decision**: present tense, one paragraph if possible.
    - **Consequences**: include the costs. An ADR that lists only benefits is marketing.
-   - **Alternatives considered**: each option, with why not.
+   - **Alternatives considered**: each rejected option, with the reason. A record with none is a note. Never re-propose a rejected option without new evidence.
 4. **Register it**: add a row to the table in `documentation/ADR.md` with the number, the title, the status
    and today's date.
 5. **To supersede an Accepted ADR**: never edit the old file's decision text. Write the new ADR, set the old

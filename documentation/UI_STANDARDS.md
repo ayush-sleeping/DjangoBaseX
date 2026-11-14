@@ -42,7 +42,7 @@ All under `frontend/src/core/components/` unless noted.
 | Page layouts | `ResourceIndex`, `ResourceShow`, `ResourceForm` → `frontend/src/core/shells/` | a module supplies columns/queries/actions, never layout |
 | Permission-gated UI | `Can` and `DeniedCard` → `frontend/src/core/lib/permissions.tsx` | hide controls the user cannot use; show a visible denial for a whole section |
 
-**Check:** `frontend/src/core/components/primitives.test.tsx`; lint bans `table`, `select`, `html`, `overlay`, `dialogs`, `storage`, `formatters` in `frontend/eslint.config.mjs` (`UI_BANS`). Note: the `storage` ban points at `src/core/lib/storage/`, which does not exist yet — report it before using browser storage.
+**Check:** `frontend/src/core/components/primitives.test.tsx`; lint bans `table`, `select`, `html`, `overlay`, `dialogs`, `storage`, `formatters` in `frontend/eslint.config.mjs` (`UI_BANS`). Note: there is no `src/core/lib/storage/` wrapper yet; the `storage` ban's message says so and to use browser storage only inside an effect or handler with try/catch and a fallback.
 
 ## 3. Every page state
 

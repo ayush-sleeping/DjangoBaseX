@@ -79,6 +79,8 @@ proves it, then links the deep spec by section. Agents: [`../AGENTS.md`](../AGEN
 | **Find a known bug before re-reporting it** | [`planning/TECH_DEBT.md`](planning/TECH_DEBT.md) |
 | **See what changed recently** | [`DAILY_CHANGES.md`](DAILY_CHANGES.md) |
 | **See what shipped, by version** | [`VERSION_SUMMARY.md`](VERSION_SUMMARY.md) |
+| **See what a release needs from my product (env keys, steps)** | [`../CHANGELOG.md`](../CHANGELOG.md) |
+| **Browse a folder** (generated, one row per file) | [`adr/README.md`](adr/README.md) · [`core/README.md`](core/README.md) · [`planning/README.md`](planning/README.md) · [`system-design/README.md`](system-design/README.md) |
 | **Know the rules I'm working under** | [`../AGENTS.md`](../AGENTS.md) — the operating contract |
 | **Change agent tooling — hooks, skills, subagents, `.claude/`** | [`core/AGENT_TOOLING.md`](core/AGENT_TOOLING.md) |
 
@@ -99,6 +101,8 @@ documentation/
 ├── ADR.md                the decision register — one row per ADR
 ├── DAILY_CHANGES.md      the running log; one entry per task
 ├── VERSION_SUMMARY.md    shippable features, by version
+├── ../CHANGELOG.md       upgrade notes per version (repo root)
+├── {adr,core,planning,system-design}/README.md   generated folder indexes (scripts/doc_index.py)
 ├── adr/                  the decision records themselves
 ├── core/                 how the built subsystems work
 ├── system-design/        conventions and standards you must follow

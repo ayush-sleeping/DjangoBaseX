@@ -3,6 +3,10 @@
 **Status:** Proposed | Accepted | Superseded by [ADR-NNNN](NNNN-....md) | Deprecated
 **Date:** YYYY-MM-DD
 
+**Invariant:** <the rule, written as an instruction an agent can obey without reading further: "Always ...", "Never ...">
+
+**Where it bites:** <the symptom when the rule is broken, especially when it fails silently or as a different error>
+
 ## Context
 
 What is true that forces a choice? Constraints, the problem, what was tried. Write this so someone
@@ -18,7 +22,7 @@ What we will do, in the present tense: "We use X." One paragraph if possible.
 What becomes easier, and what becomes harder. **Be honest about the costs** — an ADR that lists only
 benefits is marketing, and the next person will rediscover the costs the expensive way.
 
-## Alternatives considered
+## Alternatives considered (rejected options, with the reason)
 
 | Option | Why not |
 |--------|---------|
