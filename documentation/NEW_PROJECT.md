@@ -90,10 +90,15 @@ What is still renamed by hand:
 | README, LICENSE holder | `README.md`, `LICENSE` |
 | Agent banner | `AGENTS.md` § 0 — **do this one first**, every session reads it |
 
-### 3. Reset the inherited history
+### 3. Start your own history — leave the core's alone
 
-`documentation/DAILY_CHANGES.md` and `VERSION_SUMMARY.md` describe **this boilerplate's** history,
-not your product's. Empty them. Keep `ADR.md` and the `adr/` records — those are decisions your
+`documentation/DAILY_CHANGES.md` and `VERSION_SUMMARY.md` describe **the core's** history. **Do not
+edit or empty them:** the core adds to both in every change, so a product that edits them gets a merge
+conflict on every `git merge core/main` (proven in BUILD_ORDER 10.1, finding F8). They also arrive as the
+core's release notes, `Breaking` entries included ([`UPGRADING.md`](UPGRADING.md)).
+
+Keep your own log in a new file, for example `documentation/PRODUCT_CHANGES.md` (same format), and point
+`AGENTS.md` § 1 rule 8 and § 4's "recorded in" table at it. Keep `ADR.md` and the `adr/` records — those are decisions your
 product inherits and should know about, and deleting them loses the reasoning you just took on.
 
 ### 4. Point at a real database

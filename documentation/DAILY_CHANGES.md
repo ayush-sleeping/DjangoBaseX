@@ -26,6 +26,13 @@ Newest first.
 
 ## 2026-11-14
 
+### BUILD_ORDER 10.1 done: PostgreSQL run, the merge path proven locally, F8 fixed
+**What:** the suite on PostgreSQL 16 (throwaway container), and a product cloned at the pre-10.1 core, put through the NEW_PROJECT.md checklist, then merged with `core/main`. Recorded in `planning/SECOND_PRODUCT.md` § The merge path; new finding F8.
+**Why:** 10.1's last unproven part was whether a product built from the core can take an update with `git merge`.
+**Files:** `documentation/planning/SECOND_PRODUCT.md`, `documentation/planning/BUILD_ORDER.md`, `documentation/NEW_PROJECT.md`, `documentation/PURPOSE.md`, `AGENTS.md`, `documentation/DAILY_CHANGES.md`.
+**Verification:** PostgreSQL 16: with notes + enquiries 2390 passed, 0 skipped, exit 0; bare 2358 passed, 4 skipped, exit 0. Merge: one conflict (`DAILY_CHANGES.md`); after keeping the product's side, `uv lock --check` passed and the product's pytest ran 2351 passed / 11 skipped.
+**Notes:** the merge test ran in a scratch clone, not a published repository. F8 (every core update conflicts in an emptied `DAILY_CHANGES.md`) is fixed by the owner's choice A: NEW_PROJECT.md step 3 now says to leave the core's logs alone and keep a product log in a new file. 10.1 is ✅. `AGENTS.md` (owner-confirmed) and `PURPOSE.md` § Current focus now describe it.
+
 ### BUILD_ORDER 10.1: close the second product's findings (SDK 1.3, promptText)
 **What:** `core.statemachine.transition_options()` (each legal move + `needs_reason`); `money_fields(optional=True)`, `money_pair_check()` and `money_property()` returning None; SDK 1.3 exports both. Frontend `promptText()` + `PromptHost` (`core/components/prompt.tsx`), mounted in `Providers.tsx` and added to the one-host architecture test. The enquiries API carries `transitions`, and its page asks for a reason with `promptText()` instead of an inline form and a copied rule.
 **Why:** findings F5–F7 of `planning/SECOND_PRODUCT.md` (DB-137, DB-138, DB-139). F2 (DB-136) was first logged as "no core test covers gap-tolerant numbering"; that was wrong (`tests/test_numbering.py` uses a `real_db` fixture), so it is now a TRAPS row about `django_db` tests, not a defect.

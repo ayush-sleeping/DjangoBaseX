@@ -46,8 +46,10 @@ Ordered. The first three come from the properties below; the rest from the desig
 
 ## Current focus
 
-The executable backlog is [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md) — the lowest-numbered ⬜
-item is next (Phase 7: notifications, ops alerting; Phase 8.5b: security headers and logos). What exists versus what is planned: [`planning/ROADMAP.md`](planning/ROADMAP.md).
+The executable backlog is [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md). Every numbered task through
+10.1 is built except the deferred parts of 8.5b (DB-90 to DB-92); what the second product taught is in
+[`planning/SECOND_PRODUCT.md`](planning/SECOND_PRODUCT.md). Next work comes from
+[`planning/TECH_DEBT.md`](planning/TECH_DEBT.md), ranked. What exists versus what is planned: [`planning/ROADMAP.md`](planning/ROADMAP.md).
 
 ---
 

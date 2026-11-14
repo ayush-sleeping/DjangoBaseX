@@ -1089,14 +1089,14 @@ once.
 
 *Renumbered from Phase 5 on 2026-09-29, when the platform-service phases were inserted before it.*
 
-### 10.1 — Build a second product on it ◐
+### 10.1 — Build a second product on it ✅
 **Nothing proves a core is reusable until something else is built on it.** Whatever hurts the second
 time is the design flaw. It is far cheaper to find at product two than at product five.
 
 *Started 2026-11-14 (owner decision: an enquiries mini-CRM, as a plugin in `examples/plugins/`).* Built:
 `examples/plugins/enquiries` (numbering, state machine with history, money, scoping, soft delete, a page),
-installed by CI beside notes; SDK 1.2. Seven findings, all closed (six fixed in the core, SDK 1.3; one a test-environment trap): see
-[`SECOND_PRODUCT.md`](SECOND_PRODUCT.md). Open: the clone-and-re-origin merge path.
+installed by CI beside notes; SDK 1.2. Eight findings, all closed (six fixed in the core, SDK 1.3; one a test-environment trap; one a NEW_PROJECT.md step): see
+[`SECOND_PRODUCT.md`](SECOND_PRODUCT.md). *Done 2026-11-14.* The merge path is proven locally in a scratch clone; its one conflict (F8) is fixed in NEW_PROJECT.md step 3. PostgreSQL 16: 2390 passed with both plugins, 2358 bare.
 
 ---
 

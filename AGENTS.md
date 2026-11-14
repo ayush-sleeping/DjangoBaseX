@@ -57,7 +57,8 @@ security headers + `/fe/revalidate` (8.5b, part), operations (`scripts/deploy.py
 setup API, `Dockerfile.prod` images — written, not yet proven on a real host; 9.5), data lifecycle (scoping registry
 with write-path narrowing via `BaseViewSet.scope()`, soft delete + recycle bin, state history, provenance;
 `core/lifecycle/`, 9.3), domain primitives (document numbering, state machine, business calendar, bulk actions,
-import/export; 9.4). **Not built:** 8.5b's backend revalidate caller, logos and per-tenant identity (DB-90–92), 10.1;
+import/export; 9.4), the second product (10.1: `examples/plugins/enquiries` on SDK 1.3, merge path proven;
+[`SECOND_PRODUCT.md`](documentation/planning/SECOND_PRODUCT.md)). **Not built:** 8.5b's backend revalidate caller, logos and per-tenant identity (DB-90–92);
 Sentry wiring (ADR-0013). Check
 [`ROADMAP.md`](documentation/planning/ROADMAP.md) / [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) before assuming.
 
