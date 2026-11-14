@@ -5,38 +5,55 @@
 >
 > **This is the only agent contract in this repository** ([ADR-0006](documentation/adr/0006-one-agent-contract.md)).
 > Every rule lives here; `CLAUDE.md` and `GEMINI.md` import it, and `.claude/` only *enforces* and
-> *points at* it ([ADR-0007](documentation/adr/0007-claude-code-harness.md)). It is always in context —
-> read it in full; it is the short list you may not violate.
+> *points at* it ([ADR-0007](documentation/adr/0007-claude-code-harness.md)). It is a map: detail is one hop away.
 
-## 0. First response in any session
+## 0. Follow the protocol
 
-Read `CLAUDE.md` → this file before emitting any text. Then display this banner:
+At session start, and whenever the owner says "follow the protocol" (any wording), in order, before any other text:
+
+1. Read `CLAUDE.md` → this file → [`documentation/PURPOSE.md`](documentation/PURPOSE.md) (why this exists; the
+   tie-breaker) → [`documentation/INVARIANTS.md`](documentation/INVARIANTS.md) (what no change may break).
+2. Read the docs for the task (**Need → read** below) and the [`ADR.md`](documentation/ADR.md) row for anything you
+   will change the shape of.
+3. Verify state, never memory: `pwd`, `git branch --show-current`, `git status --short`, `git worktree list`.
+4. Display the banner, then: "Ready to work on DjangoBaseX. What would you like me to work on?"
 
 ```text
 ╔══════════════════════════════════════════════════════════════╗
 ║  📋 DjangoBaseX — AGENTS.md loaded                            ║
 ║  ✓ Stack: Django 5.2 + DRF  ·  Next.js 16 App Router          ║
-║  ✓ Python via uv  ·  lint/format via Ruff  ·  DB: SQLite      ║
+║  ✓ Python via uv  ·  Ruff  ·  SQLite local, PostgreSQL in CI  ║
 ║  ✓ Branch: main (never master)                                ║
 ║  ✓ Docs: update documentation/DAILY_CHANGES.md every task     ║
 ║  ✓ Commits: ask the user first — never auto-commit            ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-Then state: "Ready to work. What would you like me to work on?"
+| Need | Read first (`documentation/`) | Then |
+|---|---|---|
+| Bug report / something broken | [`PRODUCTION.md`](documentation/PRODUCTION.md), [`system-design/TRAPS.md`](documentation/system-design/TRAPS.md) | [`DOMAIN.md`](documentation/DOMAIN.md) flow, [`TESTING.md`](documentation/TESTING.md) (failing test first) |
+| A `BUILD_ORDER.md` task or new feature | [`PURPOSE.md`](documentation/PURPOSE.md), [`DOMAIN.md`](documentation/DOMAIN.md) | [`ARCHITECTURE.md`](documentation/ARCHITECTURE.md) recipe, the task's spec in `system-design/` |
+| Backend change | [`CODE_STANDARDS.md`](documentation/CODE_STANDARDS.md) | [`ARCHITECTURE.md`](documentation/ARCHITECTURE.md), [`SECURITY.md`](documentation/SECURITY.md) |
+| UI change | [`UI_STANDARDS.md`](documentation/UI_STANDARDS.md) | its gold-standard page |
+| Model / migration | [`system-design/DATA_MODEL.md`](documentation/system-design/DATA_MODEL.md) (5 decisions first) | [`DATABASE_MIGRATIONS.md`](documentation/system-design/DATABASE_MIGRATIONS.md) |
+| Auth, permissions, secrets | [`SECURITY.md`](documentation/SECURITY.md) | `AUTH_BLUEPRINT.md`, `RBAC_DESIGN.md` |
+| Releasing the core | [`RELEASE.md`](documentation/RELEASE.md) | [`UPGRADING.md`](documentation/UPGRADING.md) |
+| Before saying "done" | [`DEFINITION_OF_DONE.md`](documentation/DEFINITION_OF_DONE.md) | — |
 
 **Never describe the stack from memory.** Read [`backend/pyproject.toml`](backend/pyproject.toml) and
-[`frontend/package.json`](frontend/package.json). A version quoted from prose goes stale silently.
-(In Claude Code a SessionStart hook prints the locked versions, branch and next task — still verify.)
+[`frontend/package.json`](frontend/package.json). (In Claude Code a SessionStart hook prints the locked versions,
+branch and next task — still verify.)
 
-**Know what does not exist yet:** **no production Docker**. Built: auth
-(ADR-0009), RBAC, the Users module (the reference to copy), the `project/` split (ADR-0010) and
-plugins (`scripts/plugins.py`; example: `examples/plugins/notes`). No platform domain models. If a task assumes something exists,
-check the [Roadmap](documentation/planning/ROADMAP.md) first.
+**Know what exists.** Built (BUILD_ORDER ✅): auth (ADR-0009), RBAC, Users (the reference module to copy), the
+`project/` split (ADR-0010), plugins (`scripts/plugins.py`, example `examples/plugins/notes`), the typed settings
+registry, flags, lookups, identity, request id + scrubber, health rungs, `doctor`, encryption, audit, money, Celery
+jobs, outbox + reconcilers + locks, the frontend platform (data layer, shell, design system, i18n), dev Docker
+Compose. **Not built:** BUILD_ORDER 7.4–7.8, 8.5, Phase 9, 10.1; Sentry wiring (ADR-0013); production Docker. Check
+[`ROADMAP.md`](documentation/planning/ROADMAP.md) / [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) before assuming.
 
-**With no specific task**, start at the lowest-numbered unfinished item in [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md)
-— the executable backlog, with acceptance criteria. Tasks marked **🚧 DECISION** are questions for the
-repository owner: ask; never answer one by starting to code.
+**With no specific task**, start at the lowest-numbered unfinished item in `BUILD_ORDER.md` — the executable
+backlog, with acceptance criteria. Tasks marked **🚧 DECISION** are questions for the repository owner: ask; never
+answer one by starting to code.
 
 ## 1. Non-negotiable
 
@@ -46,8 +63,8 @@ repository owner: ask; never answer one by starting to code.
 | 2 | **Never delete branches** unless asked. Branch is `main`, never `master` |
 | 3 | **Read a file before you modify it.** No exceptions |
 | 4 | **Ask before any destructive operation** — dropping tables, `rm -rf`, resetting migrations, `git reset --hard` |
-| 5 | **Treat this repo as PUBLIC.** Anything committed here is inherited by every product copied from it, into repositories with their own access lists. Never commit real credentials, customer data, internal URLs or third-party client names. Seed/demo credentials stay obviously fake |
-| 5a | **Never name another codebase.** No other project, product, repository or module name appears anywhere in this repo — docs, code, comments, commit messages, examples, agent memory. Record the *mechanism* and the *reason*, never the source. Example names are generic (`billing`, `enquiries`) |
+| 5 | **Treat this repo as PUBLIC.** Anything committed here is inherited by every product copied from it. Never commit real credentials, customer data, internal URLs or third-party client names. Seed/demo credentials stay obviously fake |
+| 5a | **Never name another codebase.** No other project, product, repository, company or module name appears anywhere in this repo — docs, code, comments, commit messages, examples, agent memory. Record the *mechanism* and the *reason*, never the source. Example names are generic (`billing`, `enquiries`) |
 | 6 | **Never echo `.env` *values*** into output, docs or commits — key names only |
 | 7 | **Never commit** `.env`, `.env.local`, `db.sqlite3`, `.venv/`, `node_modules/`, `__pycache__/`, `.next/`, `.ruff_cache/`, `tsconfig.tsbuildinfo`, `.claude/settings.local.json` |
 | 8 | **Update [`documentation/DAILY_CHANGES.md`](documentation/DAILY_CHANGES.md) in the same change as the code**, not after |
@@ -61,19 +78,18 @@ repository owner: ask; never answer one by starting to code.
 **Before any push:** `git status`, then `git diff --cached | grep -iE "secret|password|token|api[_-]?key"`
 — and read every hit.
 
-**`frontend/AGENTS.md` is generated** by `next dev`
-(`frontend/node_modules/next/dist/server/lib/generate-agent-files.js`) — never hand-edit it; commit it
-with your work. Frontend rules go here or in `documentation/system-design/NEXTJS_STANDARDS.md`.
+**`frontend/AGENTS.md` is generated** by `next dev` — never hand-edit it; commit it with your work. Frontend rules
+go here or in `documentation/system-design/NEXTJS_STANDARDS.md`.
 
 **This is NOT the Next.js most training data knows.** Next.js 16 App Router + React 19: `params` and
-`searchParams` are async, caching defaults changed. Check the installed version
-(`frontend/node_modules/next/package.json`) and read the bundled guides in
+`searchParams` are async, caching defaults changed. Check `frontend/node_modules/next/package.json` and read
 `frontend/node_modules/next/dist/docs/` before writing Next.js code — not memory.
 
 ## 2. Verification gate
 
-**Nothing is "done" until it has been run.** CI (`.github/workflows/ci.yml`) runs exactly these on every
-push and PR — run them first anyway:
+**Nothing is "done" until it has been run.** CI (`.github/workflows/ci.yml`) runs exactly these on every push and
+PR, on PostgreSQL 16 — run them first anyway. Detail, per-change test rules and what SQLite cannot prove:
+[`TESTING.md`](documentation/TESTING.md).
 
 ```bash
 # Backend
@@ -92,41 +108,35 @@ cd frontend && npm test                                  # vitest
 python3 .claude/hooks/test_agent_guard.py                # agent tooling — when .claude/hooks/ changed
 ```
 
-- **`makemigrations --check --dry-run` is not optional after a model change.** A model edited without a
-  migration passes every other check, then fails on someone else's machine or on deploy.
-- **`npm run build` is not in the routine gate.** It is slow and writes `.next/`, which the running dev
-  server also uses. Run it deliberately, with the dev server stopped.
+- **`makemigrations --check --dry-run` is not optional after a model change.**
+- **`npm run build` is not in the routine gate.** It is slow and writes `.next/`, which the running dev server
+  also uses. Run it deliberately, with the dev server stopped.
+- Run each command separately and trust exit codes, not printed text.
 
 ## 3. Layer boundaries
 
-| Layer | Rule |
-|-------|------|
-| DRF views (`views.py`) | Thin — HTTP concerns only: parse, authorize, delegate, respond |
-| Business logic | A `services.py` module in the app, never a view and never a serializer |
-| Serializers | Shape and validate data. No queries, no side effects, no business rules |
-| Models | Field definitions, constraints, `Meta`, and simple derived properties only |
-| Querysets | Custom `Manager`/`QuerySet` methods on the model — not repeated `.filter()` chains in views |
-| Settings | Every environment-dependent value comes from `.env` via `django-environ`. Never hard-code a host, key or URL in `settings.py` |
-| Frontend data | Through `src/core/lib/api.ts`. **Never `fetch()` inline in a component** |
-| Business logic (frontend) | Never in a page or component — put it in `src/core/lib/` (product code: `src/project/`) |
+Views are thin (parse, authorize, delegate, respond) · business logic in the app's `services.py` · serializers
+shape and validate only · models hold fields, constraints and `Meta` · querysets as custom `Manager`/`QuerySet`
+methods · every environment value from `.env` via `django-environ`, never hard-coded in `settings.py` · frontend
+data only through `src/core/lib/api.ts`, never `fetch()` in a component · frontend logic in `src/core/lib/`
+(product code: `src/project/`). The table with gold-standard files: [`ARCHITECTURE.md`](documentation/ARCHITECTURE.md)
+§ Layers; rules and checks: [`CODE_STANDARDS.md`](documentation/CODE_STANDARDS.md).
 
-**Match the surrounding code's style. Don't introduce a second way of doing something.** Two patterns for
-one job is the cost that compounds.
+**Match the surrounding code's style. Don't introduce a second way of doing something.**
 
-**Where new code goes.** A new domain is a new Django app (`backend/<app>/`), registered in
-`INSTALLED_APPS`, its urls included from `config/urls.py`. `backend/core/` is for genuinely shared things.
-Ask *"would a product copied from this boilerplate want it?"* — if it only serves one product, it does not
-belong in this repository at all.
+**Where new code goes.** A new domain is a new Django app (`backend/<app>/`), registered in `INSTALLED_APPS`, its
+urls included from `config/urls.py`. Ask *"would a product copied from this boilerplate want it?"* — if it only
+serves one product, it belongs in `project/` or a plugin, not the core. Recipes: `ARCHITECTURE.md` § How to add.
 
 ## 4. Working rhythm
 
-**Before starting.** Confirm `pwd` and `git branch --show-current`. Read
-[`documentation/INDEX.md`](documentation/INDEX.md), then the one **Start Here** doc for your area. Before
-changing the *shape* of anything, check [`documentation/ADR.md`](documentation/ADR.md): an **Accepted**
-decision is settled, and reopening it needs a new ADR, not a quiet edit. Branch only when asked or when
-work spans sessions: `feature/`, `fix/`, `hotfix/`, `refactor/`, `docs/` + `<name>`.
+**Before.** § 0. Define done in one to three lines and the command that proves it. Blast radius: `rg -l "<name>"`
+before changing a function, route, column or setting key; `git log -5 --oneline -- <file>` and read recent fixes.
+An **Accepted** ADR is settled — reopening it needs a new ADR. Branch only when asked or when work spans sessions:
+`feature/`, `fix/`, `hotfix/`, `refactor/`, `docs/` + `<name>`.
 
-**During.** Keep changes atomic and reviewable. Decide up front where the change gets recorded:
+**During.** Smallest coherent change; mirror the nearest gold-standard file. A bug fix starts with a failing test.
+Same approach failed twice → stop and rethink or ask; never a third variation. Record the change:
 
 | Change | Recorded in |
 |--------|-------------|
@@ -136,51 +146,37 @@ work spans sessions: `feature/`, `fix/`, `hotfix/`, `refactor/`, `docs/` + `<nam
 | A multi-session plan | a doc under `documentation/planning/` |
 | A settled architectural decision | a record under `documentation/adr/`, plus a row in `ADR.md` |
 | A known defect you are not fixing now | a ranked row in `documentation/planning/TECH_DEBT.md` |
+| Something that cost time and will bite again | a row in `documentation/system-design/TRAPS.md` |
 
-**Commits** are conventional: `<type>(<scope>): <description>` — subject ≤ 72 characters, no trailing
-period, blank line before the body.
-Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`, `build`.
-Scopes in use: `backend`, `frontend`, `api`, `auth`, `authz`, `db`, `ui`, `docs`, `infra`, `deps`,
-`test`, `agents`, and app names (`core`, `users`, `employees`, `enquiries`). Stage explicit paths.
+**Commits** are conventional: `<type>(<scope>): <description>` — subject ≤ 72 characters, no trailing period,
+blank line before the body. Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`, `build`.
+Scopes: `backend`, `frontend`, `api`, `auth`, `authz`, `db`, `ui`, `docs`, `infra`, `deps`, `test`, `agents`, and
+app names (`core`, `users`, …). Stage explicit paths. **Never add AI attribution to a commit or PR** (decided
+2026-09-15).
 
-**Never add AI attribution to a commit or PR** — no `Co-Authored-By` naming a tool, no "Generated with".
-Decided 2026-09-15: the commit records what changed and why; how it was produced is not part of that.
-
-**After.** Run the § 2 gate. Update `DAILY_CHANGES.md` (and `VERSION_SUMMARY.md` for a shippable
-feature) and any `core/` or `system-design/` doc whose behaviour or convention changed. Report the
-verification output honestly, failures and skips included. **Then ask before committing, and wait.**
+**After.** Run the § 2 gate. Score the work against [`DEFINITION_OF_DONE.md`](documentation/DEFINITION_OF_DONE.md)
+with evidence labels (*observed* · *derived* · *inferred* · *unknown*). Update `DAILY_CHANGES.md` (and
+`VERSION_SUMMARY.md` for a shippable feature) and any doc whose behaviour or convention changed. **Then ask before
+committing, and wait.**
 
 ## 5. Multi-agent execution
 
-- **Divide independent work** into packages that can proceed concurrently
-- **No overlapping file ownership.** Partition on file or app boundaries and hand each worker an
-  **explicit, non-overlapping file list**
+- **Divide independent work** into packages with an **explicit, non-overlapping file list** each
 - **One worker owns an atomic refactor end-to-end.** Never split one across workers
-- **Migrations are never parallel.** Two agents generating migrations against one app produce a branched
-  history that stays silent until `migrate` runs — on a deploy, the worst moment to find it
-- **The orchestrator validates.** A subagent's "done" is a claim: read the diff and run the § 2 gate
-  yourself. If a subagent's output is wrong twice, take the task over directly
+- **Migrations are never parallel** — two agents generating migrations against one app branch the history silently
+- **The orchestrator validates.** A subagent's "done" is a claim: read the diff and run the § 2 gate yourself. Wrong
+  twice → take the task over. Detail: [`core/AGENT_TOOLING.md`](documentation/core/AGENT_TOOLING.md)
 
 ## 6. Where the rest lives
 
-| Need | File |
-|------|------|
-| **What this project is FOR — the tie-breaker when designs conflict** | [`documentation/VISION.md`](documentation/VISION.md) |
-| **Why something is built this way — settled decisions** | [`documentation/ADR.md`](documentation/ADR.md) |
-| The doc map — which single file to read | [`documentation/INDEX.md`](documentation/INDEX.md) |
-| First day on this repo; running it locally | [`documentation/ONBOARDING.md`](documentation/ONBOARDING.md); [`README.md`](README.md) § Getting Started |
-| What exists vs what is planned; **what to build next** | [`ROADMAP.md`](documentation/planning/ROADMAP.md); [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) |
-| The core + plugin architecture; the full capability map | [`CORE_ARCHITECTURE_PLAN.md`](documentation/planning/CORE_ARCHITECTURE_PLAN.md); [`PLATFORM_BLUEPRINT.md`](documentation/planning/PLATFORM_BLUEPRINT.md) |
-| Starting a product from this; taking a core update | [`NEW_PROJECT.md`](documentation/NEW_PROJECT.md); [`UPGRADING.md`](documentation/UPGRADING.md) |
-| Backend / frontend conventions | [`DJANGO_STANDARDS.md`](documentation/system-design/DJANGO_STANDARDS.md); [`NEXTJS_STANDARDS.md`](documentation/system-design/NEXTJS_STANDARDS.md) |
-| **Designing a model** — ⚠️ 5 decisions before the first migration | [`DATA_MODEL.md`](documentation/system-design/DATA_MODEL.md); [`DATABASE_MIGRATIONS.md`](documentation/system-design/DATABASE_MIGRATIONS.md) |
-| Endpoints; permissions and roles; security | [`API_DESIGN.md`](documentation/system-design/API_DESIGN.md); [`RBAC_DESIGN.md`](documentation/system-design/RBAC_DESIGN.md); [`SECURITY.md`](documentation/system-design/SECURITY.md) |
-| Bugs that keep recurring — the review checklist | [`BUG_CLASSES.md`](documentation/system-design/BUG_CLASSES.md) |
-| Deploying; how the two halves fit together | [`DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md); [`core/ARCHITECTURE.md`](documentation/core/ARCHITECTURE.md) |
-| Agent tooling — hooks, skills, subagents, rules | [`core/AGENT_TOOLING.md`](documentation/core/AGENT_TOOLING.md) |
-| Known defects — **don't re-report as new**; what changed | [`TECH_DEBT.md`](documentation/planning/TECH_DEBT.md); [`DAILY_CHANGES.md`](documentation/DAILY_CHANGES.md) |
+[`documentation/INDEX.md`](documentation/INDEX.md) is the doc map — one row per task, read the one file you need.
+Settled decisions: [`ADR.md`](documentation/ADR.md). First day: [`ONBOARDING.md`](documentation/ONBOARDING.md).
+Starting a product: [`NEW_PROJECT.md`](documentation/NEW_PROJECT.md). Known defects — **don't re-report as new**:
+[`TECH_DEBT.md`](documentation/planning/TECH_DEBT.md). Recurring bug classes: [`BUG_CLASSES.md`](documentation/system-design/BUG_CLASSES.md).
 
-Planning docs are **intent, not current state** — check the code before trusting them.
+Planning docs (`documentation/planning/`) are **intent, not current state** — check the code before trusting them.
+When a doc and the code disagree, the code is current and the doc is the bug — unless an Accepted ADR says
+otherwise; then the code drifted.
 
 ## 7. Agents and tooling
 
@@ -190,11 +186,10 @@ Planning docs are **intent, not current state** — check the code before trusti
 | Codex, Cursor, GitHub Copilot, OpenCode | `AGENTS.md` natively | — |
 | Gemini CLI | `GEMINI.md` → imports this file | — |
 
-**Claude Code skills** (procedures that point back here): `/verify` (the § 2 gate), `/changelog`,
-`/commit` (user-invoked only), `/next-task`, `/adr`, `/bug-class-check`, `/new-django-app`.
-**Subagents:** `code-reviewer` and `doc-auditor` (read-only, with committed memory), `implementer` (one
-spec, listed files only). The hooks *ask* before a protected file is edited and *refuse* malformed or
-AI-attributed commit messages, history rewriting, and printing `.env` files. Other agents get no
+**Claude Code skills:** `/verify` (the § 2 gate), `/changelog`, `/commit` (user-invoked only), `/next-task`, `/adr`,
+`/bug-class-check`, `/new-django-app`. **Subagents:** `code-reviewer` and `doc-auditor` (read-only, with committed
+memory), `implementer` (one spec, listed files only). The hooks *ask* before a protected file is edited and *refuse*
+malformed or AI-attributed commit messages, history rewriting, and printing `.env` files. Other agents get no
 enforcement — the rules above apply to them all the same.
 
 **Never put a rule in `.claude/`, `CLAUDE.md` or `GEMINI.md`.** They point here; two contracts drift.

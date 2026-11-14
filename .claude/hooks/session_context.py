@@ -76,6 +76,10 @@ def main() -> int:
             continue
         if line:
             lines.append(f"- {line}")
+    lines.append(
+        "- Protocol (AGENTS.md § 0): read documentation/PURPOSE.md and documentation/INVARIANTS.md, "
+        "then the task's docs from the Need → read table, before any other text."
+    )
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n".join(lines)}}))
     return 0
 

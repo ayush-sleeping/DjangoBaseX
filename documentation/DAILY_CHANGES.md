@@ -26,6 +26,25 @@ Newest first.
 
 ## 2026-11-14
 
+### Docs plan phase 3: AGENTS.md "Follow the protocol" and the pointers into the new docs
+**What:**
+- `AGENTS.md` § 0 is now "Follow the protocol": `CLAUDE.md` → `AGENTS.md` → `PURPOSE.md` → `INVARIANTS.md` →
+  the task's docs from a **Need → read** table → verified state → banner. The "what exists" list now matches
+  BUILD_ORDER (it omitted jobs, outbox, settings, flags, audit, health, i18n and Compose). Banner says SQLite
+  locally, PostgreSQL in CI. § 3 is a one-paragraph summary pointing at `ARCHITECTURE.md`/`CODE_STANDARDS.md`;
+  § 4 gains define-done, blast radius, two-strikes and the TRAPS row; § 6 shrinks to `INDEX.md` plus the
+  code-wins-over-docs rule. Section numbers 0–7 kept: other docs cite them. 195 lines.
+- `.claude/rules/backend.md`, `frontend.md` point at the hubs and `TRAPS.md`; `/verify` now runs `npm test`
+  (the gate had it, the skill did not); the SessionStart hook prints the protocol line.
+
+**Why:** the protocol is the first thing every session runs; it pointed at a doc that no longer exists
+(`VISION.md`) and at none of the new hubs.
+**Files:** `AGENTS.md`, `.claude/rules/backend.md`, `.claude/rules/frontend.md`, `.claude/skills/verify/SKILL.md`,
+`.claude/hooks/session_context.py`.
+**Verification:** every link in `AGENTS.md` resolves (script); the SessionStart hook emits valid JSON with the
+protocol line; `python3 .claude/hooks/test_agent_guard.py` — 18 tests OK. `CLAUDE.md` and `GEMINI.md` needed no
+change: both only import `AGENTS.md`.
+
 ### Docs plan phase 2: the standards set — one short hub per dimension
 **What:** nine new docs at the top of `documentation/`, each ≤ ~125 lines with a `Status · checked` line,
 every rule written as Rule · Gold-standard file · Anti-pattern · Check, linking the deep `system-design/`

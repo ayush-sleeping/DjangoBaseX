@@ -1,7 +1,7 @@
 ---
 name: verify
 description: Run the AGENTS.md § 2 verification gate on what changed, and report the real output. Use before saying any task is done, before asking to commit, and after a subagent hands work back.
-allowed-tools: Bash(git status *) Bash(git diff *) Bash(uv run ruff check *) Bash(uv run ruff format --check *) Bash(uv run python manage.py check) Bash(uv run python manage.py makemigrations --check --dry-run) Bash(uv run pytest) Bash(uv run pytest *) Bash(npm run lint) Bash(npm run typecheck) Bash(python3 .claude/hooks/test_agent_guard.py)
+allowed-tools: Bash(git status *) Bash(git diff *) Bash(uv run ruff check *) Bash(uv run ruff format --check *) Bash(uv run python manage.py check) Bash(uv run python manage.py makemigrations --check --dry-run) Bash(uv run pytest) Bash(uv run pytest *) Bash(npm run lint) Bash(npm run typecheck) Bash(npm test) Bash(python3 .claude/hooks/test_agent_guard.py)
 ---
 
 # Verify
@@ -22,7 +22,7 @@ ever disagree, `AGENTS.md` wins. Fix this file.
    - Anything under `scripts/` or `examples/`: from `backend/`, `uv run ruff check --config pyproject.toml
      ../scripts ../examples` and the same with `ruff format --check`. A change to an example plugin also
      needs it installed and the suite rerun: CI does both (`examples/plugins/notes/README.md`).
-   - Anything under `frontend/`: `npm run lint` and `npm run typecheck`, from `frontend/`.
+   - Anything under `frontend/`: `npm run lint`, `npm run typecheck` and `npm test`, from `frontend/`.
    - Anything under `.claude/hooks/`: `python3 .claude/hooks/test_agent_guard.py`.
    - Documentation only: no code gate. Check that every link you added resolves and every path you cite exists.
 2. **Run each command separately** so that one failure doesn't hide the next.
