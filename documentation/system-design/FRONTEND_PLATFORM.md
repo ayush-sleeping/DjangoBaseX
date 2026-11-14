@@ -1468,6 +1468,8 @@ rule for server-side fetches. [`SECURITY.md`](SECURITY.md) owns the backend half
 Next needs the nonce to tag its own scripts. A real incident: the production reverse-proxy config that
 was supposed to carry security headers was not in version control at all.
 
+**As built (8.5b).** `src/app/fe/revalidate/route.ts` (secret `x-revalidate-secret` vs `REVALIDATE_SECRET`, constant time, unset = refuse all; tags limited to `identity` and `identity:<host>`; `revalidateTag(tag, { expire: 0 })`); `getIdentity()` fetches under the `identity` tag; `src/core/theme/TitleSync.tsx` (re-applies `<page> — <product>` on pathname change); `src/core/lib/security/host-match.ts` (exact classification, unconsumed until the white-label module); `proxy.ts` does not match `/fe/`. The one identity endpoint stays `/api/public/config/` (no second endpoint: the core has no host table). Not built: the backend caller (DB-90), logos and favicon swap (DB-92), per-tenant identity (DB-91).
+
 **Rules — CSP.**
 - `src/proxy.ts` generates a nonce (`base64(randomUUID())`) per request, sets the **request**
   `Content-Security-Policy` header and `x-nonce` (Next reads the request header to auto-nonce its
@@ -1500,6 +1502,8 @@ was supposed to carry security headers was not in version control at all.
 above: prefetch requests are skipped inside the handler (no nonce, no policy) rather than in the matcher, because the
 matcher also runs the sign-in guard and excluding prefetch there would change its behaviour; a sign-in redirect carries
 no policy (it has no document). `<Script nonce>` has no caller yet (none exists).
+
+**As built (8.5b), static headers.** `src/core/lib/security/headers.ts` `securityHeaders({ isProduction })` is the one list; `security-headers.test.ts` pins every value and HSTS-in-production-only. `next.config.ts` must call it from `async headers()` (`source: "/:path*"`) with `poweredByHeader: false`: pending, TECH_DEBT DB-93.
 
 **Rules — static headers** (in `next.config.ts` `headers()`, so they apply whichever layer serves the
 request): HSTS (production only), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` (aligned

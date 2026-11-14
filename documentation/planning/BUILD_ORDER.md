@@ -994,7 +994,7 @@ page fails lint.
 *Split 2026-11-06.* **8.5 (this task):** the per-request nonce CSP in `src/proxy.ts` (Report-Only by
 default, `CSP_MODE` read at runtime), the pure CSP builder, runtime `platform.brand` as OKLCH numbers
 with a stdlib contrast solver that refuses a failing colour with the measured ratio and a passing
-suggestion (4.5:1 text-on-fill, 3:1 fill-vs-card). **8.5b ⬜:** the static security headers in
+suggestion (4.5:1 text-on-fill, 3:1 fill-vs-card). **8.5b ◐ (static headers wired in `next.config.ts`, `/fe/revalidate`, TitleSync and host classification built; the backend revalidate caller, logos/favicon and per-tenant host identity deferred: TECH_DEBT DB-90 to DB-92):** the static security headers in
 `next.config.ts` (HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP), the
 `/fe/revalidate` route and its shared secret, logos/favicon/TitleSync, host-matched identity.
 Per-request nonce CSP, Report-Only first with enforcement flipped by a runtime variable; runtime brand identity

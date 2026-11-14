@@ -19,13 +19,15 @@ export type Identity = {
   brand: unknown;
 };
 
+/** The cache tag POST /fe/revalidate/ expires after a brand or identity save (§ 17). */
+const IDENTITY_TAG = "identity";
 const REVALIDATE_SECONDS = 60;
 
 /** Never throws: with the API unreachable, a page still renders, under the shipped defaults. */
 export async function getIdentity(): Promise<Identity> {
   try {
     return await api<Identity>("/api/public/config/", {
-      next: { revalidate: REVALIDATE_SECONDS },
+      next: { revalidate: REVALIDATE_SECONDS, tags: [IDENTITY_TAG] },
     });
   } catch {
     return {

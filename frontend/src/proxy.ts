@@ -89,6 +89,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Pages only: not the API (proxied to Django), not build assets, not files with an extension.
-  matcher: ["/((?!api/|_next/static|_next/image|favicon\\.ico|.*\\.[A-Za-z0-9]+$).*)"],
+  // Pages only: not the API (proxied to Django), not /fe/ (server-to-server route handlers, each
+  // authenticating itself: they must never be redirected to sign-in), not build assets, not files with an extension.
+  matcher: ["/((?!api/|fe/|_next/static|_next/image|favicon\\.ico|.*\\.[A-Za-z0-9]+$).*)"],
 };
