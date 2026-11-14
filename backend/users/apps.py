@@ -25,6 +25,10 @@ class UsersConfig(AppConfig):
                 model="users.MfaDevice", field="totp_secret_ciphertext", purpose="mfa_totp"
             )
         )
+        from .notifications import PURPOSES as NOTIFICATION_PURPOSES
+
+        for notification_purpose in NOTIFICATION_PURPOSES:
+            registry.notification_purposes.register(notification_purpose)
         from .events import EVENTS
 
         for event in EVENTS:

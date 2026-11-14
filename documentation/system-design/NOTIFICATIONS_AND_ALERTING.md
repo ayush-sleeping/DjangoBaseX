@@ -925,6 +925,42 @@ not an error: a product may use a different mechanism, but it should decide that
 
 ---
 
+## As built — BUILD_ORDER 7.7
+
+Part A is built except what is listed under *Deferred*. Code: `backend/core/notifications/`
+(`api.notify`, `engine`, `channels`, `inapp`, `service`, `registration`), `backend/core/mail/render.py`,
+`backend/core/api/notifications.py`. Where the code differs from the text below, the code is current.
+
+- **Registries.** `registry.notification_purposes` (field `mandatory` is the spec's mandatory flag; `carries_token`
+  implies `mandatory`) and `registry.notification_channels` (`email`, `in_app`). `dbx.notify.E010` is built; E001
+  (a purpose whose `recipients`/`preview` path does not import) is covered by
+  `test_every_purpose_preview_renders_for_every_default_channel` but is not yet a system check.
+- **Flow.** `notify()` registers `on_commit` and writes one `notifications.dispatch` outbox row (at-least-once,
+  idempotent fan-out); each recipient x channel becomes a `core_notification_delivery` row and a
+  `notifications.deliver` outbox row (at-most-once). A row is marked `unknown` before the send.
+- **Token-bearing purposes** (`users.password_reset`, `users.invitation`, `users.account_setup`) skip the outbox:
+  they run the same gates and are delivered in the committing process, in memory, so a single-use link is never
+  written to a table. They are recorded in the delivery log without the token.
+- **Gate order.** 1, 3, 4, 5, 6, 7, 8, 11, then 9 last (a skip never consumes a dedupe key). Not built: gate 2
+  (module toggle) and gate 10 (budgets). Settings: `notifications.delivery.enabled`,
+  `notifications.delivery.test_recipient` (the spec's per-purpose `test_routing` keys are rows in
+  `core_notification_purpose_state`, because the registry's keys are static).
+- **Test routing** redirects email only; an `in_app` message of a test-routed purpose is held (`test_routing`).
+- **Recipients.** `recipients=` takes users or ids. A purpose's own resolver may also return an address derived from
+  its subject (the invitee of an invitation); a caller never can.
+- **API.** `/api/notifications/` (list, summary, read, read-all, resolve), `/api/me/notification-preferences/`,
+  `/api/notifications/{routes,matrix,purposes,deliveries}/`, route and purpose `test/`. Own-notification endpoints
+  need a signed-in user and scope to them (another user's row is a 404); admin ones need
+  `core.notifications.view` / `.manage`.
+- **`frontend_url()`** is `core.mail.render.frontend_url` (`core/urls.py` is the URLconf).
+- **Owner decisions (2026-11-14).** Bell: polling. Editable templates (§ 12): deferred (needs a sandboxed engine:
+  a future ADR). Chat transport (§ 13): deferred. Part B (7.8): not started.
+- **Deferred** (`TECH_DEBT` DB-85 to DB-89): the bell and settings screens, digests, the webhook channel, the
+  module toggle and budgets, `List-Unsubscribe`, the suppression list, resolving an `unknown` delivery from the
+  findings UI.
+
+---
+
 ## 23. ⚠️ Conflicts with existing docs
 
 | File § | What it says | Fix |

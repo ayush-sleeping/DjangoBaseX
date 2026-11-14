@@ -1814,6 +1814,144 @@ class InboundWebhookRegistry(_Catalog):
         return tuple(sorted(self._providers))
 
 
+# --- Notifications (BUILD_ORDER 7.7) -------------------------------------------------------------
+
+NOTIFICATION_AUDIENCES = ("user", "broadcast")
+NOTIFICATION_LEVELS = ("info", "success", "warning", "error", "action")
+
+
+@dataclass(frozen=True)
+class NotificationPurpose:
+    """
+    One kind of message the product sends (NOTIFICATIONS_AND_ALERTING.md § 1), declared by the
+    module that owns it. Callers name the purpose, never a destination: where a broadcast purpose
+    goes is a route row an administrator edits. `recipients` is a dotted path to
+    `def recipients(object_ref: str, context: dict) -> list[int]` (user ids), `preview` one to
+    `def preview() -> dict` (a sample context), `template` the email template base name
+    (`<app>/email/<name>`, three files). `mandatory` purposes (security notices) ignore the matrix
+    and per-user opt-outs; `carries_token` ones hold a single-use link and are never test-routed in
+    production, nor written to a table.
+    """
+
+    code: str
+    label: str
+    owner_module: str
+    description: str
+    audience: tuple[str, ...] = ("user",)
+    default_channels: tuple[str, ...] = ("in_app",)
+    recipients: str = ""
+    preview: str = ""
+    template: str = ""
+    mandatory: bool = False
+    carries_token: bool = False
+    rollout: bool = False  # ships with test routing ON until an admin flips it off
+    level: str = "info"
+
+
+@dataclass(frozen=True)
+class NotificationChannel:
+    """A transport (§ 2). `adapter` is a dotted path to an object with `available() -> bool` and
+    `send(message) -> DeliveryResult`; it never raises into its caller."""
+
+    key: str
+    label: str
+    adapter: str
+
+
+class NotificationPurposeRegistry(_Catalog):
+    def __init__(self) -> None:
+        super().__init__()
+        self._purposes: dict[str, NotificationPurpose] = {}
+
+    def register(self, purpose: NotificationPurpose) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(purpose, NotificationPurpose):
+                raise RegistryError(f"expected a NotificationPurpose, got {type(purpose).__name__}")
+            name = f"notification purpose {purpose.code!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(purpose.code, str) or not JOB_NAME_PATTERN.match(purpose.code):
+                raise RegistryError(f"{name}: not <module>.<name> (lowercase, digits, _)")
+            for field_name in ("label", "owner_module", "description"):
+                value = getattr(purpose, field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            if not purpose.audience or any(
+                a not in NOTIFICATION_AUDIENCES for a in purpose.audience
+            ):
+                raise RegistryError(f"{name}: audience is a subset of {NOTIFICATION_AUDIENCES}")
+            if purpose.level not in NOTIFICATION_LEVELS:
+                raise RegistryError(f"{name}: level is one of {NOTIFICATION_LEVELS}")
+            for field_name in ("recipients", "preview"):
+                value = getattr(purpose, field_name)
+                if value and (not isinstance(value, str) or not _DOTTED_PATTERN.match(value)):
+                    raise RegistryError(f"{name}: {field_name} must be a dotted path or empty")
+            if not isinstance(purpose.default_channels, tuple) or not purpose.default_channels:
+                raise RegistryError(f"{name}: default_channels is a non-empty tuple")
+            for field_name in ("mandatory", "carries_token", "rollout"):
+                if not isinstance(getattr(purpose, field_name), bool):
+                    raise RegistryError(f"{name}: {field_name} is True or False")
+            if purpose.carries_token and not purpose.mandatory:
+                raise RegistryError(f"{name}: a token-bearing purpose is a security notice")
+            if purpose.code in self._purposes:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[purpose.code]}; "
+                    f"registered again by {owner}"
+                )
+            self._purposes[purpose.code] = purpose
+            self._owner_of[purpose.code] = owner
+
+    def __contains__(self, code: str) -> bool:
+        self.seal()
+        return code in self._purposes
+
+    def get(self, code: str) -> NotificationPurpose:
+        self.seal()
+        return self._purposes[code]
+
+    def purposes(self) -> tuple[NotificationPurpose, ...]:
+        self.seal()
+        return tuple(self._purposes[k] for k in sorted(self._purposes))
+
+
+class NotificationChannelRegistry(_Catalog):
+    def __init__(self) -> None:
+        super().__init__()
+        self._channels: dict[str, NotificationChannel] = {}
+
+    def register(self, channel: NotificationChannel) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(channel, NotificationChannel):
+                raise RegistryError(f"expected a NotificationChannel, got {type(channel).__name__}")
+            name = f"notification channel {channel.key!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(channel.key, str) or not _KEY_PATTERN.match(channel.key):
+                raise RegistryError(f"{name}: key is lowercase letters, digits, _ and -")
+            _require_label(name, channel.label)
+            if not isinstance(channel.adapter, str) or not _DOTTED_PATTERN.match(channel.adapter):
+                raise RegistryError(f"{name}: adapter must be a dotted path")
+            if channel.key in self._channels:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[channel.key]}; "
+                    f"registered again by {owner}"
+                )
+            self._channels[channel.key] = channel
+            self._owner_of[channel.key] = owner
+
+    def __contains__(self, key: str) -> bool:
+        self.seal()
+        return key in self._channels
+
+    def get(self, key: str) -> NotificationChannel:
+        self.seal()
+        return self._channels[key]
+
+    def channels(self) -> tuple[NotificationChannel, ...]:
+        self.seal()
+        return tuple(self._channels[k] for k in sorted(self._channels))
+
+
 # --- The whole seam -----------------------------------------------------------------------------
 
 
@@ -1843,6 +1981,8 @@ class Registry:
         self.http_purposes = HttpPurposeRegistry()
         self.events = EventRegistry()
         self.inbound_webhooks = InboundWebhookRegistry()
+        self.notification_purposes = NotificationPurposeRegistry()
+        self.notification_channels = NotificationChannelRegistry()
         # A reconciler registers its job and its give-up kind into THIS registry's catalogs.
         self.reconcilers = ReconcilerRegistry(self.jobs, self.finding_kinds)
 

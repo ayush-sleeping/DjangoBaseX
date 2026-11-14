@@ -22,6 +22,11 @@ ALLOWED = {
     "report a run that never finishes",
     ("core.WebhookDelivery", "pending"): "its outbox row is the obligation: the drainer sends it, "
     "the lease sweep recovers it, and the outbox doctor reports it stuck (webhooks.deliver)",
+    ("core.NotificationDelivery", "pending"): "its outbox row is the obligation "
+    "(notifications.deliver): the drainer sends it and the lease sweep recovers it; a stale lease "
+    "makes the row `unknown`, never a resend",
+    ("core.Notification", "warning"): "a severity level that happens to end in -ing, not a "
+    "waiting state: nothing is pending on it",
     ("core.OutboxMessage", "pending"): "the drainer itself is what moves it; the outbox doctor "
     "reports a due message waiting too long (outbox.stuck)",
 }

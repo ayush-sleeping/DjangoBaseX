@@ -4,6 +4,11 @@ from .api.audit import ActivityLogViewSet
 from .api.crypto import CryptoStatusView
 from .api.flags import FlagDetailView, FlagListView
 from .api.lookups import LookupListView, LookupWriteView
+from .api.notifications import (
+    NotificationAdminViewSet,
+    NotificationPreferenceViewSet,
+    NotificationViewSet,
+)
 from .api.settings import SettingDetailView, SettingListView, SettingResetView
 from .api.webhooks import WebhookEndpointViewSet
 from .views import (
@@ -46,6 +51,68 @@ urlpatterns = [
         "core/lookups/<str:set_key>/values/<slug:key>/",
         LookupWriteView.as_view(),
         name="lookup-value",
+    ),
+    # NOTIFICATIONS_AND_ALERTING.md Part A: the bell (own rows), preferences, routes, the matrix.
+    path("notifications/", NotificationViewSet.as_view({"get": "list"}), name="notifications"),
+    path(
+        "notifications/summary/",
+        NotificationViewSet.as_view({"get": "summary"}),
+        name="notifications-summary",
+    ),
+    path(
+        "notifications/read-all/",
+        NotificationViewSet.as_view({"post": "read_all"}),
+        name="notifications-read-all",
+    ),
+    path(
+        "notifications/routes/",
+        NotificationAdminViewSet.as_view({"get": "routes", "post": "route_create"}),
+        name="notification-routes",
+    ),
+    path(
+        "notifications/routes/<int:pk>/",
+        NotificationAdminViewSet.as_view({"patch": "route_update", "delete": "route_delete"}),
+        name="notification-route",
+    ),
+    path(
+        "notifications/routes/<int:pk>/test/",
+        NotificationAdminViewSet.as_view({"post": "route_test"}),
+        name="notification-route-test",
+    ),
+    path(
+        "notifications/matrix/",
+        NotificationAdminViewSet.as_view({"get": "matrix", "patch": "matrix_update"}),
+        name="notification-matrix",
+    ),
+    path(
+        "notifications/purposes/",
+        NotificationAdminViewSet.as_view({"get": "purposes"}),
+        name="notification-purposes",
+    ),
+    path(
+        "notifications/purposes/<str:code>/test/",
+        NotificationAdminViewSet.as_view({"post": "purpose_test"}),
+        name="notification-purpose-test",
+    ),
+    path(
+        "notifications/deliveries/",
+        NotificationAdminViewSet.as_view({"get": "deliveries"}),
+        name="notification-deliveries",
+    ),
+    path(
+        "notifications/<uuid:public_id>/read/",
+        NotificationViewSet.as_view({"post": "mark_read"}),
+        name="notification-read",
+    ),
+    path(
+        "notifications/<uuid:public_id>/resolve/",
+        NotificationViewSet.as_view({"post": "resolve_item"}),
+        name="notification-resolve",
+    ),
+    path(
+        "me/notification-preferences/",
+        NotificationPreferenceViewSet.as_view({"get": "retrieve", "patch": "partial_update"}),
+        name="notification-preferences",
     ),
     # § 16: platform-owned webhook endpoints. The secret is in the create and rotate responses only.
     path(

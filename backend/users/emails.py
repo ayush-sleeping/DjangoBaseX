@@ -1,55 +1,49 @@
-"""Outbound auth email (AUTH_BLUEPRINT Ch. 18). Every link is built from FRONTEND_BASE_URL — never
-from the request's Host header, which would let an attacker point a genuine reset email at their
-own server."""
-
-from urllib.parse import urlencode
+"""Outbound auth email (AUTH_BLUEPRINT Ch. 18), as notification purposes (BUILD_ORDER 7.7). The
+calls name a purpose and the subject; the address comes from the user or the invitation, the link
+from FRONTEND_BASE_URL (core.mail.render.frontend_url) and never from the request's Host header.
+Each purpose is mandatory and token-bearing: delivered in this process after the commit, the
+single-use token held in memory only, never written to the outbox or the delivery log."""
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
+
+from core.notifications import notify
 
 
 def send_password_reset(user, raw_token: str) -> None:
-    _send(
-        to=user.email,
-        subject="Reset your password",
-        template="users/email/password_reset",
-        path="reset-password",
-        raw_token=raw_token,
-        context={"user": user, "minutes": settings.PASSWORD_RESET_TOKEN_LIFETIME // 60},
+    notify(
+        "users.password_reset",
+        obj=user,
+        recipients=[user.pk],
+        context={
+            "link_path": "reset-password",
+            "token": raw_token,
+            "minutes": settings.PASSWORD_RESET_TOKEN_LIFETIME // 60,
+        },
     )
 
 
 def send_invitation(invitation, raw_token: str) -> None:
-    _send(
-        to=invitation.email,
-        subject="You have been invited",
-        template="users/email/invitation",
-        path="accept-invitation",
-        raw_token=raw_token,
+    notify(
+        "users.invitation",
+        obj=invitation,
         context={
-            "invitation": invitation,
+            "link_path": "accept-invitation",
+            "token": raw_token,
+            "invitation_email": invitation.email,
+            "invited_by_email": invitation.invited_by.email if invitation.invited_by else "",
             "days": settings.INVITATION_LIFETIME // 86_400,
         },
     )
 
 
 def send_account_setup(user, raw_token: str) -> None:
-    _send(
-        to=user.email,
-        subject="Set your password",
-        template="users/email/account_setup",
-        path="reset-password",
-        raw_token=raw_token,
-        context={"user": user, "days": settings.PASSWORD_SETUP_TOKEN_LIFETIME // 86_400},
+    notify(
+        "users.account_setup",
+        obj=user,
+        recipients=[user.pk],
+        context={
+            "link_path": "reset-password",
+            "token": raw_token,
+            "days": settings.PASSWORD_SETUP_TOKEN_LIFETIME // 86_400,
+        },
     )
-
-
-def _send(*, to, subject, template, path, raw_token, context) -> None:
-    base = settings.FRONTEND_BASE_URL.rstrip("/")
-    context = {**context, "link": f"{base}/{path}?{urlencode({'token': raw_token})}"}
-    message = EmailMultiAlternatives(
-        subject=subject, body=render_to_string(f"{template}.txt", context), to=[to]
-    )
-    message.attach_alternative(render_to_string(f"{template}.html", context), "text/html")
-    message.send()

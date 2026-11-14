@@ -89,3 +89,20 @@ WEBHOOKS_GROUP = PermissionGroupSpec(
         ),
     ),
 )
+
+
+NOTIFICATIONS_GROUP = PermissionGroupSpec(
+    code="notifications",
+    label="Notifications",
+    module="core",
+    order=97,
+    permissions=(
+        PermissionSpec(
+            "core.notifications.view", "View notification routes, the matrix and the delivery log"
+        ),
+        PermissionSpec(
+            "core.notifications.manage",
+            "Edit notification routes and the event x channel matrix; send a test",
+        ),
+    ),
+)

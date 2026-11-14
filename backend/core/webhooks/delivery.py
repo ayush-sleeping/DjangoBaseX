@@ -24,6 +24,7 @@ from django.utils import timezone
 from core import http as core_http
 from core.jobs.retry import is_retryable_status
 from core.models import WebhookDelivery, WebhookEndpoint
+from core.notifications import notify
 from core.observability.scrub import default_rules
 from core.outbox import Delivery, Outcome
 from core.providers.errors import ProviderError, from_exception, parse_retry_after
@@ -137,9 +138,21 @@ def _count_failure(endpoint_id: int, now) -> None:
     WebhookEndpoint.objects.filter(pk=endpoint_id).update(
         consecutive_failures=F("consecutive_failures") + 1
     )
-    WebhookEndpoint.objects.filter(
+    tripped = WebhookEndpoint.objects.filter(
         pk=endpoint_id, consecutive_failures__gte=threshold, disabled_at__isnull=True
     ).update(disabled_at=now)
+    if tripped:
+        endpoint = WebhookEndpoint.objects.get(pk=endpoint_id)
+        notify(
+            "core.webhook_endpoint_disabled",
+            obj=endpoint,
+            context={
+                "title": f"Webhook endpoint disabled: {endpoint.name}"[:200],
+                "body": f"{endpoint.consecutive_failures} deliveries failed in a row.",
+                "endpoint_name": endpoint.name,
+                "failures": endpoint.consecutive_failures,
+            },
+        )
 
 
 def deliver(message: Delivery) -> Outcome:

@@ -1,4 +1,4 @@
-You have been invited to sign in as {{ invitation.email }}{% if invitation.invited_by %}, by {{ invitation.invited_by.email }}{% endif %}.
+You have been invited to sign in as {{ invitation_email }}{% if invited_by_email %}, by {{ invited_by_email }}{% endif %}.
 
 To accept, choose your password here within {{ days }} days. The link works once:
 

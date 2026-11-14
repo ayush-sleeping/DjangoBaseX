@@ -12,7 +12,7 @@ class CoreConfig(AppConfig):
         from . import checks  # noqa: F401 — registers the dbx.* system checks
         from .dataplane import register_core_checks
         from .observability.health import HEALTH_GROUP
-        from .permissions import AUDIT_GROUP, SETTINGS_GROUP, WEBHOOKS_GROUP
+        from .permissions import AUDIT_GROUP, NOTIFICATIONS_GROUP, SETTINGS_GROUP, WEBHOOKS_GROUP
         from .registry import registry
         from .routes import CORE_PUBLIC_ROUTES
 
@@ -22,6 +22,7 @@ class CoreConfig(AppConfig):
         registry.permissions.register(AUDIT_GROUP)
         registry.permissions.register(HEALTH_GROUP)
         registry.permissions.register(WEBHOOKS_GROUP)
+        registry.permissions.register(NOTIFICATIONS_GROUP)
         register_core_checks()
         from .audit_actions import register_core_actions
         from .formatting import register_locale_settings
@@ -41,6 +42,9 @@ class CoreConfig(AppConfig):
         from .webhooks.registration import register as register_webhooks
 
         register_webhooks(registry)
+        from .notifications.registration import register as register_notifications
+
+        register_notifications(registry)
         from .crypto import self_test
 
         # A process that cannot encrypt must refuse to start, not store plaintext (§ 25). An empty
@@ -48,6 +52,9 @@ class CoreConfig(AppConfig):
         self_test()
         post_migrate.connect(_report_settings, sender=self, dispatch_uid="core.settings_report")
         post_migrate.connect(_seed_lookups, sender=self, dispatch_uid="core.seed_lookups")
+        post_migrate.connect(
+            _sync_notifications, sender=self, dispatch_uid="core.sync_notifications"
+        )
         post_migrate.connect(_sync_schedules, sender=self, dispatch_uid="core.sync_schedules")
 
 
@@ -141,3 +148,17 @@ def _sync_schedules(sender, **kwargs):
     for action in ("created", "updated", "deleted"):
         for name in getattr(report, action):
             log.info(f"core.job.schedule_{action}", extra={"job": name})
+
+
+def _sync_notifications(sender, **kwargs):
+    """sync_notifications after every migrate (NOTIFICATIONS_AND_ALERTING.md § 4): seeds missing
+    matrix cells from code and never overwrites an admin's choice."""
+    from django.db import DEFAULT_DB_ALIAS, connections
+
+    tables = set(connections[kwargs.get("using", DEFAULT_DB_ALIAS)].introspection.table_names())
+    if not {"core_notification_setting", "core_notification_purpose_state"} <= tables:
+        return  # `migrate core 0001` stops short of the notification tables
+    from .notifications.engine import sync_matrix
+
+    report = sync_matrix()
+    logging.getLogger("core.notifications").info("core.notifications.synced", extra=report)

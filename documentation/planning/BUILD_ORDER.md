@@ -884,12 +884,15 @@ log with redeliver and send-test, emitted through the outbox; inbound verificati
 **Done when:** a test fails if any catalogue event has no emitting call site, and fails — not skips — if it finds
 no events at all.
 
-### 7.7 — Notifications ⬜
+### 7.7 — Notifications ✅
 Purposes registry with admin routing, channel adapters, the event × channel matrix with per-user preferences,
 the in-app store (per-user read, shared resolve, digest upsert) and email templates.
 
 **Done when:** a caller can notify with no destination in code; a failing channel never fails the save; "send
 test" works for every route.
+
+*Built 2026-11-14 (see `DAILY_CHANGES.md`). Deferred, each a TECH_DEBT row: the bell UI, digests (§ 10), the
+webhook channel, the per-module master toggle and budgets, editable templates (§ 12).*
 
 ### 7.8 — Ops alerting ⬜
 One dispatcher with a DB ledger, incidents announced once and recovered once, quiet hours with a single release

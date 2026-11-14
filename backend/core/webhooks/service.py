@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 from django.db import transaction
 from django.utils import timezone
 
-from core import audit, crypto, settings_service
+from core import audit, crypto, notifications, settings_service
 from core.env import outbound_guard_active
 from core.http import vetting
 from core.models import WebhookDelivery, WebhookEndpoint, WebhookSubscription
@@ -211,6 +211,8 @@ def update_endpoint(*, actor, endpoint, **fields):
     if fields.get("is_active") is True and (not endpoint.is_active or endpoint.disabled_at):
         endpoint.disabled_at = None
         endpoint.consecutive_failures = 0
+        # Someone re-enabled it: the "endpoint disabled" prompt is handled, for everyone told.
+        notifications.resolve(notifications.object_ref_of(endpoint), by=actor)
     if "is_active" in fields:
         endpoint.is_active = fields["is_active"]
     endpoint.updated_by = actor

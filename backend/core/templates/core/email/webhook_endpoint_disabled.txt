@@ -1,0 +1,3 @@
+The webhook endpoint "{{ endpoint_name }}" failed {{ failures }} deliveries in a row and was switched off.
+
+Re-enable it from the webhooks page once the receiver is healthy again.

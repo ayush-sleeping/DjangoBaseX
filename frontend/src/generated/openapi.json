@@ -1310,6 +1310,383 @@
         ]
       }
     },
+    "/api/me/notification-preferences/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "me_notification_preferences_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      },
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "me_notification_preferences_partial_update",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/notifications/": {
+      "get": {
+        "description": "The bell. Every action is scoped to request.user in the queryset.",
+        "operationId": "notifications_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/deliveries/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_deliveries_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/matrix/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_matrix_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_matrix_partial_update",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/purposes/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_purposes_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/purposes/{code}/test/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_purposes_test_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/read-all/": {
+      "post": {
+        "description": "The bell. Every action is scoped to request.user in the queryset.",
+        "operationId": "notifications_read_all_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/routes/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_routes_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_routes_create",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/routes/{id}/": {
+      "delete": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_routes_destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_routes_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/routes/{id}/test/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "notifications_routes_test_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/summary/": {
+      "get": {
+        "description": "The bell. Every action is scoped to request.user in the queryset.",
+        "operationId": "notifications_summary_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/{public_id}/read/": {
+      "post": {
+        "description": "The bell. Every action is scoped to request.user in the queryset.",
+        "operationId": "notifications_read_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/notifications/{public_id}/resolve/": {
+      "post": {
+        "description": "The bell. Every action is scoped to request.user in the queryset.",
+        "operationId": "notifications_resolve_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/public/config/": {
       "get": {
         "description": "GET /api/public/config/: what any visitor's page needs before sign-in (CONFIGURATION § 7).\n\nThe display identity, the platform's locale and timezone, and its brand colours (§ 17: numbers\nper theme, derived and AA-checked here; null = the stylesheet's own). Boot identity (cookie\nnames, cache prefix) never leaves the server.\nThe frontend reads this in its root layout, so a rename is a restart, not a rebuild.",

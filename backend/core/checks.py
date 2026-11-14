@@ -440,6 +440,31 @@ def check_outbound_guard(app_configs, **kwargs):
 
 
 @register()
+def check_email_backend_in_production(app_configs, **kwargs):
+    """dbx.notify.E010 (NOTIFICATIONS_AND_ALERTING.md § 11): production refuses the console,
+    locmem, dummy and file backends. A silently discarded reset email is diagnosed as "the reset
+    endpoint is broken". The INNER backend counts: the guard is not installed in production."""
+    from .env import outbound_guard_active
+    from .mail.policy import GUARDED_BACKEND, is_log_only
+
+    if outbound_guard_active(settings.APP_ENV):
+        return []
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    if backend == GUARDED_BACKEND:
+        backend = getattr(settings, "EMAIL_BACKEND_INNER", "") or ""
+    if not is_log_only(backend):
+        return []
+    return [
+        Error(
+            f"APP_ENV is production but the email backend is {backend or 'unset'}: every email "
+            "(password reset, invitation) would be discarded.",
+            hint="Set EMAIL_BACKEND to a real SMTP or provider backend.",
+            id="dbx.notify.E010",
+        )
+    ]
+
+
+@register()
 def check_celery_config(app_configs, **kwargs):
     """dbx.jobs.E010–E015: the § 3 settings that fail silently when wrong."""
     from .env import is_production_like, normalise

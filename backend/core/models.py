@@ -8,6 +8,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class SettingQuerySet(models.QuerySet):
@@ -613,3 +614,212 @@ class InboundWebhookEvent(models.Model):
 
     def __str__(self):
         return f"{self.provider} {self.status} #{self.pk}"
+
+
+# --- Notifications (BUILD_ORDER 7.7; NOTIFICATIONS_AND_ALERTING.md Part A) ------------------------
+
+
+class NotificationRoute(models.Model):
+    """Where a BROADCAST purpose goes on a channel: admin-editable data, never a call-site literal
+    (§ 1). `target` is validated per channel by core.notifications.service (email: addresses)."""
+
+    purpose_code = models.CharField(max_length=100, db_index=True)
+    channel = models.CharField(max_length=32)
+    target = models.JSONField(default=dict)
+    target_hash = models.CharField(max_length=64, editable=False)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_notification_route"
+        ordering = ["purpose_code", "channel", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["purpose_code", "channel", "target_hash"], name="core_notif_route_unique"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.purpose_code} -> {self.channel} #{self.pk}"
+
+
+class NotificationSetting(models.Model):
+    """The event x channel matrix cell (§ 4). Seeded from code, never overwritten by a sync."""
+
+    purpose_code = models.CharField(max_length=100)
+    channel = models.CharField(max_length=32)
+    enabled = models.BooleanField(default=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_notification_setting"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["purpose_code", "channel"], name="core_notif_setting_unique"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.purpose_code}/{self.channel} {'on' if self.enabled else 'off'}"
+
+
+class NotificationPurposeState(models.Model):
+    """Per-purpose test routing (§ 6): seeded ON for `rollout` purposes, flipped off by an admin."""
+
+    purpose_code = models.CharField(max_length=100, unique=True)
+    test_routing = models.BooleanField(default=False)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_notification_purpose_state"
+
+    def __str__(self):
+        return f"{self.purpose_code} test_routing={self.test_routing}"
+
+
+class NotificationPreference(models.Model):
+    """A user's choice (user set) or the system default for everyone who has not chosen (user
+    null), per purpose x channel (§ 5)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name="+"
+    )
+    purpose_code = models.CharField(max_length=100)
+    channel = models.CharField(max_length=32)
+    enabled = models.BooleanField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_notification_preference"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "purpose_code", "channel"],
+                condition=models.Q(user__isnull=False),
+                name="core_notif_pref_user_unique",
+            ),
+            # A plain unique over a nullable column would allow unlimited system rows.
+            models.UniqueConstraint(
+                fields=["purpose_code", "channel"],
+                condition=models.Q(user__isnull=True),
+                name="core_notif_pref_system_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.purpose_code}/{self.channel} user={self.user_id}"
+
+
+class NotificationDelivery(models.Model):
+    """The delivery log (§ 7): one row per purpose x channel x recipient, including every skip
+    with its reason. `pending` is watched by its outbox row (notifications.deliver). Never holds a
+    token or a provider body: an error is a code plus a scrubbed, truncated message."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending"
+        SENT = "sent"
+        SKIPPED = "skipped"
+        FAILED = "failed"
+        UNKNOWN = "unknown"
+
+    purpose_code = models.CharField(max_length=100)
+    channel = models.CharField(max_length=32)
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    route = models.ForeignKey(
+        NotificationRoute, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    target = models.JSONField(default=dict, blank=True)  # a broadcast address; empty for a user
+    target_hash = models.CharField(max_length=64)
+    dedupe_key = models.CharField(max_length=255, blank=True, default="")
+    object_ref = models.CharField(max_length=200, blank=True, default="")
+    context = models.JSONField(default=dict, blank=True)  # scalars; never for a token purpose
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    skip_reason = models.CharField(max_length=64, blank=True, default="")
+    provider_ref = models.CharField(max_length=200, blank=True, default="")
+    error_code = models.CharField(max_length=100, blank=True, default="")
+    error_message = models.CharField(max_length=1000, blank=True, default="")
+    attempts = models.PositiveSmallIntegerField(default=0)
+    is_test = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "core_notification_delivery"
+        ordering = ["-id"]
+        constraints = [
+            # Reminder dedupe lives in the delivery table and fails closed (§ 7).
+            models.UniqueConstraint(
+                fields=["purpose_code", "channel", "target_hash", "dedupe_key"],
+                condition=~models.Q(dedupe_key=""),
+                name="core_notif_dlv_dedupe",
+            )
+        ]
+        indexes = [models.Index(fields=["purpose_code", "status"], name="core_notif_dlv_purpose")]
+
+    def __str__(self):
+        return f"{self.purpose_code}/{self.channel} {self.status} #{self.pk}"
+
+
+class Notification(models.Model):
+    """The in_app store (§ 8): per-user read state, shared resolved state, one open row per
+    recipient x purpose x object_ref."""
+
+    class Level(models.TextChoices):
+        INFO = "info"
+        SUCCESS = "success"
+        WARNING = "warning"
+        ERROR = "error"
+        ACTION = "action"
+
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications"
+    )
+    purpose_code = models.CharField(max_length=100)
+    source_module = models.CharField(max_length=64, blank=True, default="")
+    level = models.CharField(max_length=16, choices=Level.choices, default=Level.INFO)
+    title = models.CharField(max_length=200)
+    body = models.TextField(blank=True, default="")
+    url = models.CharField(max_length=500, blank=True, default="")
+    object_ref = models.CharField(max_length=200, blank=True, default="", db_index=True)
+    count = models.PositiveIntegerField(default=1)
+    read_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    resolved_note = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "core_notification"
+        ordering = ["-updated_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipient", "purpose_code", "object_ref"],
+                condition=models.Q(resolved_at__isnull=True) & ~models.Q(object_ref=""),
+                name="core_notif_one_open_row",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["recipient", "read_at"], name="core_notif_unread"),
+            models.Index(fields=["recipient", "-updated_at"], name="core_notif_recent"),
+        ]
+
+    def __str__(self):
+        return f"{self.purpose_code} for user #{self.recipient_id}"
