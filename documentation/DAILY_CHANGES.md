@@ -26,6 +26,12 @@ Newest first.
 
 ## 2026-11-14
 
+### Fix: the browser could not call the API cross-origin (sign-in "Could not reach the server")
+**What:** `CORS_ALLOW_HEADERS` now allows `x-request-id` and `idempotency-key`; `CORS_EXPOSE_HEADERS` exposes `x-request-id`, `x-permissions-version`, `x-total-count`, `content-disposition`. New `backend/tests/test_cors_contract.py` reads the header names from `frontend/src/core/lib/api/client.ts`, so a header added there without allowing it fails CI.
+**Why:** the frontend client sets `X-Request-ID` on every call, which the preflight did not allow, so the browser dropped every API request from the frontend's origin. Found the first time the Docker dev stack was opened in a browser; frontend tests (same origin, MSW) and backend tests (no preflight) could not see it.
+**Files:** `backend/config/settings.py` (protected, owner-requested run), `backend/tests/test_cors_contract.py`, `documentation/system-design/TRAPS.md`, `documentation/DAILY_CHANGES.md`, `core.manifest.json`.
+**Verification:** the new tests failed first (`the preflight does not allow ['idempotency-key', 'x-request-id']`, `the browser would hide [...]`), then passed; the running stack's preflight now allows `x-request-id`. Full suite: see the session report.
+
 ### The core-manifest check joins the local gate
 **What:** `python3 scripts/core_doctor.py --verify` added to the `AGENTS.md` § 2 gate (owner-confirmed protected edit) and to the `/verify` procedure.
 **Why:** the 10.1 push failed the `core-guard` workflow because no local check read `core.manifest.json`; the gate and the CI workflow were green.

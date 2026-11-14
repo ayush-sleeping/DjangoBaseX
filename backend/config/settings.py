@@ -279,9 +279,17 @@ MEDIA_ROOT = BASE_DIR / "media"
 # reflects any origin, so every site can make authenticated calls (AUTH_BLUEPRINT § 17.2).
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = True
-# The cookie-auth CSRF header (§ 6.1) must pass preflight, or every unsafe request fails as a
-# "CORS error" that hides the auth problem behind it.
-CORS_ALLOW_HEADERS = [*default_headers, "x-csrf-token"]
+# Every header the frontend client sends must pass preflight, or the browser drops the request and
+# the page says "Could not reach the server": the cookie-auth CSRF header (§ 6.1), the request id
+# and the idempotency key. Headers it reads must be exposed, or the browser hides them.
+# tests/test_cors_contract.py reads both lists from frontend/src/core/lib/api/client.ts.
+CORS_ALLOW_HEADERS = [*default_headers, "x-csrf-token", "x-request-id", "idempotency-key"]
+CORS_EXPOSE_HEADERS = [
+    "x-request-id",
+    "x-permissions-version",
+    "x-total-count",
+    "content-disposition",
+]
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 # Deployment contract (AUTH_BLUEPRINT Ch. 17–20)
