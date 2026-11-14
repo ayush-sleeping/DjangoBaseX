@@ -2,12 +2,15 @@
 
 **The core's entities, and the conventions every model follows.**
 
-> ⚠️ **Nothing here is built yet** — `backend/core/models.py` is empty and the only tables are
-> Django's own. This is the design to build against, and it is the **most expensive document in the
-> repository to get wrong**: a schema decision made by accident on the first migration is paid for by
-> every product ever copied from this core.
+> **Status:** Spec, partly built — checked 2026-11-14. Real models exist: `core/models.py` (`Setting`,
+> `FeatureFlag`, `LookupValue`, `ActivityLog`, `JobSchedule`, `JobRun`, `JobState`, `Finding`,
+> `OutboxMessage`), `users` (`User`, `UserSession`, `Invitation`, `MfaDevice`) and `rbac` (`Role`,
+> `Permission`, `PermissionGroup`, `UserRole`). The shared base models in § 2 are **🔜 planned, not built**.
+> This remains the **most expensive document in the repository to get wrong**: a schema decision made by
+> accident is paid for by every product ever copied from this core.
 >
-> **Five decisions below are marked 🚧. Do not write the first migration until they are ADRs.**
+> D1 and D3 are decided (ADR-0008, ADR-0011). **D2 and D4 are still marked 🚧 and have no ADR** — settle and
+> record them before relying on the defaults.
 
 ---
 
@@ -102,7 +105,10 @@ roadmap lists it, but applying it to every model is a storage decision, not a de
 
 ## 2. The base models
 
-Assuming the recommendations above, everything inherits from these. They live in `core/models/base.py`.
+> 🔜 **Planned — not built.** There is no `core/models/` package and none of these classes exist; existing
+> models declare their own `created_at`/`updated_at` fields. This is the design to adopt if and when it is.
+
+Assuming the recommendations above, everything would inherit from these, living in `core/models/base.py`.
 
 ```python
 class TimeStampedModel(models.Model):
@@ -152,8 +158,8 @@ class SoftDeletableModel(models.Model):
 | `UserRole` | User ↔ Role | user, role | Explicit table; a user may hold several |
 | `Setting` | Runtime configuration **(built, 5.3)** | key, scope_type, scope_id, value `{"v": …}`, is_locked | Overrides only; the type, label and default are declared in code (`CONFIGURATION.md` § 9) |
 | `ActivityLog` | Audit trail | actor, verb, target (generic FK), meta, ip, at | D5. Append-only — **never updated or deleted** |
-| `Invitation` | Onboarding | email, role, token, expires_at, accepted_at | Token is **hashed at rest**, like a password |
-| `Session` | Active logins | user, token_id, ip, user_agent, last_seen, revoked_at | Needed for "sign out everywhere" and immediate revocation |
+| `Invitation` (in `users`) | Onboarding | email, role, token, expires_at, accepted_at | Token is **hashed at rest**, like a password |
+| `UserSession` (in `users`) | Active logins | user, token_id, ip, user_agent, last_seen, revoked_at | Needed for "sign out everywhere" and immediate revocation |
 
 **Phase 2+, as needed:** `ApiConsumer` + `ApiCredential` (machine callers), `FeatureFlag`,
 `Webhook` + `WebhookDelivery`, `SearchableEntity`, `Notification`, `Attachment`.
@@ -208,14 +214,14 @@ without anyone noticing. Treat it as a review blocker.
 
 ---
 
-## 6. Before the first migration — checklist
+## 6. Before the first migration — checklist (historical; migrations now exist)
 
 - [x] D1 decided and an ADR written; `AUTH_USER_MODEL` set if custom — ADR-0008, 2026-10-11
 - [ ] D2 decided and recorded (even if the answer is "keep the default")
 - [x] D3 decided — no (ADR-0011, 2026-10-11); the `visible_to()` rule in § 5 is the documented reason
 - [ ] D4 decided; base models written if soft delete is in
-- [ ] D5 decided; stamp columns on the base model
-- [ ] `core/models/base.py` exists and the first real model inherits from it
+- [ ] D5 decided; stamp columns on the base model (an `ActivityLog` table exists in `core/models.py`; the stamp columns do not)
+- [ ] `core/models/base.py` exists and the first real model inherits from it (🔜 not built)
 - [ ] `makemigrations` output **read**, not just run
 
 > The first migration is the one nobody can undo cheaply. Spend the hour.

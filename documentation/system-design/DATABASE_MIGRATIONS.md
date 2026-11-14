@@ -1,5 +1,7 @@
 # Database & Migrations
 
+> **Status:** Spec, built — checked 2026-11-14.
+
 **Migrations are the one part of a Django project where a mistake is expensive and delayed.** A bad
 model change passes every local check and fails on someone else's machine, or on deploy, with data
 already in the table.
@@ -120,5 +122,7 @@ uv run python manage.py migrate
 uv run python manage.py createsuperuser
 ```
 
-🔜 There are no seeders or fixtures yet. When there are, this becomes a documented, repeatable
-command rather than three ad-hoc steps.
+Reference data is seeded by commands, not fixtures: `seed_permissions` (permissions and system roles,
+`backend/rbac/seeding.py`), `sync_settings` and `bootstrap_admin` (`backend/core/management/commands/`,
+`backend/rbac/management/commands/`). Prefer them to `createsuperuser` where the project's runbook says so.
+There are no sample-data fixtures.

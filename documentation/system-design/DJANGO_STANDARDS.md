@@ -1,5 +1,7 @@
 # Django / DRF Standards
 
+> **Status:** Spec, built — checked 2026-11-14.
+
 **Conventions you must follow when writing backend code.** This is a *how to write it* doc, not a
 *what exists* doc — for the latter see [`../core/ARCHITECTURE.md`](../core/ARCHITECTURE.md).
 
@@ -67,18 +69,29 @@ command, a Celery task or the admin, and cannot be tested without building a req
 ### A view should read like this
 
 ```python
-class EnquiryViewSet(viewsets.ModelViewSet):
+class EnquiryViewSet(BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     serializer_class = EnquirySerializer
-    permission_classes = [IsAuthenticated]
+    required_permissions = {                       # per action; undeclared = denied, even for superusers
+        "list": ["enquiries.enquiries.view"],
+        "retrieve": ["enquiries.enquiries.view"],
+        "create": ["enquiries.enquiries.create"],
+    }
 
     def get_queryset(self):
-        return Enquiry.objects.for_user(self.request.user)   # a queryset method, not a filter chain
+        return Enquiry.objects.visible_to(self.request.user)   # a queryset method, not a filter chain
 
-    def perform_create(self, serializer):
-        services.create_enquiry(actor=self.request.user, **serializer.validated_data)
+    def create(self, request):
+        serializer = EnquiryCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return invalid_response(serializer)
+        enquiry = services.create_enquiry(actor=request.user, **serializer.validated_data)
+        return Response(EnquirySerializer(enquiry).data, status=status.HTTP_201_CREATED)
 ```
 
-If a view grows past a screen, the excess belongs in a service.
+The shape is `UserViewSet` in `backend/users/views.py` — copy it. Views inherit `core.api.views.BaseAPIView`
+or `core.api.viewsets.BaseViewSet`; a plain `ModelViewSet` or `permission_classes = [IsAuthenticated]` is
+refused at boot by the system checks `dbx.E001` / `dbx.E004` (`backend/core/checks.py`). If a view grows past
+a screen, the excess belongs in a service.
 
 ---
 
@@ -122,9 +135,11 @@ If a view grows past a screen, the excess belongs in a service.
 - **Routers** (`DefaultRouter`) for standard CRUD; explicit paths for anything else
 - **Pagination is on by default** (`PageNumberPagination`, `PAGE_SIZE: 20`). Do not disable it for a
   list that can grow
-- **Permissions are `IsAuthenticated` by default and that default fails closed.** Opening a view to
-  the public is an explicit, per-view `permission_classes = [AllowAny]` — and should be rare enough
-  to be worth a comment saying why
+- **Permissions are `core.permissions.DefaultDeny` by default and that default fails closed.** Each view
+  declares `required_permissions` (codes, `[]` for any signed-in user, or a per-action dict). Opening a
+  route to the public is never a per-view `AllowAny`: its URL name goes into `registry.public_routes`
+  with a one-sentence reason (`backend/users/public_routes.py` is the example; `API_DESIGN.md` §
+  Authentication)
 - **Never trust `request.data` for ownership.** A `user` or `owner` field comes from `request.user`,
   never from the payload. This is the most common authorization bug in DRF code
 - **Document non-obvious endpoints** with `@extend_schema` — drf-spectacular generates `/api/schema/`,
@@ -134,8 +149,9 @@ If a view grows past a screen, the excess belongs in a service.
 
 ## 7. Errors
 
-- Raise DRF exceptions (`ValidationError`, `PermissionDenied`, `NotFound`) — do not hand-build error
-  `Response` objects. Consistent shape matters to the frontend
+- Raise DRF exceptions (`ValidationError`, `PermissionDenied`, `NotFound`); for a typed error use
+  `core.api.errors.error_response(code, message, status, details)` or `invalid_response(serializer)` —
+  do not hand-build other error `Response` objects. Consistent shape matters to the frontend
 - Validate in the serializer (`validate_<field>`, `validate`), not in the view
 - **Never leak internals** in an error message: no stack traces, no SQL, no file paths. `DEBUG=False`
   handles the unhandled case; your own messages are your responsibility

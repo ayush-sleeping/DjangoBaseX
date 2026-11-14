@@ -1,6 +1,6 @@
 # DjangoBaseX — Architecture
 
-> **Status:** Hub — checked 2026-11-14 · describes what is built: Next.js + DRF + Celery worker/beat + Postgres/SQLite + Redis. Production Docker, webhooks, notifications and Sentry wiring are not built (see [`DOMAIN.md`](DOMAIN.md) 🔜). Detail lives in [`core/ARCHITECTURE.md`](core/ARCHITECTURE.md) (its "What does not exist yet" list lags the code; prefer this page and BUILD_ORDER).
+> **Status:** Hub — checked 2026-11-14 · describes what is built: Next.js + DRF + Celery worker/beat + Postgres/SQLite + Redis. Production Docker, webhooks, notifications and Sentry wiring are not built (see [`DOMAIN.md`](DOMAIN.md) 🔜). Detail lives in [`core/ARCHITECTURE.md`](core/ARCHITECTURE.md).
 
 Purpose and priorities: [`PURPOSE.md`](PURPOSE.md) · hard rules: [`INVARIANTS.md`](INVARIANTS.md) · vocabulary: [`DOMAIN.md`](DOMAIN.md) · done means: [`DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md).
 

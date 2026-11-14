@@ -7,6 +7,30 @@ your task below, read the **Start Here** file, and stop.
 > it is marked 🔜 — and if you find a doc describing code that does not exist, that is a bug in the
 > doc; fix it in the same change.
 
+> **Status:** checked 2026-11-14
+
+---
+
+## Start here — the set every task uses
+
+Short hubs (≤ ~200 lines), one per dimension. Each names the gold-standard file to copy and the check that
+proves it, then links the deep spec by section. Agents: [`../AGENTS.md`](../AGENTS.md) § 0 says which to read.
+
+| # | Doc | Answers | Read when |
+|---|-----|---------|-----------|
+| 1 | [`PURPOSE.md`](PURPOSE.md) | Why this exists, for whom, priorities when trade-offs appear, non-goals | **Every session, first** |
+| 2 | [`INVARIANTS.md`](INVARIANTS.md) | What no change may break — each rule with its source and its test | **Every session** |
+| 3 | [`DOMAIN.md`](DOMAIN.md) | The platform's concepts → the code that owns each; core flows | Any feature or bug in a flow |
+| 4 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Diagram, layers, dependency rule, "how to add a new X" recipes | Any change beyond one file |
+| 5 | [`CODE_STANDARDS.md`](CODE_STANDARDS.md) | Gold-standard files, rules, performance | Any code change |
+| 6 | [`UI_STANDARDS.md`](UI_STANDARDS.md) | Tokens, component kit, every page state, a11y, i18n | Any UI change |
+| 7 | [`TESTING.md`](TESTING.md) | The gate, what each change must test, what SQLite cannot prove | Any code change |
+| 8 | [`SECURITY.md`](SECURITY.md) | Auth, permissions, secrets, scrubbing, encryption | Auth, data, integrations |
+| 9 | [`PRODUCTION.md`](PRODUCTION.md) | Diagnosing a running instance: health, `doctor`, logs, triage | Any bug report |
+| 10 | [`RELEASE.md`](RELEASE.md) | Releasing the core: SemVer, manifest, core-guard, rollback | Cutting a core version |
+| 11 | [`DEFINITION_OF_DONE.md`](DEFINITION_OF_DONE.md) | The scorecard, with evidence | **Before saying "done"** |
+| — | [`system-design/TRAPS.md`](system-design/TRAPS.md) | Traps that already cost time: symptom → fix | Something 403s, renders blank or shows a wrong number |
+
 ---
 
 ## I want to…
@@ -65,7 +89,10 @@ your task below, read the **Start Here** file, and stop.
 ```
 documentation/
 ├── INDEX.md              ← you are here
-├── PURPOSE.md             what this is for, and the priority order when designs conflict
+├── PURPOSE.md            what this is for, and the priority order when designs conflict
+├── INVARIANTS.md         hard rules, each with source + test
+├── DOMAIN.md · ARCHITECTURE.md · CODE_STANDARDS.md · UI_STANDARDS.md · TESTING.md
+├── SECURITY.md · PRODUCTION.md · RELEASE.md · DEFINITION_OF_DONE.md     the hubs (table above)
 ├── ONBOARDING.md         first day, end to end
 ├── NEW_PROJECT.md        starting a product from this boilerplate
 ├── UPGRADING.md          taking a core update into a product

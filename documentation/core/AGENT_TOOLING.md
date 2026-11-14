@@ -1,5 +1,7 @@
 # Agent tooling — `.claude/` and the instruction files
 
+> **Status:** checked 2026-11-14 · all described tooling exists in `.claude/`.
+
 How AI coding agents are configured in this repository: which file each agent reads, what `.claude/`
 contains, and how to add to it. The decision behind this layout is
 [ADR-0007](../adr/0007-claude-code-harness.md). The rule it protects is
@@ -8,7 +10,7 @@ contains, and how to add to it. The decision behind this layout is
 ## The layout
 
 ```text
-AGENTS.md                 the contract: every rule, read by every agent (< 200 lines)
+AGENTS.md                 the contract: every rule, read by every agent (under 200 lines; 195 at last count)
 CLAUDE.md                 Claude Code entry point: imports AGENTS.md, nothing else
 GEMINI.md                 Gemini CLI entry point: imports AGENTS.md, nothing else
 .worktreeinclude          gitignored files copied into new worktrees (backend/.env, frontend/.env.local)
@@ -86,3 +88,6 @@ change them. Bash parsing is best-effort: it is a guard rail, not a security bou
 Written 2026-10-07 against Claude Code 2.1.292 and its official documentation on the `.claude` directory,
 memory, skills, subagents, hooks, settings and permissions. Verified in this session: the guard self-test
 passes, the SessionStart hook output, and `AGENTS.md` at under 200 lines.
+
+Checked 2026-11-14: `/verify` now also runs `npm test` for `frontend/` changes, and the SessionStart hook
+prints a protocol line (read `PURPOSE.md` and `INVARIANTS.md` first, `AGENTS.md` § 0).

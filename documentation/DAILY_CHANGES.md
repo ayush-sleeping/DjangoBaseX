@@ -26,6 +26,34 @@ Newest first.
 
 ## 2026-11-14
 
+### Docs plan phase 4: the index, and ~85 stale claims in the older docs fixed
+**What:**
+- `INDEX.md` opens with "Start here": the eleven hubs plus `TRAPS.md`, each with what it answers and when to read it.
+- A read-only audit compared 19 existing docs with the code (~85 rows); each row was re-verified before editing:
+  - `core/ARCHITECTURE.md` (dated 2026-09-15) rebuilt from the code: routes, models, DRF defaults
+    (`CookieJWTAuthentication`, `DefaultDeny`), Celery, vitest; its "not built" list is now the real unbuilt set.
+  - `README.md`, `planning/ROADMAP.md`: statuses match BUILD_ORDER; ADR count 15; links to another repository
+    removed (rule 5a).
+  - `ONBOARDING.md`, `NEW_PROJECT.md`, `UPGRADING.md`, `VERSION_SUMMARY.md`, `DEPLOYMENT.md`:
+    `FIELD_ENCRYPTION_KEYS` (not `MFA_ENCRYPTION_KEY`), CI and frontend tests exist, readiness probes exist, gate
+    steps link `AGENTS.md` § 2.
+  - `DJANGO_STANDARDS.md`, `RBAC_DESIGN.md`: examples on `BaseViewSet` + `required_permissions` (the old
+    `ModelViewSet` + `IsAuthenticated` example is refused by `dbx.E001`/`E004`); public routes via the ledger.
+  - `NEXTJS_STANDARDS.md`: real API client import, generated types, `npm test` in the gate. `API_DESIGN.md`:
+    envelope is `details` + `request_id`. `DATA_MODEL.md`, `DATABASE_MIGRATIONS.md`, deep `SECURITY.md`,
+    `OBSERVABILITY.md` (Sentry marked not built), `AGENT_TOOLING.md`: brought to today.
+- `TECH_DEBT.md`: DB-66 (Sentry unbuilt), DB-67 (no 404 scoping test), DB-68 (`storage` lint ban points nowhere),
+  DB-69 (long specs). IDs start at 66 because uncommitted 7.4 work on another branch already uses 62–65.
+
+**Why:** a doc that overstates or understates the system is worse than none — agents build on it. Several of
+these sent readers to code that the system checks now refuse.
+**Files:** `documentation/INDEX.md`, `planning/TECH_DEBT.md`, `planning/ROADMAP.md`, `README.md`,
+`ONBOARDING.md`, `NEW_PROJECT.md`, `UPGRADING.md`, `VERSION_SUMMARY.md`, `ARCHITECTURE.md`, `core/ARCHITECTURE.md`,
+`core/AGENT_TOOLING.md`, and in `system-design/`: `DEPLOYMENT`, `OBSERVABILITY`, `DJANGO_STANDARDS`,
+`NEXTJS_STANDARDS`, `API_DESIGN`, `RBAC_DESIGN`, `DATA_MODEL`, `DATABASE_MIGRATIONS`, `SECURITY`.
+**Verification:** link check over all 90 Markdown files under `documentation/`, `.claude/` and the root — 0 broken
+(3 hits are the intentional `NNNN-….md` placeholders in ADR templates); `rg` for other-codebase names — 0 hits.
+
 ### Docs plan phase 3: AGENTS.md "Follow the protocol" and the pointers into the new docs
 **What:**
 - `AGENTS.md` § 0 is now "Follow the protocol": `CLAUDE.md` → `AGENTS.md` → `PURPOSE.md` → `INVARIANTS.md` →

@@ -3,7 +3,7 @@
 **A boilerplate that cannot deliver a fix to the products already built on it is a snapshot, not a
 core.** This is the mechanism that makes DjangoBaseX the second thing.
 
-> **Status:** built. The git mechanism, the drift doctor (`scripts/core_doctor.py` against
+> **Status:** built · checked 2026-11-14. The git mechanism, the drift doctor (`scripts/core_doctor.py` against
 > `core.manifest.json`, BUILD_ORDER 4.2) and the PR guard (`.github/workflows/core-guard.yml`, 4.3)
 > all exist. The rules they implement are
 > [`system-design/ENGINEERING_PRACTICES.md`](system-design/ENGINEERING_PRACTICES.md) § 52.
@@ -43,15 +43,16 @@ cd backend
 uv sync                                    # core may have changed dependencies
 uv run python manage.py makemigrations --check --dry-run   # core may have shipped models
 uv run python manage.py migrate
-uv run ruff check . && uv run python manage.py check
 
 cd ../frontend
 npm ci                                     # ci, not install — respect the lockfile
-npm run lint && npx tsc --noEmit
 
 cd ..
 python3 scripts/core_doctor.py             # clean = you took the core exactly as shipped
 ```
+
+Then run the verification gate exactly as written in [`AGENTS.md` § 2](../AGENTS.md) — do not use a shorter
+copy of it (bare `tsc --noEmit` in particular is not the frontend typecheck; the gate uses `npm run typecheck`).
 
 Open a PR against your own `main`. **Read the diff** — a core update is the one merge where "it
 compiled" is not enough, because it can change behaviour your product depends on without changing
