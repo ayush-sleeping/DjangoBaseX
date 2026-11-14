@@ -33,6 +33,8 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | **Job run** | One `JobRun` row per execution, written from Celery signals, never by the job | `backend/core/jobs/recorder.py` | `JOBS_AND_INTEGRATIONS.md` § 7 |
 | **Event** | A registered domain event `<module>.<entity>.<verb>` (`EventDef`); `external=True` puts it in the webhook catalogue, and every catalogue event needs an `emit()` call site | `backend/core/registry.py` (`EventRegistry`), `backend/users/events.py` | `JOBS_AND_INTEGRATIONS.md` § 16 |
 | **Webhook endpoint** | A platform-owned URL subscribed to catalogue events; encrypted signing secret shown once, rotation with overlap, `is_active` (human) and `disabled_at` (breaker) kept apart | `backend/core/models.py` (`WebhookEndpoint`), `backend/core/webhooks/service.py` | `JOBS_AND_INTEGRATIONS.md` § 16 |
+| **API consumer** | A machine caller named after a system (never a person); `service_role` is its permission ceiling and `is_active` is the kill switch that outranks every token | `backend/core/api_tokens/models.py`, `backend/core/api/consumers.py` | `system-design/API_PLATFORM.md` § 8–9, ADR-0016 |
+| **API token** | A consumer's credential: `<product-slug>_<random>`, stored as a SHA-256 digest, required capped expiry, scopes are permission codes; allowed only if the scope is on the token **and** the service role grants it now; plaintext shown once | `backend/core/api_tokens/` | `system-design/API_PLATFORM.md` § 8–9, ADR-0016 |
 | **Notification purpose** | One kind of message a module sends (`users.password_reset`), declared in code with its audience, default channels, `mandatory` (cannot be switched off) and `carries_token` flags; callers name it and never a destination | `backend/core/registry.py` (`NotificationPurpose`), `backend/users/notifications.py` | `NOTIFICATIONS_AND_ALERTING.md` § 1 |
 | **Notification route** | Admin-editable data saying where a broadcast purpose goes on a channel (email addresses); every change is audited | `backend/core/models.py` (`NotificationRoute`), `backend/core/notifications/service.py` | `NOTIFICATIONS_AND_ALERTING.md` § 1 |
 | **Notification channel** | A transport adapter (`email`, `in_app`) that renders and sends one message and never raises into its caller | `backend/core/notifications/channels.py` | `NOTIFICATIONS_AND_ALERTING.md` § 2 |
@@ -99,7 +101,6 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | Concept | BUILD_ORDER item |
 |---------|------------------|
 | Static security headers, revalidation, logos, host-matched identity | 8.5b |
-| API platform | 9.2 |
 | Data lifecycle (soft delete, recycle bin) | 9.3 |
 | Domain primitives beyond money (number sequences, state machines) | 9.4 |
 | Error tracking via Sentry ([ADR-0013](adr/0013-sentry-only-error-tracking.md); no code reads `SENTRY_DSN` yet) | not in a numbered item |

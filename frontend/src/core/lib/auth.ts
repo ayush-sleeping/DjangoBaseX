@@ -5,20 +5,11 @@
  * component's own fetch() does not carry the browser's cookies, so it would silently get the
  * signed-out answer (NEXTJS_STANDARDS.md § 3).
  */
+import type { components } from "@/generated/api";
+
 import { api, ApiError } from "./api";
 
-export type Me = {
-  public_id: string;
-  email: string;
-  full_name: string;
-  is_staff: boolean;
-  is_superuser: boolean;
-  permissions: string[];
-  /** A confirmed two-factor device exists. */
-  mfa_enabled: boolean;
-  /** The user's role requires two-factor (AUTH_BLUEPRINT § 6.8). */
-  mfa_enforced: boolean;
-};
+export type Me = components["schemas"]["Me"];
 
 /** The signed-in user, or null when there is no live session. */
 export async function fetchMe(): Promise<Me | null> {

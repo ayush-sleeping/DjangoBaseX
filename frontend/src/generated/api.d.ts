@@ -277,6 +277,138 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/consumers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        get: operations["consumers_list"];
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["consumers_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/consumers/{public_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        get: operations["consumers_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        patch: operations["consumers_partial_update"];
+        trace?: never;
+    };
+    "/api/consumers/{public_id}/tokens/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        get: operations["consumers_tokens_list"];
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["consumers_tokens_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/consumers/{public_id}/tokens/{token_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        patch: operations["consumers_tokens_partial_update"];
+        trace?: never;
+    };
+    "/api/consumers/{public_id}/tokens/{token_id}/revoke/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["consumers_tokens_revoke_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/consumers/{public_id}/tokens/{token_id}/rotate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["consumers_tokens_rotate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/core/activity/": {
         parameters: {
             query?: never;
@@ -329,7 +461,7 @@ export interface paths {
          *     public = True opens it to anyone, and its URL name must be in registry.public_routes
          *     (dbx.E007). See core.permissions for the full rule.
          */
-        get: operations["core_flags_retrieve"];
+        get: operations["core_flags_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -371,7 +503,7 @@ export interface paths {
          *     public = True opens it to anyone, and its URL name must be in registry.public_routes
          *     (dbx.E007). See core.permissions for the full rule.
          */
-        get: operations["core_lookups_retrieve"];
+        get: operations["core_lookups_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -412,7 +544,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** @description Add a value — the § 14 done-when: a new choice with no deploy. */
-        post: operations["core_lookups_values_create_2"];
+        post: operations["core_lookups_values_create_by_key"];
         delete?: never;
         options?: never;
         head?: never;
@@ -421,7 +553,7 @@ export interface paths {
          *     public = True opens it to anyone, and its URL name must be in registry.public_routes
          *     (dbx.E007). See core.permissions for the full rule.
          */
-        patch: operations["core_lookups_values_partial_update_2"];
+        patch: operations["core_lookups_values_partial_update_by_key"];
         trace?: never;
     };
     "/api/core/settings/": {
@@ -436,7 +568,7 @@ export interface paths {
          *     public = True opens it to anyone, and its URL name must be in registry.public_routes
          *     (dbx.E007). See core.permissions for the full rule.
          */
-        get: operations["core_settings_retrieve"];
+        get: operations["core_settings_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -481,6 +613,48 @@ export interface paths {
          *     (dbx.E007). See core.permissions for the full rule.
          */
         post: operations["core_settings_reset_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/files/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions: None denies everyone; [] means any signed-in user; ["a.b.c"] needs each.
+         *     public = True opens it to anyone, and its URL name must be in registry.public_routes
+         *     (dbx.E007). See core.permissions for the full rule.
+         */
+        post: operations["files_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/files/{public_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions: None denies everyone; [] means any signed-in user; ["a.b.c"] needs each.
+         *     public = True opens it to anyone, and its URL name must be in registry.public_routes
+         *     (dbx.E007). See core.permissions for the full rule.
+         */
+        get: operations["files_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -841,7 +1015,7 @@ export interface paths {
          *     public = True opens it to anyone, and its URL name must be in registry.public_routes
          *     (dbx.E007). See core.permissions for the full rule.
          */
-        get: operations["rbac_permissions_retrieve"];
+        get: operations["rbac_permissions_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -927,7 +1101,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description The roles one user holds. The user is resolved through users' own visible_to(). */
-        get: operations["rbac_users_roles_retrieve"];
+        get: operations["rbac_users_roles_list"];
         put?: never;
         /** @description The roles one user holds. The user is resolved through users' own visible_to(). */
         post: operations["rbac_users_roles_create"];
@@ -1283,6 +1457,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcceptInvitationRequest: {
+            /** @default  */
+            full_name: string;
+            password: string;
+            token: string;
+        };
         /** @description Read-only by construction: every field is read-only and no write view exists (§ 4.6). */
         ActivityLog: {
             readonly action: string;
@@ -1312,6 +1492,111 @@ export interface components {
             readonly target_type: string;
             readonly tone: string;
             readonly via: string;
+        };
+        ApiConsumer: {
+            /** Format: email */
+            readonly contact_email: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly description: string;
+            /** Format: date-time */
+            readonly disabled_at: string | null;
+            readonly disabled_reason: string;
+            /** Format: uuid */
+            readonly id: string;
+            readonly is_active: boolean;
+            readonly name: string;
+            readonly owner_team: string;
+            readonly service_role: string;
+        };
+        ApiConsumerWriteRequest: {
+            contact_email?: string;
+            description?: string;
+            disabled_reason?: string;
+            is_active?: boolean;
+            name: string;
+            owner_team?: string;
+            service_role: string;
+        };
+        ApiToken: {
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly expires_at: string;
+            /** Format: uuid */
+            readonly id: string;
+            readonly is_valid: boolean;
+            /** Format: date-time */
+            readonly last_used_at: string | null;
+            readonly name: string;
+            readonly prefix: string;
+            /** Format: date-time */
+            readonly revoked_at: string | null;
+            readonly revoked_reason: string;
+            readonly scopes: unknown;
+        };
+        ApiTokenIssueRequest: {
+            /** Format: date-time */
+            expires_at: string;
+            name: string;
+            scopes: string[];
+        };
+        /** @description The one response that carries the plaintext. */
+        ApiTokenIssued: {
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly expires_at: string;
+            /** Format: uuid */
+            readonly id: string;
+            readonly is_valid: boolean;
+            /** Format: date-time */
+            readonly last_used_at: string | null;
+            readonly name: string;
+            readonly prefix: string;
+            /** Format: date-time */
+            readonly revoked_at: string | null;
+            readonly revoked_reason: string;
+            readonly scopes: unknown;
+            readonly token: string;
+        };
+        ApiTokenRevokeRequest: {
+            reason?: string;
+        };
+        AssignRoleRequest: {
+            /** Format: uuid */
+            role: string;
+        };
+        CatalogGroup: {
+            code: string;
+            label: string;
+            module: string;
+            /** Format: int64 */
+            order?: number;
+            readonly permissions: components["schemas"]["CatalogPermission"][];
+        };
+        CatalogPermission: {
+            code: string;
+            is_deprecated?: boolean;
+            label: string;
+        };
+        CryptoStatus: {
+            configured: boolean;
+            fields: {
+                [key: string]: unknown;
+            }[];
+            keys: {
+                [key: string]: unknown;
+            }[];
+        };
+        FileUploadRequest: {
+            /** Format: binary */
+            file: string;
+            /** @default general */
+            purpose: string;
+        };
+        ForgotPasswordRequest: {
+            email: string;
         };
         Invitation: {
             /** Format: date-time */
@@ -1348,6 +1633,59 @@ export interface components {
             role: components["schemas"]["RoleSummaryRequest"];
             status: components["schemas"]["StatusEnum"];
         };
+        LoginRequest: {
+            email: string;
+            password: string;
+        };
+        LookupValue: {
+            readonly is_active: boolean;
+            readonly is_system: boolean;
+            readonly key: string;
+            readonly label: string;
+            readonly meta: unknown;
+            readonly set_key: string;
+            readonly sort_order: number;
+        };
+        LookupWriteRequest: {
+            is_active?: boolean;
+            key?: string;
+            label?: string;
+            meta?: unknown;
+            sort_order?: number;
+        };
+        Me: {
+            /** Format: email */
+            readonly email: string;
+            readonly flags: string[];
+            readonly full_name: string;
+            readonly is_staff: boolean;
+            readonly is_superuser: boolean;
+            readonly mfa_enabled: boolean;
+            readonly mfa_enforced: boolean;
+            readonly permissions: string[];
+            /** Format: uuid */
+            readonly public_id: string;
+        };
+        MfaChallenge: {
+            mfa_required: boolean;
+            mfa_token: string;
+        };
+        MfaConfirmRequest: {
+            code: string;
+        };
+        MfaSetup: {
+            otpauth_uri: string;
+            secret: string;
+        };
+        MfaVerifyRequest: {
+            code: string;
+            mfa_token: string;
+        };
+        Navigation: {
+            sections: {
+                [key: string]: unknown;
+            }[];
+        };
         PaginatedActivityLogList: {
             /** @example 123 */
             count: number;
@@ -1362,6 +1700,36 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["ActivityLog"][];
+        };
+        PaginatedApiConsumerList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ApiConsumer"][];
+        };
+        PaginatedApiTokenList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["ApiToken"][];
         };
         PaginatedInvitationList: {
             /** @example 123 */
@@ -1423,6 +1791,65 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["WebhookEndpoint"][];
         };
+        PasswordConfirmRequest: {
+            password: string;
+        };
+        PatchedApiConsumerWriteRequest: {
+            contact_email?: string;
+            description?: string;
+            disabled_reason?: string;
+            is_active?: boolean;
+            name?: string;
+            owner_team?: string;
+            service_role?: string;
+        };
+        PatchedApiTokenScopesRequest: {
+            scopes?: string[];
+        };
+        PatchedFlagWriteRequest: {
+            enabled?: boolean;
+            /** @default  */
+            reason: string;
+            role_slugs?: string[];
+            tenant_ids?: string[];
+            user_ids?: string[];
+        };
+        PatchedLookupWriteRequest: {
+            is_active?: boolean;
+            key?: string;
+            label?: string;
+            meta?: unknown;
+            sort_order?: number;
+        };
+        PatchedSettingWriteRequest: {
+            locked?: boolean | null;
+            /** @default  */
+            reason: string;
+            /** @default platform */
+            scope: components["schemas"]["ScopeEnum"];
+            scope_id?: string | null;
+            value?: unknown;
+        };
+        PrivateFile: {
+            readonly content_type: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: uuid */
+            readonly id: string;
+            readonly name: string;
+            readonly purpose: string;
+            readonly size: number;
+        };
+        RecoveryCodes: {
+            recovery_codes: string[];
+        };
+        ResetPasswordRequest: {
+            password: string;
+            token: string;
+        };
+        RevokedCount: {
+            revoked: number;
+        };
         Role: {
             /** Format: date-time */
             readonly created_at: string;
@@ -1450,6 +1877,20 @@ export interface components {
             /** Format: uuid */
             public_id: string;
             slug: string;
+        };
+        /**
+         * @description * `user` - user
+         *     * `tenant` - tenant
+         *     * `platform` - platform
+         * @enum {string}
+         */
+        ScopeEnum: "user" | "tenant" | "platform";
+        SettingResetRequest: {
+            /** @default  */
+            reason: string;
+            /** @default platform */
+            scope: components["schemas"]["ScopeEnum"];
+            scope_id?: string | null;
         };
         /**
          * @description * `pending` - pending
@@ -1516,10 +1957,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1534,10 +1979,22 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaChallenge"];
+                };
+            };
+            /** @description No response body */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1555,7 +2012,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1572,12 +2029,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
             };
         };
     };
@@ -1588,14 +2046,19 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaConfirmRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodes"];
+                };
             };
         };
     };
@@ -1609,7 +2072,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1626,12 +2089,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MfaSetup"];
+                };
             };
         };
     };
@@ -1642,10 +2106,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaVerifyRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1660,10 +2128,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordConfirmRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1678,10 +2150,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1696,10 +2172,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1717,7 +2197,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description No response body */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1734,12 +2214,227 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["RevokedCount"];
+                };
+            };
+        };
+    };
+    consumers_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedApiConsumerList"];
+                };
+            };
+        };
+    };
+    consumers_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiConsumerWriteRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiConsumer"];
+                };
+            };
+        };
+    };
+    consumers_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiConsumer"];
+                };
+            };
+        };
+    };
+    consumers_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedApiConsumerWriteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiConsumer"];
+                };
+            };
+        };
+    };
+    consumers_tokens_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedApiTokenList"];
+                };
+            };
+        };
+    };
+    consumers_tokens_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiTokenIssueRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenIssued"];
+                };
+            };
+        };
+    };
+    consumers_tokens_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedApiTokenScopesRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiToken"];
+                };
+            };
+        };
+    };
+    consumers_tokens_revoke_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApiTokenRevokeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiToken"];
+                };
+            };
+        };
+    };
+    consumers_tokens_rotate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenIssued"];
+                };
             };
         };
     };
@@ -1784,7 +2479,7 @@ export interface operations {
             };
         };
     };
-    core_flags_retrieve: {
+    core_flags_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -1811,7 +2506,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedFlagWriteRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
             200: {
@@ -1822,21 +2521,24 @@ export interface operations {
             };
         };
     };
-    core_lookups_retrieve: {
+    core_lookups_list: {
         parameters: {
-            query?: never;
+            query?: {
+                set?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LookupValue"][];
+                };
             };
         };
     };
@@ -1849,14 +2551,19 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LookupWriteRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LookupValue"];
+                };
             };
         };
     };
@@ -1869,18 +2576,23 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedLookupWriteRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LookupValue"];
+                };
             };
         };
     };
-    core_lookups_values_create_2: {
+    core_lookups_values_create_by_key: {
         parameters: {
             query?: never;
             header?: never;
@@ -1890,18 +2602,23 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LookupWriteRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LookupValue"];
+                };
             };
         };
     };
-    core_lookups_values_partial_update_2: {
+    core_lookups_values_partial_update_by_key: {
         parameters: {
             query?: never;
             header?: never;
@@ -1911,18 +2628,23 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedLookupWriteRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LookupValue"];
+                };
             };
         };
     };
-    core_settings_retrieve: {
+    core_settings_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -1949,7 +2671,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedSettingWriteRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
             200: {
@@ -1969,7 +2695,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SettingResetRequest"];
+            };
+        };
         responses: {
             /** @description No response body */
             200: {
@@ -1977,6 +2707,50 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    files_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["FileUploadRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivateFile"];
+                };
+            };
+        };
+    };
+    files_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
             };
         };
     };
@@ -2028,12 +2802,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Navigation"];
+                };
             };
         };
     };
@@ -2373,7 +3148,7 @@ export interface operations {
             };
         };
     };
-    rbac_permissions_retrieve: {
+    rbac_permissions_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -2382,12 +3157,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CatalogGroup"][];
+                };
             };
         };
     };
@@ -2515,9 +3291,12 @@ export interface operations {
             };
         };
     };
-    rbac_users_roles_retrieve: {
+    rbac_users_roles_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
             header?: never;
             path: {
                 user_public_id: string;
@@ -2526,12 +3305,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaginatedRoleList"];
+                };
             };
         };
     };
@@ -2544,14 +3324,19 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignRoleRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Role"];
+                };
             };
         };
     };
@@ -2585,12 +3370,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CryptoStatus"];
+                };
             };
         };
     };

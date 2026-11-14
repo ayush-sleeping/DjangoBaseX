@@ -1292,6 +1292,17 @@ These are recorded, not edited. Each names the file, the section and the fix.
 6. **Whether malware scanning is required by default for any core upload purpose** (§ 18). Recommended: optional
    in core; a product handling third-party documents sets it required.
 
+## As built (9.2)
+
+> Built 2026-11-14. Everything below this section's rules is still the spec; this lists what exists, where, and the deliberate gaps (TECH_DEBT DB-105 to DB-112).
+
+- **Consumers and tokens (§ 8–9, ADR-0016).** `backend/core/api_tokens/` (`models`, `services` = the only issuing path, `auth`). Token format `<PRODUCT_SLUG>_<token_urlsafe(32)>` (no new env key; the prefix is derived from the project slug), SHA-256 digest, `hmac.compare_digest`, expiry required and capped at 365 days, rotation overlap 24 h (module constants, not settings). Gate 1 = token scopes (or `["*"]`), gate 2 = the service role's live non-deprecated grants (one query per request); a `MachinePrincipal` is never a user and never a superuser. Audited: consumer created/updated/(de)activated, token issued/rotated/scopes changed/revoked. Admin API `/api/consumers/…`, human-only.
+- **Credential kinds (§ 7).** `BaseAPIView`/`BaseViewSet` carry `authentication_classes = [ApiTokenAuthentication, *DEFAULT_AUTHENTICATION_CLASSES]` (no `settings.py` edit), `credential_kinds` (default `{"session"}`) and `human_only`; `CredentialKindAllowed` answers `403 credential_not_accepted`. A bearer value without the product prefix is ignored, so cookie auth and CSRF are unchanged.
+- **List pipeline (§ 1).** `core/api/listing.py::run_list`, called from `BaseViewSet.filter_queryset`. Unknown query params and unknown `ordering` fields are `400 unknown_parameter`; pk is always the last ordering term. Views that read their own params declare `accepted_params`. **Pending decision applied:** unknown ordering is a 400, not a fallback (the build task's rule); § 1's "falls back" text is superseded.
+- **Errors and 429 (§ 3–5).** `core/api/error_codes.py` (`ERROR_CODES`, `ApiError`); the exception handler renders `ApiError` and `Throttled` (`Retry-After` = `retry_after_seconds` = `max(1, ceil(wait))`, `details.scope`).
+- **Files (§ 18–19).** `core/files.py` + `core/api/files.py`: magic-byte sniff (PNG/JPEG/GIF/WebP/PDF), extension must agree, generated storage name under `MEDIA_ROOT/private`, `PrivateFile` row, download through `core.files.view`/purpose check (404 otherwise), `attachment` + `nosniff` + `no-store`. **Pending decisions applied:** `FILE_SERVE_MODE` = Django streaming (no `x-accel` yet); malware scanning optional, not built; personal access tokens not in core; read-only-field 400 not built.
+- **Contract (§ 16–17).** The 26 views from 8.4a have schemas (`core/api/schemas.py` for dict-built bodies; `Bootstrap`/`PublicConfig` are free-form objects); lookups write view has its own operationId for the by-key URL. `ENUM_NAME_OVERRIDES` is not set: it needs `SPECTACULAR_SETTINGS` in protected `settings.py`.
+
 ## Doc accuracy
 
 > Written 2026-09-29 from research across several production codebases. Nothing here is implemented; verify

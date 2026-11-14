@@ -9,12 +9,14 @@ The DRF exception handler (OBSERVABILITY.md § 1–2, API_PLATFORM.md error enve
 """
 
 import logging
+import math
 
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import Throttled, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
+from core.api.error_codes import ApiError, envelope
 from core.observability.request_id import current
 from core.providers.errors import ProviderError
 
@@ -52,10 +54,34 @@ def _provider_error(exc: ProviderError) -> Response:
 validation = logging.getLogger("core.validation")
 
 
+def _throttled(exc: Throttled, context) -> Response:
+    """The 429 contract (API_PLATFORM.md § 5): Retry-After and retry_after_seconds carry the same
+    number, never below 1 (DRF omits the header at 0, which invites an immediate retry)."""
+    wait = max(1, math.ceil(exc.wait or 0))
+    view = context.get("view")
+    scope = getattr(view, "throttle_scope", None)
+    body = envelope(
+        "throttled",
+        f"Too many requests. Try again in {wait} seconds.",
+        {"scope": scope} if scope else None,
+        retry_after_seconds=wait,
+    )
+    body["error"]["request_id"] = current()
+    response = Response(body, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    response["Retry-After"] = str(wait)
+    return response
+
+
 def handler(exc, context):
     request = context.get("request")
     if isinstance(exc, ProviderError):
         return _provider_error(exc)
+    if isinstance(exc, ApiError):
+        body = envelope(exc.error_code, str(exc.detail), exc.details)
+        body["error"]["request_id"] = current()
+        return Response(body, status=exc.status_code)
+    if isinstance(exc, Throttled):
+        return _throttled(exc, context)
     response = exception_handler(exc, context)
     if response is None:
         errors.error("unhandled exception", exc_info=exc)

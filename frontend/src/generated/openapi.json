@@ -1,6 +1,30 @@
 {
   "components": {
     "schemas": {
+      "AcceptInvitationRequest": {
+        "properties": {
+          "full_name": {
+            "default": "",
+            "maxLength": 255,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "token"
+        ],
+        "type": "object"
+      },
       "ActivityLog": {
         "description": "Read-only by construction: every field is read-only and no write view exists (§ 4.6).",
         "properties": {
@@ -136,6 +160,408 @@
         ],
         "type": "object"
       },
+      "ApiConsumer": {
+        "properties": {
+          "contact_email": {
+            "format": "email",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "disabled_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "disabled_reason": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "is_active": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "owner_team": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "service_role": {
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_email",
+          "created_at",
+          "description",
+          "disabled_at",
+          "disabled_reason",
+          "id",
+          "is_active",
+          "name",
+          "owner_team",
+          "service_role"
+        ],
+        "type": "object"
+      },
+      "ApiConsumerWriteRequest": {
+        "properties": {
+          "contact_email": {
+            "oneOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "description": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "disabled_reason": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "owner_team": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "service_role": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "service_role"
+        ],
+        "type": "object"
+      },
+      "ApiToken": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "is_valid": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "prefix": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "revoked_reason": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "scopes": {
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "expires_at",
+          "id",
+          "is_valid",
+          "last_used_at",
+          "name",
+          "prefix",
+          "revoked_at",
+          "revoked_reason",
+          "scopes"
+        ],
+        "type": "object"
+      },
+      "ApiTokenIssueRequest": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "expires_at",
+          "name",
+          "scopes"
+        ],
+        "type": "object"
+      },
+      "ApiTokenIssued": {
+        "description": "The one response that carries the plaintext.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "is_valid": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "prefix": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "revoked_reason": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "scopes": {
+            "readOnly": true
+          },
+          "token": {
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "expires_at",
+          "id",
+          "is_valid",
+          "last_used_at",
+          "name",
+          "prefix",
+          "revoked_at",
+          "revoked_reason",
+          "scopes",
+          "token"
+        ],
+        "type": "object"
+      },
+      "ApiTokenRevokeRequest": {
+        "properties": {
+          "reason": {
+            "maxLength": 255,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AssignRoleRequest": {
+        "properties": {
+          "role": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "type": "object"
+      },
+      "CatalogGroup": {
+        "properties": {
+          "code": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "module": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "order": {
+            "format": "int64",
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogPermission"
+            },
+            "readOnly": true,
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "module",
+          "permissions"
+        ],
+        "type": "object"
+      },
+      "CatalogPermission": {
+        "properties": {
+          "code": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "is_deprecated": {
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "type": "object"
+      },
+      "CryptoStatus": {
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "fields": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "keys": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "configured",
+          "fields",
+          "keys"
+        ],
+        "type": "object"
+      },
+      "FileUploadRequest": {
+        "properties": {
+          "file": {
+            "format": "binary",
+            "type": "string"
+          },
+          "purpose": {
+            "default": "general",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "type": "object"
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
       "Invitation": {
         "properties": {
           "accepted_at": {
@@ -234,6 +660,228 @@
         ],
         "type": "object"
       },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "minLength": 1,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object"
+      },
+      "LookupValue": {
+        "properties": {
+          "is_active": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "is_system": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "key": {
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "readOnly": true,
+            "type": "string"
+          },
+          "label": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "meta": {
+            "readOnly": true
+          },
+          "set_key": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "sort_order": {
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "is_active",
+          "is_system",
+          "key",
+          "label",
+          "meta",
+          "set_key",
+          "sort_order"
+        ],
+        "type": "object"
+      },
+      "LookupWriteRequest": {
+        "properties": {
+          "is_active": {
+            "type": "boolean"
+          },
+          "key": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "meta": {},
+          "sort_order": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Me": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "readOnly": true,
+            "type": "string"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "full_name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "is_staff": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "is_superuser": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "mfa_enabled": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "mfa_enforced": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "public_id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "flags",
+          "full_name",
+          "is_staff",
+          "is_superuser",
+          "mfa_enabled",
+          "mfa_enforced",
+          "permissions",
+          "public_id"
+        ],
+        "type": "object"
+      },
+      "MfaChallenge": {
+        "properties": {
+          "mfa_required": {
+            "type": "boolean"
+          },
+          "mfa_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mfa_required",
+          "mfa_token"
+        ],
+        "type": "object"
+      },
+      "MfaConfirmRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "MfaSetup": {
+        "properties": {
+          "otpauth_uri": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "otpauth_uri",
+          "secret"
+        ],
+        "type": "object"
+      },
+      "MfaVerifyRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "mfa_token": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "mfa_token"
+        ],
+        "type": "object"
+      },
+      "Navigation": {
+        "properties": {
+          "sections": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "sections"
+        ],
+        "type": "object"
+      },
       "PaginatedActivityLogList": {
         "properties": {
           "count": {
@@ -255,6 +903,68 @@
           "results": {
             "items": {
               "$ref": "#/components/schemas/ActivityLog"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedApiConsumerList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ApiConsumer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedApiTokenList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ApiToken"
             },
             "type": "array"
           }
@@ -389,6 +1099,247 @@
         ],
         "type": "object"
       },
+      "PasswordConfirmRequest": {
+        "properties": {
+          "password": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
+      "PatchedApiConsumerWriteRequest": {
+        "properties": {
+          "contact_email": {
+            "oneOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "description": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "disabled_reason": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "owner_team": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "service_role": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PatchedApiTokenScopesRequest": {
+        "properties": {
+          "scopes": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "PatchedFlagWriteRequest": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "role_slugs": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "tenant_ids": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_ids": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "PatchedLookupWriteRequest": {
+        "properties": {
+          "is_active": {
+            "type": "boolean"
+          },
+          "key": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[-a-zA-Z0-9_]+$",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "meta": {},
+          "sort_order": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PatchedSettingWriteRequest": {
+        "properties": {
+          "locked": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "reason": {
+            "default": "",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "scope": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ScopeEnum"
+              }
+            ],
+            "default": "platform"
+          },
+          "scope_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          },
+          "value": {
+            "nullable": true
+          }
+        },
+        "type": "object"
+      },
+      "PrivateFile": {
+        "properties": {
+          "content_type": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "purpose": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "size": {
+            "readOnly": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content_type",
+          "created_at",
+          "id",
+          "name",
+          "purpose",
+          "size"
+        ],
+        "type": "object"
+      },
+      "RecoveryCodes": {
+        "properties": {
+          "recovery_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "recovery_codes"
+        ],
+        "type": "object"
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "password": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "token"
+        ],
+        "type": "object"
+      },
+      "RevokedCount": {
+        "properties": {
+          "revoked": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revoked"
+        ],
+        "type": "object"
+      },
       "Role": {
         "properties": {
           "created_at": {
@@ -498,6 +1449,39 @@
           "public_id",
           "slug"
         ],
+        "type": "object"
+      },
+      "ScopeEnum": {
+        "description": "* `user` - user\n* `tenant` - tenant\n* `platform` - platform",
+        "enum": [
+          "user",
+          "tenant",
+          "platform"
+        ],
+        "type": "string"
+      },
+      "SettingResetRequest": {
+        "properties": {
+          "reason": {
+            "default": "",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "scope": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ScopeEnum"
+              }
+            ],
+            "default": "platform"
+          },
+          "scope_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "StatusEnum": {
@@ -673,6 +1657,11 @@
       }
     },
     "securitySchemes": {
+      "apiToken": {
+        "description": "An API consumer token.",
+        "scheme": "bearer",
+        "type": "http"
+      },
       "cookieAuth": {
         "description": "The httpOnly access cookie (<AUTH_COOKIE_PREFIX>_access, __Host- prefixed over HTTPS), set by POST /api/auth/login/ and rotated by /api/auth/refresh/. Unsafe methods also send X-CSRF-Token.",
         "in": "cookie",
@@ -692,8 +1681,18 @@
       "post": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_invitations_accept_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
@@ -706,8 +1705,28 @@
       "post": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_login_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaChallenge"
+                }
+              }
+            },
+            "description": ""
+          },
+          "204": {
             "description": "No response body"
           }
         },
@@ -721,11 +1740,14 @@
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_logout_create",
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -741,10 +1763,20 @@
         "operationId": "auth_me_retrieve",
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -758,12 +1790,32 @@
       "post": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_mfa_confirm_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -778,11 +1830,14 @@
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_mfa_disable_create",
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -798,10 +1853,20 @@
         "operationId": "auth_mfa_setup_create",
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaSetup"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -815,8 +1880,18 @@
       "post": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_mfa_verify_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
@@ -829,12 +1904,25 @@
       "post": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_password_confirm_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -848,8 +1936,18 @@
       "post": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_password_forgot_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
@@ -862,8 +1960,18 @@
       "post": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_password_reset_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
@@ -877,7 +1985,7 @@
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
         "operationId": "auth_refresh_create",
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
@@ -892,16 +2000,452 @@
         "operationId": "auth_sessions_revoke_all_create",
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokedCount"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
         ],
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/consumers/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_list",
+        "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedApiConsumerList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      },
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiConsumerWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiConsumer"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      }
+    },
+    "/api/consumers/{public_id}/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiConsumer"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      },
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedApiConsumerWriteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiConsumer"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      }
+    },
+    "/api/consumers/{public_id}/tokens/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_tokens_list",
+        "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedApiTokenList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      },
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_tokens_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiTokenIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTokenIssued"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      }
+    },
+    "/api/consumers/{public_id}/tokens/{token_id}/": {
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_tokens_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedApiTokenScopesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiToken"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      }
+    },
+    "/api/consumers/{public_id}/tokens/{token_id}/revoke/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_tokens_revoke_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiTokenRevokeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiToken"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
+        ]
+      }
+    },
+    "/api/consumers/{public_id}/tokens/{token_id}/rotate/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "consumers_tokens_rotate_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTokenIssued"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "consumers"
         ]
       }
     },
@@ -934,6 +2478,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -960,6 +2507,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -971,13 +2521,16 @@
     "/api/core/flags/": {
       "get": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
-        "operationId": "core_flags_retrieve",
+        "operationId": "core_flags_list",
         "responses": {
           "200": {
             "description": "No response body"
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1001,12 +2554,24 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedFlagWriteRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "No response body"
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1019,13 +2584,35 @@
     "/api/core/lookups/": {
       "get": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
-        "operationId": "core_lookups_retrieve",
+        "operationId": "core_lookups_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "set",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LookupValue"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1049,12 +2636,31 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedLookupWriteRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupValue"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1076,12 +2682,31 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupWriteRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "No response body"
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupValue"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1094,7 +2719,7 @@
     "/api/core/lookups/{set_key}/values/{key}/": {
       "patch": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
-        "operationId": "core_lookups_values_partial_update_2",
+        "operationId": "core_lookups_values_partial_update_by_key",
         "parameters": [
           {
             "in": "path",
@@ -1113,12 +2738,31 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedLookupWriteRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupValue"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1129,7 +2773,7 @@
       },
       "post": {
         "description": "Add a value — the § 14 done-when: a new choice with no deploy.",
-        "operationId": "core_lookups_values_create_2",
+        "operationId": "core_lookups_values_create_by_key",
         "parameters": [
           {
             "in": "path",
@@ -1148,12 +2792,31 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupWriteRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "No response body"
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupValue"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1166,13 +2829,16 @@
     "/api/core/settings/": {
       "get": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
-        "operationId": "core_settings_retrieve",
+        "operationId": "core_settings_list",
         "responses": {
           "200": {
             "description": "No response body"
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1196,12 +2862,24 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedSettingWriteRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "No response body"
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1225,6 +2903,15 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingResetRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "No response body"
@@ -1232,11 +2919,94 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
         "tags": [
           "core"
+        ]
+      }
+    },
+    "/api/files/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "files_create",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/FileUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateFile"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/api/files/{public_id}/": {
+      "get": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "files_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "files"
         ]
       }
     },
@@ -1283,6 +3053,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1297,10 +3070,20 @@
         "operationId": "me_navigation_retrieve",
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Navigation"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1321,6 +3104,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1337,6 +3123,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1357,6 +3146,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1375,6 +3167,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1395,6 +3190,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1411,6 +3209,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1430,6 +3231,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1460,6 +3264,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1478,6 +3285,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1498,6 +3308,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1514,6 +3327,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1544,6 +3360,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1570,6 +3389,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1600,6 +3422,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1618,6 +3443,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1649,6 +3477,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1679,6 +3510,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1704,13 +3538,26 @@
     "/api/rbac/permissions/": {
       "get": {
         "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
-        "operationId": "rbac_permissions_retrieve",
+        "operationId": "rbac_permissions_list",
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogGroup"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1749,6 +3596,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1772,6 +3622,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1802,6 +3655,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1838,6 +3694,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1872,6 +3731,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1910,6 +3772,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -1921,8 +3786,17 @@
     "/api/rbac/users/{user_public_id}/roles/": {
       "get": {
         "description": "The roles one user holds. The user is resolved through users' own visible_to().",
-        "operationId": "rbac_users_roles_retrieve",
+        "operationId": "rbac_users_roles_list",
         "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "in": "path",
             "name": "user_public_id",
@@ -1935,10 +3809,20 @@
         ],
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedRoleList"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -1961,12 +3845,32 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "201": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Role"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2007,6 +3911,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2021,10 +3928,20 @@
         "operationId": "system_crypto_retrieve",
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CryptoStatus"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2063,6 +3980,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2086,6 +4006,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2124,6 +4047,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2157,6 +4083,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2205,6 +4134,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2242,6 +4174,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2276,6 +4211,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2314,6 +4252,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2350,6 +4291,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2388,6 +4332,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2425,6 +4372,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2448,6 +4398,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2478,6 +4431,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2514,6 +4470,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2548,6 +4507,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2585,6 +4547,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2631,6 +4596,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2667,6 +4635,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }
@@ -2705,6 +4676,9 @@
         },
         "security": [
           {
+            "apiToken": []
+          },
+          {
             "cookieAuth": []
           }
         ],
@@ -2730,6 +4704,9 @@
           }
         },
         "security": [
+          {
+            "apiToken": []
+          },
           {
             "cookieAuth": []
           }

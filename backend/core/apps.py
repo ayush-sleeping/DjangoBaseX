@@ -13,7 +13,14 @@ class CoreConfig(AppConfig):
         from .bootstrap import register_core_contributors
         from .dataplane import register_core_checks
         from .observability.health import HEALTH_GROUP
-        from .permissions import AUDIT_GROUP, NOTIFICATIONS_GROUP, SETTINGS_GROUP, WEBHOOKS_GROUP
+        from .permissions import (
+            API_CONSUMERS_GROUP,
+            AUDIT_GROUP,
+            FILES_GROUP,
+            NOTIFICATIONS_GROUP,
+            SETTINGS_GROUP,
+            WEBHOOKS_GROUP,
+        )
         from .plugin_state import register as register_plugin_state
         from .registry import registry
         from .routes import CORE_PUBLIC_ROUTES
@@ -27,6 +34,8 @@ class CoreConfig(AppConfig):
         registry.permissions.register(AUDIT_GROUP)
         registry.permissions.register(HEALTH_GROUP)
         registry.permissions.register(WEBHOOKS_GROUP)
+        registry.permissions.register(API_CONSUMERS_GROUP)
+        registry.permissions.register(FILES_GROUP)
         registry.permissions.register(NOTIFICATIONS_GROUP)
         register_core_checks()
         from .audit_actions import register_core_actions

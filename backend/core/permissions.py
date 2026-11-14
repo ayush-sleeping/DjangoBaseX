@@ -13,6 +13,7 @@ A view states what it needs on the class, in one place:
 
 from rest_framework.permissions import BasePermission
 
+from core.api.error_codes import ApiError
 from core.registry import PermissionGroupSpec, PermissionSpec
 
 
@@ -21,6 +22,24 @@ class DefaultDeny(BasePermission):
 
     def has_permission(self, request, view):
         return False
+
+
+class CredentialKindAllowed(BasePermission):
+    """
+    API_PLATFORM.md § 7: a view accepts the credential kinds it declares (default: session only).
+    A machine principal reaches a view only if it opts in with credential_kinds including "token",
+    and never a human_only view, whatever the scopes.
+    """
+
+    def has_permission(self, request, view):
+        user = request.user
+        if getattr(view, "public", False) or not user or not user.is_authenticated:
+            return True  # anonymous: IsAuthenticated answers 401
+        kind = "token" if getattr(user, "is_machine", False) else "session"
+        accepted = getattr(view, "credential_kinds", frozenset({"session"}))
+        if kind not in accepted or (kind == "token" and getattr(view, "human_only", False)):
+            raise ApiError("credential_not_accepted")
+        return True
 
 
 class HasPermission(BasePermission):
@@ -72,6 +91,34 @@ AUDIT_GROUP = PermissionGroupSpec(
     permissions=(
         PermissionSpec("core.audit.view", "Read the audit log"),
         PermissionSpec("core.audit.export", "Export the audit log (the export is itself audited)"),
+    ),
+)
+
+
+API_CONSUMERS_GROUP = PermissionGroupSpec(
+    code="api_consumers",
+    label="API consumers",
+    module="core",
+    order=98,
+    permissions=(
+        PermissionSpec("core.api_consumers.view", "View API consumers and their tokens"),
+        PermissionSpec(
+            "core.api_consumers.manage", "Create, describe and deactivate API consumers"
+        ),
+        PermissionSpec("core.api_tokens.issue", "Issue, rotate and re-scope API tokens"),
+        PermissionSpec("core.api_tokens.revoke", "Revoke API tokens"),
+    ),
+)
+
+
+FILES_GROUP = PermissionGroupSpec(
+    code="files",
+    label="Files",
+    module="core",
+    order=99,
+    permissions=(
+        PermissionSpec("core.files.upload", "Upload files (content-checked, stored privately)"),
+        PermissionSpec("core.files.view", "Download files of the general purpose"),
     ),
 )
 

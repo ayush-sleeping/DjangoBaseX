@@ -21,6 +21,9 @@ from tests.architecture.permission_refs import find_permission_refs
 DECLARED_AHEAD_OF_USE: frozenset[str] = frozenset(
     {
         "users.users.export",
+        # Enforced by data, not a literal at a check site: FilePurpose.read_permission names it
+        # and core.api.files.FileDownloadView calls has_perm(purpose.read_permission).
+        "core.files.view",
     }
 )
 

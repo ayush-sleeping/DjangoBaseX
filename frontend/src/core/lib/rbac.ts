@@ -29,15 +29,9 @@ export const ROLE_CODES = {
   assign: "rbac.roles.assign",
 } as const;
 
-export type CatalogPermission = { code: string; label: string; is_deprecated: boolean };
+export type CatalogPermission = components["schemas"]["CatalogPermission"];
 
-export type PermissionGroup = {
-  code: string;
-  label: string;
-  module: string;
-  order: number;
-  permissions: CatalogPermission[];
-};
+export type PermissionGroup = components["schemas"]["CatalogGroup"];
 
 /** The API's Role (generated from the OpenAPI contract, DB-4). `permissions` is sorted codes. */
 export type Role = components["schemas"]["Role"];

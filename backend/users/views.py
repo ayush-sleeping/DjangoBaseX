@@ -11,11 +11,19 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.api.errors import error_response, from_exception, invalid_response
+from core.api.schemas import (
+    DynamicBodySerializer,
+    MfaChallengeSerializer,
+    MfaSetupSerializer,
+    RecoveryCodesSerializer,
+    RevokedCountSerializer,
+)
 from core.api.views import BaseAPIView
 from core.api.viewsets import BaseViewSet
 from core.bootstrap import assemble
@@ -93,6 +101,7 @@ class LoginView(BaseAPIView):
     authentication_classes: list = []
     throttle_classes = [LoginThrottle]  # step 1: 5/min per (address, IP) pair
 
+    @extend_schema(request=LoginSerializer, responses={204: None, 200: MfaChallengeSerializer})
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -115,6 +124,7 @@ class RefreshView(BaseAPIView):
     public = True  # registry.public_routes
     authentication_classes: list = []
 
+    @extend_schema(request=None, responses={204: None})
     def post(self, request):
         refresh_token = request.COOKIES.get(cookie_names().refresh)
         try:
@@ -133,6 +143,7 @@ class RefreshView(BaseAPIView):
 class LogoutView(BaseAPIView):
     required_permissions = []  # any signed-in user
 
+    @extend_schema(request=None, responses={204: None})
     def post(self, request):
         auth.logout(request)
         response = Response(status=status.HTTP_204_NO_CONTENT)
@@ -143,6 +154,7 @@ class LogoutView(BaseAPIView):
 class RevokeOtherSessionsView(BaseAPIView):
     required_permissions = []  # any signed-in user
 
+    @extend_schema(request=None, responses=RevokedCountSerializer)
     def post(self, request):
         return Response({"revoked": auth.revoke_other_sessions(request)})
 
@@ -150,6 +162,7 @@ class RevokeOtherSessionsView(BaseAPIView):
 class MeView(BaseAPIView):
     required_permissions = []  # any signed-in user
 
+    @extend_schema(responses=MeSerializer)
     def get(self, request):
         return Response(MeSerializer(request.user).data)
 
@@ -160,6 +173,7 @@ class BootstrapView(BaseAPIView):
 
     required_permissions = []  # any signed-in user; the body is the user's own
 
+    @extend_schema(responses=DynamicBodySerializer)
     def get(self, request):
         return Response(assemble(request, registry.bootstrap.enabled()))
 
@@ -170,6 +184,7 @@ class ForgotPasswordView(BaseAPIView):
     authentication_classes: list = []
     throttle_classes = [PasswordResetThrottle]  # 3/hour per address
 
+    @extend_schema(request=ForgotPasswordSerializer, responses={204: None})
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -182,6 +197,7 @@ class ResetPasswordView(BaseAPIView):
     public = True  # registry.public_routes
     authentication_classes: list = []
 
+    @extend_schema(request=ResetPasswordSerializer, responses={204: None})
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -208,6 +224,7 @@ class PasswordConfirmView(BaseAPIView):
     required_permissions = []  # any signed-in user
     throttle_classes = [MfaThrottle]
 
+    @extend_schema(request=PasswordConfirmSerializer, responses={204: None})
     def post(self, request):
         serializer = PasswordConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -224,6 +241,7 @@ class MfaVerifyView(BaseAPIView):
     authentication_classes: list = []
     throttle_classes = [MfaVerifyThrottle]
 
+    @extend_schema(request=MfaVerifySerializer, responses={204: None})
     def post(self, request):
         serializer = MfaVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -247,6 +265,7 @@ class MfaSetupView(BaseAPIView):
     required_permissions = []  # any signed-in user
     throttle_classes = [MfaThrottle]
 
+    @extend_schema(request=None, responses=MfaSetupSerializer)
     def post(self, request):
         try:
             return Response(mfa_service.begin_setup(request.user))
@@ -260,6 +279,7 @@ class MfaConfirmView(BaseAPIView):
     required_permissions = []  # any signed-in user
     throttle_classes = [MfaThrottle]
 
+    @extend_schema(request=MfaConfirmSerializer, responses=RecoveryCodesSerializer)
     def post(self, request):
         serializer = MfaConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -277,6 +297,7 @@ class MfaDisableView(BaseAPIView):
     permission_classes = [*BaseAPIView.permission_classes, requires_recent_auth("mfa_disable")]
     throttle_classes = [MfaThrottle]
 
+    @extend_schema(request=None, responses={204: None})
     def post(self, request):
         mfa_service.disable(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -291,6 +312,8 @@ def role_model():
 
 class UserViewSet(BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     serializer_class = UserSerializer
+    ordering_fields = ("email", "full_name", "created_at")
+    accepted_params = ("search",)  # read in get_queryset
     required_permissions = {
         "list": ["users.users.view"],
         "retrieve": ["users.users.view"],
@@ -405,6 +428,7 @@ class AcceptInvitationView(BaseAPIView):
     authentication_classes: list = []
     throttle_classes = [InvitationAcceptThrottle]
 
+    @extend_schema(request=AcceptInvitationSerializer, responses={204: None})
     def post(self, request):
         serializer = AcceptInvitationSerializer(data=request.data)
         if not serializer.is_valid():

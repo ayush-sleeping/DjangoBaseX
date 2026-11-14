@@ -6,6 +6,7 @@ through visible_to(), so an id the caller may not see answers 404, never 403 (AP
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -53,6 +54,7 @@ def roles_for_response(user):
 class PermissionCatalogView(BaseAPIView):
     required_permissions = ["rbac.permissions.view"]
 
+    @extend_schema(responses=CatalogGroupSerializer(many=True))
     def get(self, request):
         groups = PermissionGroup.objects.prefetch_related("permissions")
         return Response(CatalogGroupSerializer(groups, many=True).data)
@@ -131,6 +133,8 @@ class RoleViewSet(
 class UserRoleViewSet(BaseViewSet):
     """The roles one user holds. The user is resolved through users' own visible_to()."""
 
+    serializer_class = RoleSerializer
+
     required_permissions = {
         "list": ["rbac.roles.view"],
         "create": ["rbac.roles.assign"],
@@ -141,10 +145,12 @@ class UserRoleViewSet(BaseViewSet):
         users = User.objects.visible_to(self.request.user)
         return get_object_or_404(users, public_id=self.kwargs["user_public_id"])
 
+    @extend_schema(responses=RoleSerializer(many=True))
     def list(self, request, user_public_id=None):
         held = roles_for_response(request.user).filter(user_roles__user=self._user())
         return Response(RoleSerializer(held, many=True).data)
 
+    @extend_schema(request=AssignRoleSerializer, responses={201: RoleSerializer})
     def create(self, request, user_public_id=None):
         user = self._user()
         serializer = AssignRoleSerializer(data=request.data)
@@ -160,6 +166,7 @@ class UserRoleViewSet(BaseViewSet):
         data = RoleSerializer(roles_for_response(request.user).get(pk=role.pk)).data
         return Response(data, status=status.HTTP_201_CREATED)
 
+    @extend_schema(responses={204: None})
     def destroy(self, request, user_public_id=None, public_id=None):
         user = self._user()
         role = get_object_or_404(Role.objects.visible_to(request.user), public_id=public_id)

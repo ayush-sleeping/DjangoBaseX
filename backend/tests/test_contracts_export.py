@@ -101,8 +101,9 @@ def test_plugin_codes_statuses_and_routes_are_left_out():
 def test_ordering_lists_only_list_routes_with_ordering_fields():
     table = contracts.ordering_table(PluginScope.none())
     assert table == {
-        "core:activity": ["id"]
-    }  # the activity log sorts by id; its export route is not a list
+        "core:activity": ["id"],  # sorts by id; its export route is not a list
+        "users:users": ["created_at", "email", "full_name"],
+    }
 
 
 def test_permissions_render_as_a_mergeable_interface():

@@ -4,6 +4,8 @@ filter reads it. Writes go through core.lookups' one writer, behind settings.loo
 an admin adds or edits a value with no deploy, and the stable key is never writable.
 """
 
+from drf_spectacular.openapi import AutoSchema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -21,9 +23,22 @@ def lookup_error_response(exc: lookups.LookupError_) -> Response:
     return from_exception(exc, status.HTTP_400_BAD_REQUEST)
 
 
+class LookupSchema(AutoSchema):
+    """One view serves the collection and the value URL; the value URL gets its own operationId
+    so the contract has no duplicates (BUILD_ORDER 9.2)."""
+
+    def get_operation_id(self):
+        base = super().get_operation_id()
+        return f"{base}_by_key" if "{key}" in self.path else base
+
+
 class LookupListView(BaseAPIView):
     required_permissions = []  # any signed-in user: selects and filters read this
 
+    @extend_schema(
+        parameters=[OpenApiParameter("set", str, required=False)],
+        responses=LookupValueSerializer(many=True),
+    )
     def get(self, request):
         set_key = request.query_params.get("set")
         if set_key and set_key not in registry.lookups:
@@ -35,14 +50,17 @@ class LookupListView(BaseAPIView):
 
 
 class LookupWriteView(BaseAPIView):
+    schema = LookupSchema()
     required_permissions = ["settings.lookups.manage"]
 
+    @extend_schema(request=LookupWriteSerializer, responses={201: LookupValueSerializer})
     def post(self, request, set_key, key=None):
         """Add a value — the § 14 done-when: a new choice with no deploy."""
         if key is not None:  # POST creates under the collection; the value URL is PATCH's
             return self.http_method_not_allowed(request)
         return self._write(request, set_key, create=True, partial=False)
 
+    @extend_schema(request=LookupWriteSerializer, responses=LookupValueSerializer)
     def patch(self, request, set_key, key=None):
         if key is None:
             return self.http_method_not_allowed(request)

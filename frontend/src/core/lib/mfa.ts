@@ -4,13 +4,15 @@
  * Recovery codes are returned once, by confirmMfaSetup(), and live only in component state until
  * the user leaves the page. Never write them to storage, a cookie or a log.
  */
+import type { components } from "@/generated/api";
+
 import { api, ApiError, isReauthRequired } from "./api";
 import { confirmPassword } from "./auth";
 
 /** Where to send a user on `mfa_enrollment_required` (isMfaEnrollmentRequired in ./api). */
 export const MFA_ENROLMENT_PATH = "/account/security";
 
-export type MfaSetup = { otpauth_uri: string; secret: string };
+export type MfaSetup = components["schemas"]["MfaSetup"];
 
 /** Creates a fresh unconfirmed device, replacing any earlier unconfirmed one. */
 export async function startMfaSetup(): Promise<MfaSetup> {
