@@ -40,7 +40,7 @@ from core.registry import (
     registry,
 )
 
-SDK_VERSION = (1, 2)
+SDK_VERSION = (1, 3)
 
 # One entry per minor: what was added and why.
 SDK_CHANGELOG = {
@@ -58,6 +58,10 @@ SDK_CHANGELOG = {
         "Domain primitives (BUILD_ORDER 9.4), needed by the first second product (10.1): "
         "NumberingSeries with peek_number/reserve_number, StateMachine with transition, "
         "allowed_transitions and its typed errors, and Money with money_fields/money_property."
+    ),
+    (1, 3): (
+        "transition_options (each legal move with needs_reason, TECH_DEBT DB-137) and "
+        "money_pair_check with optional money_fields (DB-139), from the second product's findings."
     ),
 }
 
@@ -145,6 +149,7 @@ _LAZY = {
     "reserve_number": "core.numbering:reserve",
     "transition": "core.statemachine",
     "allowed_transitions": "core.statemachine:allowed_targets",
+    "transition_options": "core.statemachine",
     "StateMachineError": "core.statemachine",
     "IllegalTransition": "core.statemachine",
     "ReasonRequired": "core.statemachine",
@@ -153,6 +158,7 @@ _LAZY = {
     "to_money": "core.money",
     "money_fields": "core.money",
     "money_property": "core.money",
+    "money_pair_check": "core.money",
 }
 
 
@@ -211,6 +217,7 @@ __all__ = [
     "live_unique",
     "log_activity",
     "money_fields",
+    "money_pair_check",
     "money_property",
     "peek_number",
     "plugin_enabled",
@@ -224,4 +231,5 @@ __all__ = [
     "stamp_provenance",
     "to_money",
     "transition",
+    "transition_options",
 ]

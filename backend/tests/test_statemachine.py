@@ -38,6 +38,15 @@ def test_a_declared_move_is_recorded_through_change_state():
     assert statemachine.allowed_targets(user, "is_active") == [True]
 
 
+def test_the_options_say_which_moves_need_a_reason(one_way):
+    user = UserFactory()
+    assert statemachine.transition_options(user, "is_active") == [
+        {"to": False, "needs_reason": True}
+    ]
+    user.is_active = False
+    assert statemachine.transition_options(user, "is_active") == []
+
+
 def test_moving_to_the_state_a_row_is_already_in_is_a_no_op():
     user = UserFactory()
     assert statemachine.transition(user, "is_active", True) is False

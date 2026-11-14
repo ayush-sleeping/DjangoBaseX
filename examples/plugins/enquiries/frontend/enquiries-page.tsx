@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 
+import { promptText } from "@/core/components/prompt";
 import { fieldErrors, isApiError } from "@/core/lib/api";
 import { useT } from "@/core/lib/i18n";
 import { usePermissions } from "@/core/lib/permissions";
@@ -13,6 +14,7 @@ import {
   deleteEnquiry,
   ENQUIRY_CODES,
   type Enquiry,
+  type EnquiryTransition,
   listEnquiries,
   transitionEnquiry,
 } from "./enquiries";
@@ -34,8 +36,6 @@ export default function EnquiriesPage() {
   const perms = usePermissions();
   const [enquiries, setEnquiries] = useState<Enquiry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // A transition that needs a reason waits here for it (window.prompt is banned by the lint rule).
-  const [pending, setPending] = useState<{ enquiry: Enquiry; to: string } | null>(null);
   const canView = perms.can(ENQUIRY_CODES.view);
 
   const load = useCallback(() => {
@@ -75,23 +75,21 @@ export default function EnquiriesPage() {
     try {
       await transitionEnquiry(enquiry.public_id, to, reason);
       setError(null);
-      setPending(null);
       load();
     } catch (caught) {
       setError((isApiError(caught) && caught.serverMessage) || t("transitionFailed"));
     }
   }
 
-  function handleTransition(enquiry: Enquiry, to: string) {
-    if (to === "lost" || (enquiry.status === "lost" && to === "new")) setPending({ enquiry, to });
-    else void sendTransition(enquiry, to);
-  }
-
-  function handleReason(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!pending) return;
-    const reason = String(new FormData(event.currentTarget).get("reason") ?? "");
-    void sendTransition(pending.enquiry, pending.to, reason);
+  async function handleTransition(enquiry: Enquiry, transition: EnquiryTransition) {
+    // The server says which moves need a reason (needs_reason); the page never re-derives that rule.
+    if (!transition.needs_reason) return sendTransition(enquiry, transition.to);
+    const reason = await promptText({
+      title: t("moveTo", { status: transition.to }),
+      label: t("reasonPrompt"),
+      required: true,
+    });
+    if (reason !== null) await sendTransition(enquiry, transition.to, reason);
   }
 
   async function handleDelete(enquiry: Enquiry) {
@@ -151,17 +149,6 @@ export default function EnquiriesPage() {
             {error}
           </p>
         )}
-        {pending && (
-          <form onSubmit={handleReason} className={ui.card}>
-            <input name="reason" placeholder={t("reasonPrompt")} aria-label={t("reasonPrompt")} className={ui.input} autoFocus />
-            <button type="submit" className={ui.button}>
-              {t("moveTo", { status: pending.to })}
-            </button>
-            <button type="button" className="text-sm underline" onClick={() => setPending(null)}>
-              {t("cancel")}
-            </button>
-          </form>
-        )}
         <ul className={ui.card}>
           {enquiries === null && <li className="text-sm text-muted-foreground">{t("loading")}</li>}
           {enquiries?.length === 0 && <li className="text-sm text-muted-foreground">{t("empty")}</li>}
@@ -183,14 +170,14 @@ export default function EnquiriesPage() {
               </div>
               <div className="flex flex-wrap justify-end gap-2">
                 {perms.can(ENQUIRY_CODES.transition) &&
-                  enquiry.allowed_transitions.map((to) => (
+                  enquiry.transitions.map((transition) => (
                     <button
-                      key={to}
+                      key={transition.to}
                       type="button"
                       className="text-sm underline"
-                      onClick={() => handleTransition(enquiry, to)}
+                      onClick={() => handleTransition(enquiry, transition)}
                     >
-                      {t("moveTo", { status: to })}
+                      {t("moveTo", { status: transition.to })}
                     </button>
                   ))}
                 {perms.can(ENQUIRY_CODES.delete) && (

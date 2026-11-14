@@ -48,7 +48,7 @@ class Enquiry(SoftDeleteModel, ProvenanceModel):
     subject = models.CharField(max_length=200)
     message = models.TextField(blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.NEW)
-    # The estimated value is required: money_fields() has no optional pair (see SECOND_PRODUCT.md).
+    # Required by product choice: money_fields(optional=True) + money_pair_check() would relax it.
     value_amount, value_currency = money_fields()
     value = money_property("value")
     created_at = models.DateTimeField(auto_now_add=True)

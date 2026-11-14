@@ -28,7 +28,7 @@ function rendered(name: string): string[] {
 }
 
 describe("root-mounted hosts", () => {
-  it.each(["ConfirmHost", "Toaster"])("%s is rendered exactly once, by the root providers", (name) => {
+  it.each(["ConfirmHost", "PromptHost", "Toaster"])("%s is rendered exactly once, by the root providers", (name) => {
     expect(rendered(name)).toEqual(["src/core/providers/Providers.tsx"]);
   });
 });

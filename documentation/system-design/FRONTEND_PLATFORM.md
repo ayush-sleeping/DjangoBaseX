@@ -1113,6 +1113,8 @@ a positive-control fixture per rule that must make ESLint fail (§ 26).
   - `Modal` (on Headless UI's `Dialog`).
   - `confirm()` + `ConfirmHost`, and `toast()` + `Toaster`, both module stores mounted once in
     `Providers.tsx`. A `confirm()` with no host rejects; a newer question cancels the older one.
+    `promptText()` + `PromptHost` (BUILD_ORDER 10.1, DB-138) is the same shape for one line of text;
+    it is not called `prompt()` because the lint rule matches a bare `prompt(` to catch the global.
     The query layer's "couldn't refresh" notice shows as a toast.
   - `SearchInput` (300 ms debounce, minimum length 2), `Select`/`MultiSelect`/`AsyncSelect` (on
     Headless UI's `Combobox`; searchable; `name` renders hidden inputs so a plain `<form>` still

@@ -1,6 +1,6 @@
 # DjangoBaseX — traps
 
-> **Status:** Hub — checked 2026-11-14 · 35 real incidents from this repo's own history; the table grows as things bite.
+> **Status:** Hub — checked 2026-11-14 · 36 real incidents from this repo's own history; the table grows as things bite.
 
 **Add a row the day something bites.** When something 403s, renders blank or shows a wrong number, check here before assuming the code is wrong: most of these fail silently or as a different error. Within each group, ordered by how much time the trap cost (most first). Sources: `DAILY_CHANGES` = [`../DAILY_CHANGES.md`](../DAILY_CHANGES.md) (entry date), `DB-n` = [`../planning/TECH_DEBT.md`](../planning/TECH_DEBT.md), `AGENTS.md` = [`../../AGENTS.md`](../../AGENTS.md). Related: [`../PRODUCTION.md`](../PRODUCTION.md), [`LESSONS_LEARNED.md`](LESSONS_LEARNED.md) (general lessons), [`../INVARIANTS.md`](../INVARIANTS.md).
 
@@ -27,6 +27,7 @@
 | Hex-token scrub rule redacting `request_id` | uuid4-hex request ids would vanish from logs | Caught before shipping; see the entry for how the rule and its test canary were adjusted | DAILY_CHANGES 2026-11-06 (DB-51) |
 | A production-like boot on `memory://` broker | Jobs published, nothing consumes | `dbx.jobs.E015` refuses it | DAILY_CHANGES 2026-11-06 (7.1) |
 | A plugin field shares a name with a core enum field (`status`, `scope`) | Installing the plugin fails `test_every_committed_contract_is_current`: drf-spectacular renamed core's `StatusEnum` in `openapi.json` | Pin core's enum names in `SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`; add any new core choice field there | BUILD_ORDER 10.1 F3 |
+| A gap-tolerant numbering series in a `django_db` test | `database table is locked` on every create, on in-memory SQLite: `reserve()` writes on its own connection while the test's transaction holds the lock | Use a `real_db`-style fixture (no wrapping transaction, delete your counter rows) as `tests/test_numbering.py` does, or a gapless series | BUILD_ORDER 10.1 F2 |
 
 ## Frontend
 

@@ -4,6 +4,8 @@ import random
 from decimal import Decimal
 
 import pytest
+from django.db.models import CheckConstraint
+from django.db.models.fields import NOT_PROVIDED
 
 from core.money import (
     MINOR_UNITS,
@@ -13,6 +15,9 @@ from core.money import (
     Rate,
     UnknownCurrency,
     allocate,
+    money_fields,
+    money_pair_check,
+    money_property,
     scale,
     to_money,
     to_rate,
@@ -124,6 +129,43 @@ def test_allocate_largest_remainder_is_deterministic():
 def test_price_not_found_names_the_component():
     exc = PriceNotFound("plan:gold")
     assert exc.code == "pricing_incomplete" and "plan:gold" in str(exc)
+
+
+def test_required_money_fields_are_unchanged():
+    amount, currency = money_fields()
+    assert not amount.null and not amount.blank
+    assert not currency.blank and currency.default is NOT_PROVIDED
+
+
+def test_optional_money_fields_are_nullable_and_blank():
+    amount, currency = money_fields(optional=True)
+    assert amount.null and amount.blank
+    assert currency.blank and currency.default == ""
+    assert not currency.null
+
+
+def test_money_property_is_none_for_an_unset_amount_else_money():
+    class Holder:
+        price = money_property("price")
+
+    unset = Holder()
+    unset.price_amount, unset.price_currency = None, ""
+    assert unset.price is None
+
+    holder = Holder()
+    holder.price_amount, holder.price_currency = Decimal("1.5"), EUR
+    assert holder.price == to_money("1.50", EUR)
+
+    bad = Holder()
+    bad.price_amount, bad.price_currency = Decimal("1"), ""
+    with pytest.raises(UnknownCurrency):  # a set amount with no currency is refused, not defaulted
+        bad.price  # noqa: B018
+
+
+def test_money_pair_check_is_a_named_check_constraint():
+    check = money_pair_check("price", constraint_name="x_price_pair")
+    assert isinstance(check, CheckConstraint) and check.name == "x_price_pair"
+    assert "price_amount" in str(check.condition) and "price_currency" in str(check.condition)
 
 
 def test_wire_form_is_strings():

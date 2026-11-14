@@ -21,7 +21,9 @@ body reaching a balance debit unquantised; a charge in one currency collected in
 - `allocate()` splits by largest remainder so the parts always sum exactly to the total.
 
 Storage: `money_fields()` gives the (amount, currency) column pair, written already quantised;
-`money_property()` reads them back as Money. The API carries amounts as strings
+`money_property()` reads them back as Money. `money_fields(optional=True)` makes the pair
+optional (null amount, blank currency) with `money_pair_check()` enforcing both-or-neither, and
+`money_property()` then returns None for an unset value. The API carries amounts as strings
 (core/api/fields.py). Every price comes from master data: an unresolvable component raises
 PriceNotFound, which the API reports as 409 pricing_incomplete. Zero is a price someone must set.
 """
@@ -238,24 +240,50 @@ def allocate(total: Money, weights: Iterable[object]) -> list[Money]:
 AMOUNT_MAX_DIGITS, AMOUNT_PLACES = 19, 4  # headroom above the largest minor-unit scale (4)
 
 
-def money_fields(**amount_options):
+def money_fields(*, optional: bool = False, **amount_options):
     """The (amount, currency) column pair, always written already quantised:
 
     total_amount, total_currency = money_fields()
     total = money_property("total")
+
+    `optional=True` makes the value unset-able as a PAIR: the amount is null/blank and the currency
+    blank with default "". Add `money_pair_check(name, ...)` to the model's Meta.constraints so
+    one half can never be set without the other. A set currency is still validated by to_money().
     """
     from django.db import models
 
+    if optional:
+        amount_options.update(null=True, blank=True)
+        currency = models.CharField(max_length=3, blank=True, default="")
+    else:
+        currency = models.CharField(max_length=3)
     return (
         models.DecimalField(
             max_digits=AMOUNT_MAX_DIGITS, decimal_places=AMOUNT_PLACES, **amount_options
         ),
-        models.CharField(max_length=3),
+        currency,
+    )
+
+
+def money_pair_check(name: str, *, constraint_name: str):
+    """CheckConstraint for an optional pair: both set or both unset, never one half."""
+    from django.db import models
+
+    amount, currency = f"{name}_amount", f"{name}_currency"
+    return models.CheckConstraint(
+        condition=models.Q(**{f"{amount}__isnull": True, currency: ""})
+        | models.Q(**{f"{amount}__isnull": False}) & ~models.Q(**{currency: ""}),
+        name=constraint_name,
     )
 
 
 def money_property(name: str) -> property:
-    def read(self) -> Money:
-        return to_money(getattr(self, f"{name}_amount"), getattr(self, f"{name}_currency"))
+    """Reads the pair back as Money; None when an optional value is not set (amount is None)."""
+
+    def read(self) -> Money | None:
+        amount = getattr(self, f"{name}_amount")
+        if amount is None:
+            return None
+        return to_money(amount, getattr(self, f"{name}_currency"))
 
     return property(read)

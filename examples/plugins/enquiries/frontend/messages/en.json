@@ -1,7 +1,6 @@
 {
   "enquiries": {
     "add": "Add enquiry",
-    "cancel": "Cancel",
     "checking": "Checking your session…",
     "contactEmail": "Contact email",
     "contactName": "Contact name",

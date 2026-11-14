@@ -14,6 +14,8 @@ export const ENQUIRY_CODES = {
 
 export type EnquiryStatus = "new" | "contacted" | "quoted" | "won" | "lost";
 
+export type EnquiryTransition = { to: string; needs_reason: boolean };
+
 export type Enquiry = {
   public_id: string;
   number: string;
@@ -24,6 +26,7 @@ export type Enquiry = {
   status: EnquiryStatus;
   value: { amount: string; currency: string };
   allowed_transitions: string[];
+  transitions: EnquiryTransition[];
   origin: string;
   source_ref: string;
   created_at: string;

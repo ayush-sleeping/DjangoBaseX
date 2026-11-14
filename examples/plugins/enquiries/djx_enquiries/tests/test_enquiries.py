@@ -76,6 +76,10 @@ def test_an_enquiry_gets_the_next_number_and_a_quantised_value():
     assert second["number"].endswith("-00002")
     assert first["value"] == {"amount": "1200.50", "currency": "EUR"}
     assert first["status"] == "new" and first["allowed_transitions"] == ["contacted", "lost"]
+    assert first["transitions"] == [
+        {"to": "contacted", "needs_reason": False},
+        {"to": "lost", "needs_reason": True},
+    ]
     assert "id" not in first  # public_id only
 
 

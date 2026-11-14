@@ -42,8 +42,8 @@ SECTION = NavSection(
 )
 
 # Gapless: reserved inside the create's transaction, so a rollback returns the number. A
-# gap-tolerant series would suit an enquiry, but its separate connection deadlocks the in-memory
-# test database and no core test covers it (SECOND_PRODUCT.md finding F2).
+# gap-tolerant series reserves on its own connection, which the default (transaction-wrapped)
+# test database cannot host on in-memory SQLite: see TRAPS.md and SECOND_PRODUCT.md F2.
 SERIES = NumberingSeries(
     key="enquiries.enquiry",
     label="Enquiries",

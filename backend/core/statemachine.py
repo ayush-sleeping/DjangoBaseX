@@ -47,6 +47,17 @@ def allowed_targets(obj, field: str) -> list:
     return sorted(machine.transitions.get(getattr(obj, field), ()), key=repr)
 
 
+def transition_options(obj, field: str) -> list[dict]:
+    """The legal moves from `obj`'s current state, each saying whether it needs a reason: what an
+    API returns so a client draws its buttons without repeating the machine's rules."""
+    machine = _machine(obj, field)
+    current = getattr(obj, field)
+    return [
+        {"to": to, "needs_reason": (current, to) in machine.reason_required}
+        for to in allowed_targets(obj, field)
+    ]
+
+
 def transition(obj, field: str, to, *, actor=None, reason: str = "", also_save=()) -> bool:
     machine = _machine(obj, field)
     with transaction.atomic():

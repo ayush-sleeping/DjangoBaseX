@@ -30,6 +30,7 @@ All under `frontend/src/core/components/` unless noted.
 | Surface | `Card` → `Card.tsx` | grouped content |
 | Dialog | `Modal` → `Modal.tsx` | any overlay (focus trap, Escape, scroll lock); sizes `sm..xl` |
 | Confirm a destructive/irreversible act | `confirm()` + `ConfirmHost` → `confirm.tsx` | replaces `window.confirm`; returns `Promise<boolean>` |
+| Ask for one line of text (a reason) | `promptText()` + `PromptHost` → `prompt.tsx` | replaces `window.prompt`; returns `Promise<string \| null>`; `required` disables confirm until non-blank |
 | Feedback | `toast()` → `toast.tsx` (`Toaster` mounted once) | success and transient errors |
 | Nothing to show | `EmptyState` (`none` / `filtered`) → `EmptyState.tsx` | a load that succeeded with zero rows |
 | List failed to load | `ListLoadError` → `ListLoadError.tsx` | a list/table query failed with nothing to show |

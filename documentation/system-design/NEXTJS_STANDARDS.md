@@ -208,7 +208,7 @@ author meets:
 - **Use the primitives** (§ 13 of the same doc), each enforced by ESLint:
   - `Button`/`IconButton`;
   - `Modal`, never a `fixed inset-0` overlay;
-  - `confirm()`/`toast()`, never `window.confirm`/`alert`;
+  - `confirm()`/`promptText()`/`toast()`, never `window.confirm`/`prompt`/`alert`;
   - `Select`/`MultiSelect`/`AsyncSelect`, never a native `<select>`;
   - `SearchInput`, `EmptyState`, `ListLoadError`/`PanelError`, `StatusPill`, and
     `FormField kind=…`.

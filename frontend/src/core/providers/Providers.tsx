@@ -5,7 +5,7 @@
  * the LocalizationProvider (8.4b: the platform locale from the root layout, for formatters before
  * bootstrap and when signed out), the I18nProvider (8.4c: next-intl, on the same locale and zone),
  * the PermissionProvider (8.2, fed by bootstrap), and the one
- * ConfirmHost and Toaster (8.3a) that confirm() and toast() talk to. The identity and session
+ * ConfirmHost, PromptHost and Toaster (8.3a) that confirm() and toast() talk to. The identity and session
  * providers join as their tasks land, in the order § 1 fixes. The client is created once per
  * browser session in useState, never at module scope.
  */
@@ -13,6 +13,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
 import { ConfirmHost } from "@/core/components/confirm";
+import { PromptHost } from "@/core/components/prompt";
 import { Toaster } from "@/core/components/toast";
 import { LocalizationProvider, type PlatformLocale } from "@/core/lib/format/use-format";
 import { I18nProvider } from "@/core/lib/i18n";
@@ -30,6 +31,7 @@ export function Providers({ platform, children }: { platform: PlatformLocale; ch
             <StatusProvider>{children}</StatusProvider>
           </PermissionProvider>
           <ConfirmHost />
+          <PromptHost />
           <Toaster />
         </I18nProvider>
       </LocalizationProvider>

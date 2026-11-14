@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from core.sdk import SOURCE_REF_PATTERN, allowed_transitions
+from core.sdk import SOURCE_REF_PATTERN, allowed_transitions, transition_options
 
 from .models import Enquiry
 
@@ -10,6 +10,7 @@ from .models import Enquiry
 class EnquirySerializer(serializers.ModelSerializer):
     value = serializers.SerializerMethodField()
     allowed_transitions = serializers.SerializerMethodField()
+    transitions = serializers.SerializerMethodField()
 
     class Meta:
         model = Enquiry
@@ -23,6 +24,7 @@ class EnquirySerializer(serializers.ModelSerializer):
             "status",
             "value",
             "allowed_transitions",
+            "transitions",
             "origin",
             "source_ref",
             "created_at",
@@ -34,6 +36,9 @@ class EnquirySerializer(serializers.ModelSerializer):
 
     def get_allowed_transitions(self, enquiry) -> list[str]:
         return allowed_transitions(enquiry, "status")  # the registry, no query
+
+    def get_transitions(self, enquiry) -> list[dict]:
+        return transition_options(enquiry, "status")  # each move + needs_reason (DB-137)
 
 
 class EnquiryCreateSerializer(serializers.Serializer):

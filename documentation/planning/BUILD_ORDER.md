@@ -1095,8 +1095,8 @@ time is the design flaw. It is far cheaper to find at product two than at produc
 
 *Started 2026-11-14 (owner decision: an enquiries mini-CRM, as a plugin in `examples/plugins/`).* Built:
 `examples/plugins/enquiries` (numbering, state machine with history, money, scoping, soft delete, a page),
-installed by CI beside notes; SDK 1.2. Seven findings, three fixed in the core: see
-[`SECOND_PRODUCT.md`](SECOND_PRODUCT.md). Open: the clone-and-re-origin merge path, and DB-136 to DB-139.
+installed by CI beside notes; SDK 1.2. Seven findings, all closed (six fixed in the core, SDK 1.3; one a test-environment trap): see
+[`SECOND_PRODUCT.md`](SECOND_PRODUCT.md). Open: the clone-and-re-origin merge path.
 
 ---
 
