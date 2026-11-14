@@ -138,6 +138,9 @@ def test_the_command_prints_the_diff():
         "created core.outbox_drain",
         "created core.outbox_recover",
         "created core.retention",
+        "created ops.alert_digest",
+        "created ops.monitor",
+        "created ops.release_held",
         "created users.auth_cleanup",
         "schedules already match the registry",
     ]

@@ -894,12 +894,16 @@ test" works for every route.
 *Built 2026-11-14 (see `DAILY_CHANGES.md`). Deferred, each a TECH_DEBT row: the bell UI, digests (§ 10), the
 webhook channel, the per-module master toggle and budgets, editable templates (§ 12).*
 
-### 7.8 — Ops alerting ⬜
+### 7.8 — Ops alerting ✅
 One dispatcher with a DB ledger, incidents announced once and recovered once, quiet hours with a single release
 summary, and a twice-daily digest.
 
 **Done when:** a flapping check produces one incident message and one recovery message, and cooldowns survive a
 cache clear.
+
+*Built 2026-11-14 (see `DAILY_CHANGES.md`): `tests/core/ops/test_incidents.py::test_a_flapping_check_produces_one_incident_message_and_one_recovery_message`
+and `test_dispatcher.py::test_cooldown_survives_cache_clear`. Deferred, each a TECH_DEBT row (DB-94 to DB-99): the ops
+panel and its API (§ 20), the heartbeat (§ 21), error groups in the digest, `MonitorCommand`, reconciling instant sends.*
 
 ---
 

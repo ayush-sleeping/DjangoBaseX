@@ -823,3 +823,114 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.purpose_code} for user #{self.recipient_id}"
+
+
+# --- Ops alerting (BUILD_ORDER 7.8; NOTIFICATIONS_AND_ALERTING.md Part B) ------------------------
+
+
+class OpsDigestRun(models.Model):
+    """One ops digest: the stamp that says which held alerts it carried (§ 16). `pending` means
+    handed to notify() and not yet settled; core.ops.digest settles it from the delivery log at the
+    start of every run (sent | unknown | failed). Only a sent or unknown run releases its alerts: a
+    failed one gives them back, so a digest that did not arrive never makes its contents vanish."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending"
+        SENT = "sent"
+        UNKNOWN = "unknown"
+        FAILED = "failed"
+
+    slot_at = models.DateTimeField()  # the scheduled digest time this run answers (UTC)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    held_count = models.PositiveIntegerField(default=0)
+    incident_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "core_ops_digest_run"
+        ordering = ["-id"]
+        indexes = [models.Index(fields=["status", "slot_at"], name="core_ops_digest_slot")]
+
+    def __str__(self):
+        return f"ops digest {self.slot_at:%Y-%m-%d %H:%M} {self.status}"
+
+
+class OpsAlert(models.Model):
+    """The ops alert ledger (§ 14): one row per dispatcher call, with its decision and reason.
+    Cooldowns, dedupe and "since the last digest" are queries on this table, never the cache."""
+
+    class Decision(models.TextChoices):
+        SENT = "sent"  # handed to notify(); the delivery log holds the provider's answer
+        HELD = "held"  # waiting for a digest or for quiet hours to end
+        SKIPPED = "skipped"  # cooldown, disabled, no destination, duplicate, dispatch error
+
+    class Event(models.TextChoices):
+        PROBLEM = "problem"
+        RECOVERED = "recovered"
+
+    source = models.CharField(max_length=64)
+    reason = models.CharField(max_length=100)
+    kind = models.CharField(max_length=32)
+    event = models.CharField(max_length=16, choices=Event.choices, default=Event.PROBLEM)
+    subject_key = models.CharField(max_length=255)
+    title = models.CharField(max_length=200)
+    body = models.TextField(blank=True, default="")
+    decision = models.CharField(max_length=16, choices=Decision.choices)
+    decision_reason = models.CharField(max_length=64, blank=True, default="")
+    channel = models.CharField(max_length=32, blank=True, default="")
+    released_at = models.DateTimeField(null=True, blank=True)
+    released_via = models.CharField(max_length=32, blank=True, default="")
+    digest_run = models.ForeignKey(
+        OpsDigestRun, null=True, blank=True, on_delete=models.SET_NULL, related_name="alerts"
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "core_ops_alert"
+        ordering = ["-id"]
+        indexes = [
+            models.Index(
+                fields=["subject_key", "decision", "created_at"], name="core_ops_alert_subject"
+            ),
+            models.Index(fields=["decision", "released_at"], name="core_ops_alert_held"),
+        ]
+
+    def __str__(self):
+        return f"{self.subject_key} {self.decision}:{self.decision_reason}"
+
+
+class Incident(models.Model):
+    """A condition a monitor reported (§ 17): announced once when it opens, once when it recovers.
+    `pending` waits out confirm_after_minutes, so a flap inside it is never announced."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending"
+        OPEN = "open"
+        RECOVERED = "recovered"
+
+    source = models.CharField(max_length=64)
+    key = models.CharField(max_length=255)
+    label = models.CharField(max_length=300)
+    kind = models.CharField(max_length=32)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    first_seen_at = models.DateTimeField()
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    announced_at = models.DateTimeField(null=True, blank=True)
+    last_seen_at = models.DateTimeField()
+    recovered_at = models.DateTimeField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "core_health_incident"
+        ordering = ["-first_seen_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source", "key"],
+                condition=~models.Q(status="recovered"),
+                name="core_incident_one_live",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.source}/{self.key} {self.status}"
