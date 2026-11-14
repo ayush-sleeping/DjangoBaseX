@@ -13,4 +13,5 @@ Every document in this folder, with its first heading. The task map is [`../INDE
 | [`PLATFORM_BLUEPRINT.md`](PLATFORM_BLUEPRINT.md) | Platform Blueprint |
 | [`PLUGIN_DEVELOPMENT.md`](PLUGIN_DEVELOPMENT.md) | Creating a Plugin |
 | [`ROADMAP.md`](ROADMAP.md) | Roadmap |
+| [`SECOND_PRODUCT.md`](SECOND_PRODUCT.md) | Second product — what hurt (BUILD_ORDER 10.1) |
 | [`TECH_DEBT.md`](TECH_DEBT.md) | Tech Debt |

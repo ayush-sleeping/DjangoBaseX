@@ -1,0 +1,16 @@
+# Enquiries: a DjangoBaseX plugin, and the second product built on the core (BUILD_ORDER 10.1).
+# The manifest is read without importing any code (EXTENSIBILITY § 12, § 17).
+
+[plugin]
+name = "enquiries"
+label = "enquiries"
+package = "djx_enquiries"
+version = "0.1.0"
+app = "djx_enquiries.apps.EnquiriesConfig"
+description = "Enquiries: incoming requests, followed up to won or lost."
+
+[plugin.prefixes]
+table = "enquiries_"
+permission = "enquiries"
+route = "enquiries"
+frontend = "enquiries"

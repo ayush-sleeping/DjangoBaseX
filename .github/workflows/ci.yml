@@ -3,9 +3,9 @@
 # Two jobs, so a Python failure still reports the TypeScript result. No step is
 # continue-on-error: a non-blocking check is a check nobody reads.
 #
-# Each job checks the boilerplate as shipped (no plugins), then installs the example plugin
-# (examples/plugins/notes, BUILD_ORDER 3.4) and checks again: the plugin seam is proved on every
-# push, and the bare platform is too.
+# Each job checks the boilerplate as shipped (no plugins), then installs the example plugins
+# (examples/plugins/notes, BUILD_ORDER 3.4, and examples/plugins/enquiries, the second product of
+# 10.1) and checks again: the plugin seam is proved on every push, and the bare platform is too.
 
 name: CI
 
@@ -95,10 +95,12 @@ jobs:
           uv run ruff check --config pyproject.toml ../scripts ../examples
           uv run ruff format --check --config pyproject.toml ../scripts ../examples
 
-      - name: Install the example plugin
+      - name: Install the example plugins
         run: |
           cp -R ../examples/plugins/notes plugins/notes
+          cp -R ../examples/plugins/enquiries plugins/enquiries
           uv run python ../scripts/plugins.py link notes
+          uv run python ../scripts/plugins.py link enquiries
 
       - name: Checks and migrations, with the example plugin
         run: |
@@ -146,10 +148,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install the example plugin
+      - name: Install the example plugins
         run: |
           cp -R ../examples/plugins/notes ../backend/plugins/notes
+          cp -R ../examples/plugins/enquiries ../backend/plugins/enquiries
           python ../scripts/plugins.py link notes
+          python ../scripts/plugins.py link enquiries
 
       - name: ESLint, with the example plugin
         run: npm run lint

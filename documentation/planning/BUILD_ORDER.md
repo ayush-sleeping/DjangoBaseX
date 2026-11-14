@@ -1089,9 +1089,14 @@ once.
 
 *Renumbered from Phase 5 on 2026-09-29, when the platform-service phases were inserted before it.*
 
-### 10.1 — Build a second product on it ⬜
+### 10.1 — Build a second product on it ◐
 **Nothing proves a core is reusable until something else is built on it.** Whatever hurts the second
 time is the design flaw. It is far cheaper to find at product two than at product five.
+
+*Started 2026-11-14 (owner decision: an enquiries mini-CRM, as a plugin in `examples/plugins/`).* Built:
+`examples/plugins/enquiries` (numbering, state machine with history, money, scoping, soft delete, a page),
+installed by CI beside notes; SDK 1.2. Seven findings, three fixed in the core: see
+[`SECOND_PRODUCT.md`](SECOND_PRODUCT.md). Open: the clone-and-re-origin merge path, and DB-136 to DB-139.
 
 ---
 

@@ -41,6 +41,7 @@ proves it, then links the deep spec by section. Agents: [`../AGENTS.md`](../AGEN
 | **Start a NEW product from this boilerplate** | [`NEW_PROJECT.md`](NEW_PROJECT.md) |
 | **Take a core update into my product** | [`UPGRADING.md`](UPGRADING.md) |
 | **Build a plugin / work as a separate team** | [`planning/PLUGIN_DEVELOPMENT.md`](planning/PLUGIN_DEVELOPMENT.md) |
+| **See what hurt building a second product on the core (10.1)** | [`planning/SECOND_PRODUCT.md`](planning/SECOND_PRODUCT.md) |
 | **Understand the core + plugin architecture** | [`planning/CORE_ARCHITECTURE_PLAN.md`](planning/CORE_ARCHITECTURE_PLAN.md) |
 | **Why the auth model is cookie JWT (decided)** | [`adr/0009-jwt-in-httponly-cookies.md`](adr/0009-jwt-in-httponly-cookies.md) — reasoning in [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
 | **Understand what auth/RBAC designs get wrong** | [`system-design/AUTH_FAILURE_MODES.md`](system-design/AUTH_FAILURE_MODES.md) — the failure catalogue + design checklist |

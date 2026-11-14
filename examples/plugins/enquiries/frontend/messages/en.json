@@ -1,0 +1,27 @@
+{
+  "enquiries": {
+    "add": "Add enquiry",
+    "cancel": "Cancel",
+    "checking": "Checking your session…",
+    "contactEmail": "Contact email",
+    "contactName": "Contact name",
+    "count": "{count, plural, one {# enquiry} other {# enquiries}}",
+    "currency": "Currency (3 letters)",
+    "delete": "Delete",
+    "deleteFailed": "Could not delete the enquiry.",
+    "denied": "You don't have permission to view enquiries.",
+    "empty": "No enquiries yet.",
+    "home": "Home",
+    "loadFailed": "Could not load your enquiries.",
+    "loading": "Loading…",
+    "message": "Message",
+    "moveTo": "Move to {status}",
+    "reasonPrompt": "Reason for this change",
+    "saveFailed": "Could not save the enquiry.",
+    "signIn": "Sign in to see your enquiries",
+    "subject": "Subject",
+    "title": "Enquiries",
+    "transitionFailed": "Could not change the status.",
+    "valueAmount": "Value"
+  }
+}
