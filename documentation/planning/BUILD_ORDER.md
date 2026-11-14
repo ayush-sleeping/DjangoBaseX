@@ -1054,12 +1054,14 @@ the first-run wizard.
 **Done when:** a deploy whose backup fails stops before migrating; a restored dump from another environment comes
 up with its schedules and integrations disabled.
 
-### 9.6 — Engineering practice ⬜
+### 9.6 — Engineering practice ✅
 `BUG_CLASSES.md` in the PR template; the upgraded ADR template; generated folder indexes and a doc link test;
 `CHANGELOG.md` with upgrade notes; per-app idempotent `seed_demo`. Closes **DB-13**.
 
 **Done when:** a broken relative link in `documentation/` fails CI; `seed_demo` run twice creates each demo row
 once.
+
+*Proved by:* `backend/tests/architecture/test_doc_links.py::test_no_relative_markdown_link_is_broken` (with `test_the_scanner_catches_a_broken_link` proving the scanner can fail, and `test_the_scan_finds_the_documentation` failing on a zero-file scan; it runs in the CI pytest step); `backend/tests/test_seed_demo.py::test_seed_demo_twice_creates_each_demo_row_once`. Also `test_every_generated_folder_index_is_current` (`scripts/doc_index.py --check`).
 
 ---
 
@@ -1081,4 +1083,4 @@ time is the design flaw. It is far cheaper to find at product two than at produc
 - **DB-11** — a readiness probe that actually checks the database → now **6.2**
 - **DB-4** — generate frontend types from `/api/schema/` → now **8.4**
 - **DB-3** — `mypy` + `django-stubs`
-- **DB-13** — a `seed` management command → now **9.6**
+- ~~**DB-13** — a `seed` management command~~ → closed by **9.6**
