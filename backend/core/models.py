@@ -487,9 +487,9 @@ class OutboxMessage(models.Model):
 
 class WebhookEndpoint(models.Model):
     """
-    A URL that receives signed, ids-only event callbacks. Platform-owned: there is no API-consumer
-    model yet (BUILD_ORDER 9.2 adds a nullable `consumer` FK). The signing secret is encrypted, not
-    hashed: we must reproduce it to sign. It is shown once, at creation or rotation.
+    A URL that receives signed, ids-only event callbacks. Owned by an API consumer when `consumer`
+    is set, else platform-owned. The signing secret is encrypted, not hashed: we must reproduce it
+    to sign. It is shown once, at creation or rotation.
     `is_active` is a human switch; `disabled_at` is the circuit breaker's. They are separate columns
     because "an admin turned it off" and "it tripped" need different fixes.
     """
@@ -504,6 +504,14 @@ class WebhookEndpoint(models.Model):
     custom_headers = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
     disabled_at = models.DateTimeField(null=True, blank=True)
+    # The owning system (TECH_DEBT DB-79): NULL = platform-owned. Never a person.
+    consumer = models.ForeignKey(
+        "core.ApiConsumer",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="webhook_endpoints",
+    )
     consecutive_failures = models.PositiveIntegerField(default=0)
     last_delivery_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
@@ -934,3 +942,30 @@ class Incident(models.Model):
 
     def __str__(self):
         return f"{self.source}/{self.key} {self.status}"
+
+
+# Registered under the core app, defined in core.api_tokens (one concern per package).
+from core.api_tokens.models import ApiConsumer, ApiToken  # noqa: E402, F401
+
+
+class PrivateFile(models.Model):
+    """An uploaded file's record. The bytes live in private storage with a generated name; the only
+    way to read them is the permission-checked download view (core.files, API_PLATFORM.md § 19)."""
+
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    purpose = models.CharField(max_length=64)
+    original_name = models.CharField(max_length=200)
+    content_type = models.CharField(max_length=100)  # sniffed from the bytes, never the client's
+    size = models.PositiveBigIntegerField()
+    storage_name = models.CharField(max_length=255)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_private_file"
+        ordering = ["-id"]
+
+    def __str__(self):
+        return f"{self.purpose}:{self.public_id}"

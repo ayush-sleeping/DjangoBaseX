@@ -1,7 +1,9 @@
 from django.urls import path
 
 from .api.audit import ActivityLogViewSet
+from .api.consumers import ApiConsumerViewSet
 from .api.crypto import CryptoStatusView
+from .api.files import FileDownloadView, FileUploadView
 from .api.flags import FlagDetailView, FlagListView
 from .api.lookups import LookupListView, LookupWriteView
 from .api.notifications import (
@@ -151,6 +153,40 @@ urlpatterns = [
         "webhooks/endpoints/<uuid:public_id>/deliveries/<slug:delivery_id>/redeliver/",
         WebhookEndpointViewSet.as_view({"post": "redeliver"}),
         name="webhook-redeliver",
+    ),
+    # API_PLATFORM § 18-19: sniffed uploads; no public media URL, the download checks the purpose.
+    path("files/", FileUploadView.as_view(), name="file-upload"),
+    path("files/<uuid:public_id>/", FileDownloadView.as_view(), name="file-download"),
+    # ADR-0016: machine callers. Human-only; the plaintext token is in issue/rotate responses only.
+    path(
+        "consumers/",
+        ApiConsumerViewSet.as_view({"get": "list", "post": "create"}),
+        name="api-consumers",
+    ),
+    path(
+        "consumers/<uuid:public_id>/",
+        ApiConsumerViewSet.as_view({"get": "retrieve", "patch": "partial_update"}),
+        name="api-consumer",
+    ),
+    path(
+        "consumers/<uuid:public_id>/tokens/",
+        ApiConsumerViewSet.as_view({"get": "tokens", "post": "issue_token"}),
+        name="api-consumer-tokens",
+    ),
+    path(
+        "consumers/<uuid:public_id>/tokens/<uuid:token_id>/",
+        ApiConsumerViewSet.as_view({"patch": "token_scopes"}),
+        name="api-consumer-token",
+    ),
+    path(
+        "consumers/<uuid:public_id>/tokens/<uuid:token_id>/rotate/",
+        ApiConsumerViewSet.as_view({"post": "rotate_token"}),
+        name="api-consumer-token-rotate",
+    ),
+    path(
+        "consumers/<uuid:public_id>/tokens/<uuid:token_id>/revoke/",
+        ApiConsumerViewSet.as_view({"post": "revoke_token"}),
+        name="api-consumer-token-revoke",
     ),
     # § 17: public by declaration (core.routes.CORE_PUBLIC_ROUTES).
     path(

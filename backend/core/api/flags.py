@@ -6,6 +6,7 @@ user may see is only ever the on-for-me list on /api/auth/me/.
 
 from datetime import date
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -32,6 +33,7 @@ def catalogue():
 class FlagListView(BaseAPIView):
     required_permissions = ["settings.flags.view"]
 
+    @extend_schema(responses=FlagSerializer(many=True))
     def get(self, request):
         return Response(FlagSerializer(catalogue(), many=True).data)
 
@@ -39,6 +41,7 @@ class FlagListView(BaseAPIView):
 class FlagDetailView(BaseAPIView):
     required_permissions = ["settings.flags.manage"]
 
+    @extend_schema(request=FlagWriteSerializer, responses=FlagSerializer)
     def patch(self, request, key):
         serializer = FlagWriteSerializer(data=request.data)
         if not serializer.is_valid():

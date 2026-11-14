@@ -6,6 +6,7 @@
 
 export const ORDERING = {
   "core:activity": ["id"],
+  "users:users": ["created_at", "email", "full_name"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type ListEndpoint = keyof typeof ORDERING;

@@ -8,6 +8,7 @@ audited action.
     POST  /api/core/settings/<key>/reset/      {scope?, scope_id?, reason?}
 """
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -31,6 +32,7 @@ def setting_error_response(exc: SettingError) -> Response:
 class SettingListView(BaseAPIView):
     required_permissions = ["settings.settings.view"]
 
+    @extend_schema(responses=SettingSerializer(many=True))
     def get(self, request):
         items = settings_service.describe(
             module=request.query_params.get("module") or None,
@@ -42,6 +44,7 @@ class SettingListView(BaseAPIView):
 class SettingDetailView(BaseAPIView):
     required_permissions = ["settings.settings.manage"]
 
+    @extend_schema(request=SettingWriteSerializer, responses=SettingSerializer)
     def patch(self, request, key):
         serializer = SettingWriteSerializer(data=request.data)
         if not serializer.is_valid():
@@ -66,6 +69,7 @@ class SettingDetailView(BaseAPIView):
 class SettingResetView(BaseAPIView):
     required_permissions = ["settings.settings.manage"]
 
+    @extend_schema(request=SettingResetSerializer, responses=SettingSerializer)
     def post(self, request, key):
         serializer = SettingResetSerializer(data=request.data)
         if not serializer.is_valid():

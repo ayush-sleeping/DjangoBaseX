@@ -21,14 +21,10 @@ import { assertRatchet, type Hit, iterSources, rel } from "./walk";
 const WIRE = "hand-written wire type until its view has an OpenAPI schema (BUILD_ORDER 9.2)";
 const CLIENT = "client-only: not an API shape";
 const LISTED: Record<string, string> = {
-  "src/core/lib/auth.ts::Me": `${WIRE}: MeView`,
   "src/core/lib/bootstrap.ts::Bootstrap": `${WIRE}: BootstrapView assembles contributors`,
   "src/core/lib/bootstrap.ts::BootstrapUser": `${WIRE}: BootstrapView's user section`,
   "src/core/lib/identity.ts::Identity": `${WIRE}: PublicConfigView`,
   "src/core/lib/format/index.ts::Localization": `${WIRE}: BootstrapView's localization section (LocalePolicy)`,
-  "src/core/lib/mfa.ts::MfaSetup": `${WIRE}: MfaSetupView`,
-  "src/core/lib/rbac.ts::CatalogPermission": `${WIRE}: PermissionCatalogView`,
-  "src/core/lib/rbac.ts::PermissionGroup": `${WIRE}: PermissionCatalogView`,
   "src/core/lib/rbac.ts::NewRole": `${WIRE}: the role create request has no request component yet`,
   "src/core/lib/api.ts::Page": "the DRF page envelope, generic over the generated row type",
   "src/core/lib/api/errors.ts::FieldError": "the decoded error envelope; the error catalogue export is BUILD_ORDER 9.2",

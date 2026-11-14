@@ -1032,7 +1032,7 @@ data; `manage.py check` passes with every plugin removed from `INSTALLED_APPS`.
 
 *Proved by:* `backend/tests/test_plugin_lifecycle.py::test_disabling_a_plugin_hides_every_registry_surface_and_enabling_restores_it` (with `test_a_plugin_route_answers_403_plugin_disabled_and_enabled_answers_through` and `test_a_disabled_plugins_job_skips_at_run_time_and_is_recorded`); on a real plugin `plugins/notes` → `djx_notes/tests/test_notes.py::test_disabling_the_plugin_hides_its_nav_and_routes_without_touching_its_data` (rows asserted unchanged); `backend/tests/architecture/test_platform_without_project.py::test_check_passes_with_every_plugin_removed_from_installed_apps`.
 
-### 9.2 — API platform ⬜
+### 9.2 — API platform ✅
 *Input from 8.4a:* 26 views are absent from the OpenAPI contract ("unable to guess serializer"): AcceptInvitation,
 Bootstrap, CryptoStatus, FlagDetail, FlagList, ForgotPassword, Login, Logout, LookupList, LookupWrite, Me, MfaConfirm,
 MfaDisable, MfaSetup, MfaVerify, Navigation, PasswordConfirm, PermissionCatalog, PublicConfig, Refresh, ResetPassword,
@@ -1044,6 +1044,8 @@ contract, content-sniffed uploads with private file serving, and machine callers
 
 **Done when:** a list endpoint sorted on a non-unique column never repeats or drops a row across pages; an upload
 renamed to `.png` but containing HTML is refused.
+
+*Proved by:* `backend/tests/core/test_api_platform.py::test_a_list_sorted_on_a_non_unique_column_never_repeats_or_drops_a_row_across_pages`; `::test_an_upload_renamed_to_png_but_containing_html_is_refused`; the machine-caller gates in the same file (`test_both_gates_must_pass`, `test_revoked_expired_and_inactive_are_401`, `test_a_typo_scope_and_an_ungranted_scope_are_refused_at_issue`, …). *Done 2026-11-14 (owner decision ADR-0016).* Built: consumers and tokens, the 26 views in the contract and the lookups operationId collisions, the list pipeline, the error catalogue and 429 contract, sniffed uploads with private serving. Not built: see DB-105 to DB-112 (no token-accepting endpoint yet, `ENUM_NAME_OVERRIDES` needs the protected `settings.py`, request log, `Role.audience`, wider catalogue and list features).
 
 ### 9.3 — Data lifecycle ⬜
 Soft delete with partial unique constraints and the recycle bin; state-transition history; provenance; every

@@ -7,8 +7,14 @@
 //   }
 
 export interface PermissionCodes {
+  "core.api_consumers.manage": true;
+  "core.api_consumers.view": true;
+  "core.api_tokens.issue": true;
+  "core.api_tokens.revoke": true;
   "core.audit.export": true;
   "core.audit.view": true;
+  "core.files.upload": true;
+  "core.files.view": true;
   "core.health.view": true;
   "core.notifications.manage": true;
   "core.notifications.view": true;
@@ -40,8 +46,14 @@ export type PermissionCode = keyof PermissionCodes;
 
 /** Core's codes, as data. */
 export const CORE_PERMISSIONS = [
+  "core.api_consumers.manage",
+  "core.api_consumers.view",
+  "core.api_tokens.issue",
+  "core.api_tokens.revoke",
   "core.audit.export",
   "core.audit.view",
+  "core.files.upload",
+  "core.files.view",
   "core.health.view",
   "core.notifications.manage",
   "core.notifications.view",

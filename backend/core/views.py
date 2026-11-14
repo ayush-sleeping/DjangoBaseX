@@ -4,9 +4,11 @@ import logging
 from urllib.parse import urlsplit
 
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 from rest_framework.throttling import SimpleRateThrottle
 
+from core.api.schemas import DynamicBodySerializer, NavigationSerializer
 from core.observability import health
 
 from .api.views import BaseAPIView
@@ -66,6 +68,7 @@ class PublicConfigView(BaseAPIView):
     public = True  # registry.public_routes
     authentication_classes: list = []
 
+    @extend_schema(responses=DynamicBodySerializer)
     def get(self, request):
         # The platform's locale and timezone too: signed-out pages and server-rendered text format
         # and (from 8.4c) translate with them. Never currency or country — those are not public.
@@ -158,5 +161,6 @@ class NavigationView(BaseAPIView):
 
     required_permissions = []  # any signed-in user; the items are filtered per permission
 
+    @extend_schema(responses=NavigationSerializer)
     def get(self, request):
         return Response({"sections": navigation_for(request.user)})

@@ -4,9 +4,11 @@ registered encrypted field — the system-health page's view of "is rotation fin
 """
 
 from django.apps import apps
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 
 from core import crypto
+from core.api.schemas import CryptoStatusSerializer
 from core.api.views import BaseAPIView
 from core.registry import registry
 
@@ -14,6 +16,7 @@ from core.registry import registry
 class CryptoStatusView(BaseAPIView):
     required_permissions = ["settings.crypto.view"]
 
+    @extend_schema(responses=CryptoStatusSerializer)
     def get(self, request):
         try:
             fingerprints = crypto.key_fingerprints()

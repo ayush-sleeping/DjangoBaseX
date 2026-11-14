@@ -64,6 +64,17 @@ class ActivityLogViewSet(BaseViewSet, mixins.ListModelMixin):
     serializer_class = ActivityLogSerializer
     required_permissions = {"list": ["core.audit.view"], "export": ["core.audit.export"]}
     ordering_fields = ("id",)
+    # Read by filtered(): the audit filters are the view's own, not model-field exact matches.
+    accepted_params = (
+        "channel",
+        "action",
+        "event",
+        "source",
+        "batch_id",
+        "target_type",
+        "target_id",
+        "actor",
+    )
 
     def initial(self, request, *args, **kwargs):
         # § 4.6: a write verb answers 405 to a signed-in caller. Without this the permission check

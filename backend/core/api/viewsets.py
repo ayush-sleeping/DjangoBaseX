@@ -4,8 +4,11 @@ from typing import ClassVar
 
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.settings import api_settings
 
-from core.permissions import HasPermission
+from core.api.listing import run_list
+from core.api_tokens.auth import ApiTokenAuthentication
+from core.permissions import CredentialKindAllowed, HasPermission
 
 
 class BaseViewSet(viewsets.GenericViewSet):
@@ -17,14 +20,25 @@ class BaseViewSet(viewsets.GenericViewSet):
     required_permissions: ClassVar[dict[str, list[str]] | None] = None
     public: ClassVar[bool] = False
     permission_classes = [HasPermission]
+    # A machine token is a separate credential kind (ADR-0016): the token authenticator claims only
+    # `Bearer <prefix>_…`; everything else falls through to the project's default (cookie) one.
+    authentication_classes = [ApiTokenAuthentication, *api_settings.DEFAULT_AUTHENTICATION_CLASSES]
+    # Default closed: a view is machine-reachable only by opting in; human_only refuses tokens.
+    credential_kinds: ClassVar[frozenset[str]] = frozenset({"session"})
+    human_only: ClassVar[bool] = False
     lookup_field = "public_id"  # internal ids never appear in a URL (A15)
 
     filterset_fields: ClassVar[tuple[str, ...]] = ()
     ordering_fields: ClassVar[tuple[str, ...]] = ()
+    # Params the view reads itself (search, custom filters); anything else is a 400 (listing.py).
+    accepted_params: ClassVar[tuple[str, ...]] = ()
     max_page_size: ClassVar[int] = 100
 
     def get_permissions(self):
         # Same rule as BaseAPIView: a session first (anonymous → 401), unless declared public.
         if self.public:
             return [HasPermission()]
-        return [IsAuthenticated(), *super().get_permissions()]
+        return [CredentialKindAllowed(), IsAuthenticated(), *super().get_permissions()]
+
+    def filter_queryset(self, queryset):
+        return run_list(queryset, self, self.request.query_params)
