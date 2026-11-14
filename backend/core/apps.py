@@ -50,6 +50,11 @@ class CoreConfig(AppConfig):
         from .notifications.registration import register as register_notifications
 
         register_notifications(registry)
+        # --- ops alerting (BUILD_ORDER 7.8) ---
+        from .ops.registration import register as register_ops
+
+        register_ops(registry)
+        # --- end ops alerting ---
         from .crypto import self_test
 
         # A process that cannot encrypt must refuse to start, not store plaintext (§ 25). An empty

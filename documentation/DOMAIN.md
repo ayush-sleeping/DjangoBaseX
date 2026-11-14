@@ -37,6 +37,10 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | **Notification route** | Admin-editable data saying where a broadcast purpose goes on a channel (email addresses); every change is audited | `backend/core/models.py` (`NotificationRoute`), `backend/core/notifications/service.py` | `NOTIFICATIONS_AND_ALERTING.md` § 1 |
 | **Notification channel** | A transport adapter (`email`, `in_app`) that renders and sends one message and never raises into its caller | `backend/core/notifications/channels.py` | `NOTIFICATIONS_AND_ALERTING.md` § 2 |
 | **In-app notification** | A row in the bell: read state is per user, resolved state is shared, one open row per recipient x purpose x object | `backend/core/models.py` (`Notification`), `backend/core/notifications/inapp.py` | `NOTIFICATIONS_AND_ALERTING.md` § 8 |
+| **Ops alert** | One call to `core.ops.alert()` about a problem (or its recovery), classified by `AlertKind`: a short code allow-list is sent instantly, everything else waits for the digest; every call is a ledger row | `backend/core/ops/dispatcher.py`, `backend/core/ops/policy.py` | `NOTIFICATIONS_AND_ALERTING.md` § 14, § 15 |
+| **Ledger** | `core_ops_alert`: one row per dispatcher call with its decision (`sent` / `held` / `skipped`) and reason; cooldowns, dedupe and "since the last digest" are queries on it, never the cache | `backend/core/models.py` (`OpsAlert`) | `NOTIFICATIONS_AND_ALERTING.md` § 14 |
+| **Incident** | A problem a monitor keeps reporting, announced once when it opens and once when it recovers; flaps inside `confirm_after_minutes` are never announced | `backend/core/models.py` (`Incident`), `backend/core/ops/incidents.py` | `NOTIFICATIONS_AND_ALERTING.md` § 17 |
+| **Quiet hours** | An opt-in window (platform/alert timezone) in which instant alerts are held and released afterwards as one summary; nothing bypasses it | `backend/core/ops/quiet_hours.py`, `backend/core/ops/digest.py` | `NOTIFICATIONS_AND_ALERTING.md` § 18 |
 | **Notification preference** | A user's (or the system default's) on/off per purpose x channel; resolves user row, system row, code default; mandatory purposes cannot be opted out | `backend/core/models.py` (`NotificationPreference`), `backend/core/notifications/engine.py` | `NOTIFICATIONS_AND_ALERTING.md` § 5 |
 | **Delivery** | One event x endpoint, ids-only payload, signed `v1=` HMAC over `timestamp.body`; the log row with Redeliver and the outbox row that carries it | `backend/core/webhooks/delivery.py`, `WebhookDelivery` | `JOBS_AND_INTEGRATIONS.md` § 16 |
 | **Inbound webhook** | A third-party callback: verified over the raw body first, then deduplicated by a unique key in the database, stored minimised, processed later | `backend/core/webhooks/inbound.py`, `InboundWebhookEvent` | `JOBS_AND_INTEGRATIONS.md` § 17 |
@@ -94,7 +98,6 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 
 | Concept | BUILD_ORDER item |
 |---------|------------------|
-| Ops alerting | 7.8 |
 | Static security headers, revalidation, logos, host-matched identity | 8.5b |
 | API platform | 9.2 |
 | Data lifecycle (soft delete, recycle bin) | 9.3 |

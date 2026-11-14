@@ -954,10 +954,57 @@ Part A is built except what is listed under *Deferred*. Code: `backend/core/noti
   `core.notifications.view` / `.manage`.
 - **`frontend_url()`** is `core.mail.render.frontend_url` (`core/urls.py` is the URLconf).
 - **Owner decisions (2026-11-14).** Bell: polling. Editable templates (§ 12): deferred (needs a sandboxed engine:
-  a future ADR). Chat transport (§ 13): deferred. Part B (7.8): not started.
+  a future ADR). Chat transport (§ 13): deferred. Part B: see "As built (7.8)" below.
 - **Deferred** (`TECH_DEBT` DB-85 to DB-89): the bell and settings screens, digests, the webhook channel, the
   module toggle and budgets, `List-Unsubscribe`, the suppression list, resolving an `unknown` delivery from the
   findings UI.
+
+---
+
+## As built — BUILD_ORDER 7.8
+
+Part B is built except what is listed under *Deferred*. Code: `backend/core/ops/`; models `OpsAlert`
+(`core_ops_alert`), `Incident` (`core_health_incident`), `OpsDigestRun` (`core_ops_digest_run`). Where the code
+differs from the text above, the code is current.
+
+- **Entry point.** `core.ops.alert(subject_key, *, source, reason, title, body="", kind, event="problem")`, not
+  `ops.alerts.raise_`. `kind` is an `AlertKind`; the instant allow-list is `core.ops.kinds.INSTANT_KINDS`
+  (regression, infra_outage, misconfiguration, deploy_breakage, first_sighting); any other or unknown kind is held
+  for the digest. `event="recovered"` is never cooled down. It never raises into its caller.
+- **Order of decisions** (`core.ops.policy.decide`): disabled, no destination, not instant (held `digest`; a second
+  unreleased problem for the same key is `skipped:already_held`), cooldown (`skipped:cooldown`), quiet hours
+  (`held:quiet_hours`), storm cap (`held:storm_cap`, plus one "Alert storm: N held" notice an hour), send.
+  Cooldowns count `sent` and `held` problem rows for the `subject_key` in the window.
+- **`sent` means handed to `notify()`.** The purposes are `core.ops_alert` and `core.ops_digest` (audience user +
+  broadcast: routes are data; with no route the recipients are active users holding `core.notifications.manage`).
+  The provider's answer is in the delivery log. An alert with no destination is `skipped:no_destination`, logs
+  `core.ops.no_destination` at ERROR and opens the finding `ops.no_destination` (cleared by the next alert that
+  finds a destination).
+- **Digest.** `ops.alert_digest` runs every 15 minutes and sends once per configured slot
+  (`operations.alerts.digest_times`, read in `operations.alerts.timezone` or `platform.timezone`). notify() is
+  asynchronous, so a run is `pending` until `digest.settle()` reads the delivery log: `sent` or `unknown` release the
+  carried alerts (`released_at`, `released_via=digest`), `failed` (or never delivered after an hour) gives them back
+  to the next digest. An open incident's own opening alert is not listed twice. The digest waits out quiet hours.
+- **Incidents.** `incidents.sync(source, problems, confirm_after_minutes=)`; a recovery is sent only if the opening
+  was announced (`announced_at`). A re-opening absorbed by the cooldown is retried on later runs until announced or
+  cleared. Settings: `operations.incidents.confirm_after_minutes` (0) and `.queue_confirm_after_minutes` (10, used
+  for the `queue` and `outbox` doctors), not one per source.
+- **Quiet hours.** `operations.alerts.quiet_start` / `quiet_end` (`HH:MM`, either empty = off); `ops.release_held`
+  sends one summary after the window and notes problems that opened and recovered inside it.
+- **Monitor.** `ops.monitor` (5 minutes) runs every registered doctor, maps finding codes to a kind
+  (`core.ops.monitors.kind_for`; unmapped codes wait for the digest), `sync`s each doctor's failures (advisories and
+  `doctor.*` housekeeping are not alerts) and returns normally. A doctor that raises is the alert
+  `monitor:<key>:crashed` (misconfiguration) and its incidents are left alone.
+- **Watching itself (§ 21), the cheap half.** A dispatcher failure is `core.ops.dispatch_failed` /
+  `core.ops.alert_failed` at ERROR and a ledger row `skipped:dispatch_error`. The all-clear digest line is the
+  human heartbeat.
+- **Retention.** `core.ops_alert` (90 days, 500 000 rows, unreleased held rows never pruned), `core.ops_incident`
+  (recovered, 180 days), `core.ops_digest_run` (90 days).
+- **Owner decisions (2026-11-14).** Nothing bypasses quiet hours: the core pages nobody. Ops alerting lives in core.
+- **Deferred** (`TECH_DEBT` DB-94 to DB-99): the ops panel and `GET /api/ops/alerts/overview/` (§ 20), the
+  `ops.heartbeat` job, `OPS_HEARTBEAT_URL` and `dbx.notify.E020` (§ 21), error groups in the digest and producers for
+  the regression / first_sighting / deploy_breakage kinds, `MonitorCommand` (`manage.py doctor --strict` is the
+  human path today), reconciling instant sends.
 
 ---
 

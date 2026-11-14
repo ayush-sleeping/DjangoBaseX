@@ -27,6 +27,12 @@ ALLOWED = {
     "makes the row `unknown`, never a resend",
     ("core.Notification", "warning"): "a severity level that happens to end in -ing, not a "
     "waiting state: nothing is pending on it",
+    ("core.OpsDigestRun", "pending"): "settled from the delivery log at the start of every "
+    "ops.alert_digest run (core.ops.digest.settle); one never delivered is given up on after an "
+    "hour and its alerts roll into the next digest",
+    ("core.Incident", "pending"): "ops.monitor re-syncs every open problem on each run: it is "
+    "confirmed once it has persisted, and recovered the run it is gone; a stopped monitor shows "
+    "in the schedule doctor",
     ("core.OutboxMessage", "pending"): "the drainer itself is what moves it; the outbox doctor "
     "reports a due message waiting too long (outbox.stuck)",
 }
