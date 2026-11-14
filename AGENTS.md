@@ -50,7 +50,8 @@ registry, flags, lookups, identity, request id + scrubber, health rungs, `doctor
 jobs, outbox + reconcilers + locks, the retention engine (`core/retention/`), safe outbound HTTP + the non-production guard (`core/http/`, `core/mail/`), the
 frontend platform (data layer, shell, design system, i18n, per-request nonce CSP, runtime brand colours), dev Docker
 Compose, the doc-link test and `manage.py seed_demo` (9.6), webhooks outbound + inbound and the events registry
-(`core/webhooks/`, 7.6). **Not built:** BUILD_ORDER 7.7–7.8, 8.5b, 9.1–9.5, 10.1; Sentry wiring (ADR-0013); production Docker. Check
+(`core/webhooks/`, 7.6), static security headers + `/fe/revalidate` (8.5b, part). **Not built:** BUILD_ORDER 7.7–7.8,
+8.5b's backend revalidate caller, logos and per-tenant identity (DB-90–92), 9.1–9.5, 10.1; Sentry wiring (ADR-0013); production Docker. Check
 [`ROADMAP.md`](documentation/planning/ROADMAP.md) / [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) before assuming.
 
 **With no specific task**, start at the lowest-numbered unfinished item in `BUILD_ORDER.md` — the executable
