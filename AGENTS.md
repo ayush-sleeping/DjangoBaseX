@@ -56,8 +56,9 @@ Compose, the doc-link test and `manage.py seed_demo` (9.6), webhooks outbound + 
 security headers + `/fe/revalidate` (8.5b, part), operations (`scripts/deploy.py`, `manage.py backup`/`restore`, the
 setup API, `Dockerfile.prod` images — written, not yet proven on a real host; 9.5), data lifecycle (scoping registry
 with write-path narrowing via `BaseViewSet.scope()`, soft delete + recycle bin, state history, provenance;
-`core/lifecycle/`, 9.3). **Not built:** 8.5b's backend revalidate caller, logos and per-tenant identity (DB-90–92), 9.4,
-10.1; Sentry wiring (ADR-0013). Check
+`core/lifecycle/`, 9.3), domain primitives (document numbering, state machine, business calendar, bulk actions,
+import/export; 9.4). **Not built:** 8.5b's backend revalidate caller, logos and per-tenant identity (DB-90–92), 10.1;
+Sentry wiring (ADR-0013). Check
 [`ROADMAP.md`](documentation/planning/ROADMAP.md) / [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) before assuming.
 
 **With no specific task**, start at the lowest-numbered unfinished item in `BUILD_ORDER.md` — the executable
