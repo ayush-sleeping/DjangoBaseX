@@ -326,7 +326,7 @@ class UserViewSet(BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin)
 
     def get_queryset(self):
         queryset = (
-            User.objects.visible_to(self.request.user)
+            self.scope(User.objects)
             .prefetch_related(
                 Prefetch("user_roles", queryset=_user_roles_with_role()), "mfa_devices"
             )

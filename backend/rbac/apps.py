@@ -12,8 +12,11 @@ class RbacConfig(AppConfig):
         from .permissions import GROUP
 
         registry.permissions.register(GROUP)
+        from .scoping import SPECS as SCOPING
         from .setup import register as register_setup
 
+        for scope_spec in SCOPING:
+            registry.scoping.register(scope_spec)
         register_setup(registry)
         from .navigation import register as register_navigation
 

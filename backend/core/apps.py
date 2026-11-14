@@ -18,6 +18,7 @@ class CoreConfig(AppConfig):
             AUDIT_GROUP,
             FILES_GROUP,
             NOTIFICATIONS_GROUP,
+            RECYCLE_BIN_GROUP,
             SETTINGS_GROUP,
             WEBHOOKS_GROUP,
         )
@@ -36,6 +37,7 @@ class CoreConfig(AppConfig):
         registry.permissions.register(WEBHOOKS_GROUP)
         registry.permissions.register(API_CONSUMERS_GROUP)
         registry.permissions.register(FILES_GROUP)
+        registry.permissions.register(RECYCLE_BIN_GROUP)
         registry.permissions.register(NOTIFICATIONS_GROUP)
         register_core_checks()
         from .audit_actions import register_core_actions
@@ -49,6 +51,9 @@ class CoreConfig(AppConfig):
         from .retention.policies import register_core_retention
 
         register_core_retention(registry)
+        from .scoping import register as register_scoping
+
+        register_scoping(registry)
         _register_jobs_monitoring(registry)
         from .outbox.jobs import register as register_outbox
 

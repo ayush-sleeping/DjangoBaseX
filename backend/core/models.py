@@ -969,3 +969,7 @@ class PrivateFile(models.Model):
 
     def __str__(self):
         return f"{self.purpose}:{self.public_id}"
+
+
+# Registered under the core app, defined in core.lifecycle (one concern per package).
+from core.lifecycle.models import StateTransition  # noqa: E402, F401

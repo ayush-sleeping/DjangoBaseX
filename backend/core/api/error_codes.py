@@ -36,6 +36,12 @@ for _entry in (
     ErrorCode("permission_denied", 403, "You do not have permission to do this."),
     ErrorCode("credential_not_accepted", 403, "This endpoint does not accept this kind of caller."),
     ErrorCode("not_found", 404, "Not found."),
+    ErrorCode(
+        "restore_conflict",
+        409,
+        "A live record already holds a value this one needs to be restored.",
+    ),
+    ErrorCode("delete_blocked", 409, "Other records still depend on this one."),
     ErrorCode("unsupported_file_type", 400, "This file type is not accepted."),
     ErrorCode("throttled", 429, "Too many requests.", retryable=True),
     ErrorCode("server_error", 500, "Something went wrong."),

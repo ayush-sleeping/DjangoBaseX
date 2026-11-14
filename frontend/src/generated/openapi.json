@@ -449,6 +449,65 @@
         ],
         "type": "object"
       },
+      "BinList": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/BinRow"
+            },
+            "type": "array"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "results",
+          "type"
+        ],
+        "type": "object"
+      },
+      "BinRow": {
+        "properties": {
+          "deleted_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleted_by": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted_at",
+          "deleted_by",
+          "id",
+          "title"
+        ],
+        "type": "object"
+      },
+      "BinType": {
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "type": "object"
+      },
       "CatalogGroup": {
         "properties": {
           "code": {
@@ -3919,6 +3978,133 @@
         ],
         "tags": [
           "rbac"
+        ]
+      }
+    },
+    "/api/recycle-bin/": {
+      "get": {
+        "description": "Without ?type= the registered types; with it, that type's binned rows (newest first).",
+        "operationId": "recycle_bin_retrieve",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "recycle-bin"
+        ]
+      }
+    },
+    "/api/recycle-bin/{type_key}/{public_id}/force-delete/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "recycle_bin_force_delete_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "type_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "recycle-bin"
+        ]
+      }
+    },
+    "/api/recycle-bin/{type_key}/{public_id}/restore/": {
+      "post": {
+        "description": "required_permissions: None denies everyone; [] means any signed-in user; [\"a.b.c\"] needs each.\npublic = True opens it to anyone, and its URL name must be in registry.public_routes\n(dbx.E007). See core.permissions for the full rule.",
+        "operationId": "recycle_bin_restore_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "type_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinType"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "recycle-bin"
         ]
       }
     },

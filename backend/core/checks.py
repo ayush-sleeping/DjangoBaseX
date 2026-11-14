@@ -567,3 +567,33 @@ def _celery_tasks() -> dict:
     from celery import current_app as app  # config/celery.py's app; core never imports config
 
     return {name: task for name, task in app.tasks.items() if not name.startswith("celery.")}
+
+
+@register()
+def check_soft_deletable_models_have_no_unique_columns(app_configs, **kwargs):
+    """
+    dbx.E050: a SoftDeleteModel never declares unique=True (other than its pk and public_id, an
+    identity token that is never reused): a binned row would keep its value forever. Uniqueness
+    is core.lifecycle.live_unique(), a partial index over live rows (DATA_LIFECYCLE.md § 7.2).
+    """
+    from django.apps import apps
+
+    from .lifecycle.models import SoftDeleteModel
+
+    errors = []
+    for model in apps.get_models():
+        if not issubclass(model, SoftDeleteModel):
+            continue
+        for field in model._meta.local_fields:
+            if field.unique and not field.primary_key and field.name != "public_id":
+                errors.append(
+                    Error(
+                        f"{model._meta.label}.{field.name} is unique=True on a soft-deletable "
+                        "model.",
+                        hint="Use live_unique(...) in Meta.constraints so a deleted row's value "
+                        "can be reused.",
+                        obj=model,
+                        id="dbx.E050",
+                    )
+                )
+    return errors

@@ -116,6 +116,30 @@ def test_update_changes_the_name_only():
     assert not target.is_superuser  # not a field this endpoint accepts
 
 
+def test_a_row_the_caller_cannot_see_is_a_404_on_patch_not_a_403():
+    """DB-67 / BUILD_ORDER 9.3: holding the write code does not widen what the caller can see."""
+    client, me = session(
+        "users.users.update", "users.users.deactivate", "users.sessions.revoke"
+    )  # no users.users.view
+    other = UserFactory(full_name="Untouched")
+
+    patched = send(client, "patch", url(other), {"full_name": "Hijacked"})
+    assert patched.status_code == 404, patched.content  # not 403: existence stays hidden
+    assert send(client, "post", url(other, "deactivate/"), {"reason": "x"}).status_code == 404
+    assert send(client, "post", url(other, "sessions/revoke/")).status_code == 404
+    other.refresh_from_db()
+    assert other.full_name == "Untouched" and other.is_active
+
+    own = send(client, "patch", url(me), {"full_name": "Me"})  # the control: a visible row works
+    assert own.status_code == 200, own.content
+
+
+def test_with_the_view_code_the_same_patch_succeeds():
+    client, _ = session("users.users.view", "users.users.update")
+    other = UserFactory()
+    assert send(client, "patch", url(other), {"full_name": "Seen"}).status_code == 200
+
+
 # --- Deactivate and activate --------------------------------------------------------------------
 
 

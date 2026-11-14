@@ -28,14 +28,17 @@ from core.registry import (
     NoProvider,
     PermissionGroupSpec,
     PermissionSpec,
+    Recyclable,
+    ScopeSpec,
     SearchSource,
     ServiceContractError,
     ServiceUnavailable,
+    StateField,
     plugin_state,
     registry,
 )
 
-SDK_VERSION = (1, 0)
+SDK_VERSION = (1, 1)
 
 # One entry per minor: what was added and why.
 SDK_CHANGELOG = {
@@ -43,6 +46,11 @@ SDK_CHANGELOG = {
         "First facade: the registry and its contribution specs, service-contract calls, "
         "plugin_enabled, and the lazily-loaded views, queryset base, audit log, settings and "
         "flag reads that plugins used to import from core internals."
+    ),
+    (1, 1): (
+        "Data lifecycle (BUILD_ORDER 9.3): SoftDeleteModel and its queryset/manager helpers, "
+        "ProvenanceModel and stamp_provenance, Recyclable and register_recyclable, StateField and "
+        "change_state, ScopeSpec and register_scoping."
     ),
 }
 
@@ -93,6 +101,20 @@ def call_service(name: str, **kwargs):
     return registry.services.call_service(name, **kwargs)
 
 
+def register_recyclable(spec: Recyclable, *, days: int = 90) -> None:
+    """Make a soft-deletable model listable and restorable in the recycle bin, and purge it after
+    `days` (floor 7) through a retention policy. Call from wiring, after models load."""
+    from core.lifecycle.recyclebin import register_recyclable as _register
+
+    _register(registry, spec, days=days)
+
+
+def register_scoping(spec: ScopeSpec) -> None:
+    """Declare how a model of yours is scoped (or why it is not): required for any model with an
+    owner or tenant field (tests/architecture/test_scoping.py)."""
+    registry.scoping.register(spec)
+
+
 # Needs Django loaded: resolved on first use (PEP 562).
 _LAZY = {
     "BaseViewSet": "core.api.viewsets",
@@ -103,6 +125,15 @@ _LAZY = {
     "log_activity": "core.audit",
     "get_setting": "core.settings_service",
     "flag_enabled": "core.flags",
+    "SoftDeleteModel": "core.lifecycle.models",
+    "SoftDeleteQuerySet": "core.lifecycle.models",
+    "ProvenanceModel": "core.lifecycle.models",
+    "RestoreConflict": "core.lifecycle.models",
+    "SOURCE_REF_PATTERN": "core.lifecycle.models",
+    "live_unique": "core.lifecycle.models",
+    "soft_delete_managers": "core.lifecycle.models",
+    "stamp_provenance": "core.lifecycle.provenance:stamp",
+    "change_state": "core.lifecycle.transitions",
 }
 
 
@@ -110,7 +141,8 @@ def __getattr__(name: str):
     module = _LAZY.get(name)
     if module is None:
         raise AttributeError(f"module 'core.sdk' has no attribute {name!r}")
-    return getattr(importlib.import_module(module), name)
+    module, _, attr = module.partition(":")
+    return getattr(importlib.import_module(module), attr or name)
 
 
 __all__ = [
@@ -126,23 +158,37 @@ __all__ = [
     "NoProvider",
     "PermissionGroupSpec",
     "PermissionSpec",
+    "ProvenanceModel",
+    "Recyclable",
+    "RestoreConflict",
     "SDKVersionError",
     "SDK_CHANGELOG",
     "SDK_VERSION",
+    "SOURCE_REF_PATTERN",
+    "ScopeSpec",
     "SearchSource",
     "ServiceContractError",
     "ServiceUnavailable",
+    "SoftDeleteModel",
+    "SoftDeleteQuerySet",
+    "StateField",
     "VisibleToQuerySet",
     "call_service",
+    "change_state",
     "error_response",
     "flag_enabled",
     "get_setting",
     "has_service",
     "invalid_response",
     "is_compatible",
+    "live_unique",
     "log_activity",
     "plugin_enabled",
     "provide",
+    "register_recyclable",
+    "register_scoping",
     "registry",
     "require_version",
+    "soft_delete_managers",
+    "stamp_provenance",
 ]

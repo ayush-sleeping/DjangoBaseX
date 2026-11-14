@@ -54,8 +54,10 @@ Compose, the doc-link test and `manage.py seed_demo` (9.6), webhooks outbound + 
 (`core/ops/`, 7.8), plugin soft-disable + the `core.sdk` facade (9.1; plugins import only `core.sdk`), the API platform
 (machine-caller tokens per ADR-0016, list pipeline, error catalogue, sniffed uploads; `core/api_tokens/`, 9.2), static
 security headers + `/fe/revalidate` (8.5b, part), operations (`scripts/deploy.py`, `manage.py backup`/`restore`, the
-setup API, `Dockerfile.prod` images — written, not yet proven on a real host; 9.5). **Not built:** 8.5b's backend
-revalidate caller, logos and per-tenant identity (DB-90–92), 9.3, 9.4, 10.1; Sentry wiring (ADR-0013). Check
+setup API, `Dockerfile.prod` images — written, not yet proven on a real host; 9.5), data lifecycle (scoping registry
+with write-path narrowing via `BaseViewSet.scope()`, soft delete + recycle bin, state history, provenance;
+`core/lifecycle/`, 9.3). **Not built:** 8.5b's backend revalidate caller, logos and per-tenant identity (DB-90–92), 9.4,
+10.1; Sentry wiring (ADR-0013). Check
 [`ROADMAP.md`](documentation/planning/ROADMAP.md) / [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) before assuming.
 
 **With no specific task**, start at the lowest-numbered unfinished item in `BUILD_ORDER.md` — the executable

@@ -60,6 +60,8 @@ ACTIONS = (
     ("core.notification_route.deleted", "Notification route deleted", "warning", "security"),
     ("core.notification_matrix.changed", "Notification matrix changed", "info", "settings"),
     ("core.notification.test_sent", "Notification test sent", "info", "settings"),
+    ("core.recycle_bin.restored", "Record restored from the recycle bin", "success", "data"),
+    ("core.recycle_bin.force_deleted", "Record deleted for good from the bin", "danger", "data"),
     ("core.command.ran", "Management command ran", "neutral", "data"),
     ("core.retention.purged", "Retention removed rows", "warning", "data"),
     ("core.audit.exported", "Audit log exported", "security", "security"),

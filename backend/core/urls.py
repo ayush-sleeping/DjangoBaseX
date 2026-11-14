@@ -13,6 +13,7 @@ from .api.notifications import (
 )
 from .api.settings import SettingDetailView, SettingListView, SettingResetView
 from .api.webhooks import WebhookEndpointViewSet
+from .lifecycle.recyclebin import ForceDeleteView, RecycleBinView, RestoreView
 from .views import (
     ComponentsView,
     CspReportView,
@@ -157,6 +158,18 @@ urlpatterns = [
     # API_PLATFORM § 18-19: sniffed uploads; no public media URL, the download checks the purpose.
     path("files/", FileUploadView.as_view(), name="file-upload"),
     path("files/<uuid:public_id>/", FileDownloadView.as_view(), name="file-download"),
+    # DATA_LIFECYCLE § 7.4: the recycle bin, by registry key only.
+    path("recycle-bin/", RecycleBinView.as_view(), name="recycle-bin"),
+    path(
+        "recycle-bin/<str:type_key>/<uuid:public_id>/restore/",
+        RestoreView.as_view(),
+        name="recycle-bin-restore",
+    ),
+    path(
+        "recycle-bin/<str:type_key>/<uuid:public_id>/force-delete/",
+        ForceDeleteView.as_view(),
+        name="recycle-bin-force-delete",
+    ),
     # ADR-0016: machine callers. Human-only; the plaintext token is in issue/rotate responses only.
     path(
         "consumers/",

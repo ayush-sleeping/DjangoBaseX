@@ -9,7 +9,7 @@ urlpatterns = [
     path("", NoteViewSet.as_view({"get": "list", "post": "create"}), name="notes"),
     path(
         "<uuid:public_id>/",
-        NoteViewSet.as_view({"get": "retrieve", "delete": "destroy"}),
+        NoteViewSet.as_view({"get": "retrieve", "patch": "partial_update", "delete": "destroy"}),
         name="note",
     ),
 ]

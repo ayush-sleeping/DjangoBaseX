@@ -15,3 +15,11 @@ class VisibleToQuerySet(models.QuerySet):
             f"{self.model.__name__} must implement visible_to(). "
             "Returning .all() is a decision; make it explicitly."
         )
+
+    def writable_by(self, user):
+        """
+        What `user` may change (DATA_LIFECYCLE.md § 12.4). Defaults to what they may see, so an
+        invisible row is a 404 on PATCH/PUT/DELETE, never a 403 that confirms it exists. A model
+        whose write rule is narrower than its read rule overrides this and intersects.
+        """
+        return self.visible_to(user)

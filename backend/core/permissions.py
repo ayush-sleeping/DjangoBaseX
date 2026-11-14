@@ -123,6 +123,20 @@ FILES_GROUP = PermissionGroupSpec(
 )
 
 
+RECYCLE_BIN_GROUP = PermissionGroupSpec(
+    code="recycle_bin",
+    label="Recycle bin",
+    module="core",
+    order=99,
+    permissions=(
+        PermissionSpec(
+            "core.recycle_bin.manage",
+            "See deleted records, restore them and delete them for good",
+        ),
+    ),
+)
+
+
 WEBHOOKS_GROUP = PermissionGroupSpec(
     code="webhooks",
     label="Webhooks",

@@ -42,6 +42,8 @@
 
 | Trap | Symptom | Fix | Source |
 |---|---|---|---|
+| **Parallel git worktrees each install their own `.venv` and `node_modules` (and `.next`)** | The disk fills (ENOSPC) mid-gate; every command fails, even the tool's own temp files | Remove a worktree as soon as its branch merges; run one gate at a time when free space is under ~10 GB | DAILY_CHANGES 2026-11-14 |
+| **`git add <dirs>` misses a changed file outside them, then `git worktree remove --force` discards it** | A commit lands without one edit (here a ratchet test), main goes red, and the edit is lost | After staging, any line in `git status --porcelain` not starting with a staged code blocks the commit; never `--force` a worktree whose status is not empty | DAILY_CHANGES 2026-11-14 (main `13df181` → fixed `c08f7ab`) |
 | Docker `node_modules` is an anonymous volume | After a dependency change, the old modules persist | `docker compose up -d --wait --build -V` | DAILY_CHANGES 2026-10-11 (compose note) |
 | Host `runserver` and compose share `db.sqlite3` and port 8000 | Both fight over the file and the port | Run one or the other | DAILY_CHANGES 2026-10-11 (compose note) |
 | Two stacks on `localhost` share cookie names | They sign each other out (cookies ignore the port) | Per-checkout `AUTH_COOKIE_PREFIX` from `scripts/setup.sh` | `docker-compose.yml` header |

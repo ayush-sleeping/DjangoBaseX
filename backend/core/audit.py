@@ -105,6 +105,11 @@ def _provenance() -> dict[str, Any]:
     return {"source": "system"}
 
 
+def provenance_source() -> str:
+    """How the current write arrived: web, command or system (ActivityLog.source's vocabulary)."""
+    return _provenance()["source"]
+
+
 # --- The one writer -----------------------------------------------------------------------------
 
 
@@ -146,6 +151,11 @@ def _actor_fields(actor) -> dict[str, Any]:
         "actor_kind": "user",
         "actor_label": str(getattr(actor, "email", "") or actor)[:255],
     }
+
+
+def actor_snapshot(actor) -> dict[str, Any]:
+    """{actor_id, actor_kind, actor_label} for `actor`; empty for a system write (None)."""
+    return _actor_fields(actor)
 
 
 def _target_fields(target) -> dict[str, Any]:

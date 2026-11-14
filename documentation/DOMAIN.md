@@ -1,6 +1,6 @@
 # DjangoBaseX — Domain (the platform's concepts)
 
-> **Status:** Hub — checked 2026-11-14 · every concept in the glossary is built and read from code; notifications, soft delete and similar are in the 🔜 table. A boilerplate has no business domain: its "domain" is the vocabulary below. Products add their own nouns in `backend/project/` or a plugin.
+> **Status:** Hub — checked 2026-11-14 · every concept in the glossary is built and read from code; notifications and similar are in the 🔜 table. A boilerplate has no business domain: its "domain" is the vocabulary below. Products add their own nouns in `backend/project/` or a plugin.
 
 Look a term up, go to its **owner** (the one module that decides it — change behaviour there, never in a consumer), then read the spec section. Spec files are in [`system-design/`](system-design/). The layout and recipes are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
@@ -98,13 +98,16 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | Topic handler sends and returns an `Outcome` | `backend/core/outbox/outcome.py` |
 | `settle()` sets the row state; unknown results open a finding | `backend/core/outbox/service.py` (`settle`, `resolve_unknown`) |
 | Expired leases recovered | `backend/core/outbox/recovery.py` |
+| **Scoping registration** | Every model with an owner or tenant field is in `registry.scoping`, scoped (`visible_to`) or with a stated reason; writes narrow through `writable_by`, so an unseen row is 404 | `backend/core/registry.py` (`ScopeSpec`), `backend/{core,users,rbac}/scoping.py`, `backend/tests/architecture/test_scoping.py` | `DATA_LIFECYCLE.md` § 12, [ADR-0011](adr/0011-no-organisation-in-core.md) |
+| **Soft delete / recycle bin** | `SoftDeleteModel` bins a row (hidden by default, restorable, unique among live rows only); the bin lists and restores registered types by key; retention purges after N days | `backend/core/lifecycle/{models,recyclebin}.py`, `examples/plugins/notes/` | `DATA_LIFECYCLE.md` § 7 |
+| **State transition** | One row per change of a registered state field: object, field, from, to, actor, source, reason, when | `backend/core/lifecycle/{models,transitions}.py` | `DATA_LIFECYCLE.md` § 5 |
+| **Provenance** | How a row came to exist: `created_via` (the consumer), `origin`, `source_ref`; NULL means unknown | `backend/core/lifecycle/{models,provenance}.py` | `DATA_LIFECYCLE.md` § 8 |
 
 ## 🔜 Planned (not built — do not assume)
 
 | Concept | BUILD_ORDER item |
 |---------|------------------|
 | Static security headers, revalidation, logos, host-matched identity | 8.5b |
-| Data lifecycle (soft delete, recycle bin) | 9.3 |
 | Domain primitives beyond money (number sequences, state machines) | 9.4 |
 | Error tracking via Sentry ([ADR-0013](adr/0013-sentry-only-error-tracking.md); no code reads `SENTRY_DSN` yet) | not in a numbered item |
 

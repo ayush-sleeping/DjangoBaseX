@@ -39,10 +39,11 @@ def rbac_error_response(exc: services.RbacError) -> Response:
     return from_exception(exc, status.HTTP_409_CONFLICT)  # SystemRoleProtected, LastAdministrator
 
 
-def roles_for_response(user):
+def roles_for_response(user, scoped=None):
+    """`scoped` is a viewset's own scope(Role.objects) (read or write); None means visible_to."""
     live = Prefetch("permissions", queryset=Permission.objects.filter(is_deprecated=False))
     return (
-        Role.objects.visible_to(user)
+        (Role.objects.visible_to(user) if scoped is None else scoped)
         .annotate(user_count=Count("user_roles", distinct=True))
         .prefetch_related(live)
         # Explicit: Count() makes Django drop Meta.ordering, and a page boundary on an unordered
@@ -76,7 +77,7 @@ class RoleViewSet(
     }
 
     def get_queryset(self):
-        return roles_for_response(self.request.user)
+        return roles_for_response(self.request.user, scoped=self.scope(Role.objects))
 
     def _fresh(self, role) -> Response:
         return RoleSerializer(self.get_queryset().get(pk=role.pk)).data

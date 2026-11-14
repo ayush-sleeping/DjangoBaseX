@@ -18,6 +18,7 @@ export interface PermissionCodes {
   "core.health.view": true;
   "core.notifications.manage": true;
   "core.notifications.view": true;
+  "core.recycle_bin.manage": true;
   "core.webhooks.manage": true;
   "core.webhooks.view": true;
   "rbac.permissions.view": true;
@@ -57,6 +58,7 @@ export const CORE_PERMISSIONS = [
   "core.health.view",
   "core.notifications.manage",
   "core.notifications.view",
+  "core.recycle_bin.manage",
   "core.webhooks.manage",
   "core.webhooks.view",
   "rbac.permissions.view",

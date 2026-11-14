@@ -7,13 +7,21 @@ reviewed diff with an UPGRADING.md note, never a silent side effect of a refacto
 import json
 from pathlib import Path
 
+from core.contracts import PluginScope
 from core.registry import registry
 
 SNAPSHOT = Path(__file__).with_name("setting_defaults.json")
 
 
 def test_the_code_defaults_match_the_committed_snapshot():
-    live = {d.key: d.to_json(d.default) for d in registry.settings.defs()}
+    # The snapshot is the boilerplate's own: a linked plugin's settings (including the retention
+    # window of its recycle-bin policy, `retention.<label>_…`) are left out, as in the contracts.
+    plugins = PluginScope.installed().labels
+    live = {
+        d.key: d.to_json(d.default)
+        for d in registry.settings.defs()
+        if not any(d.key.startswith(f"retention.{label}_") for label in plugins)
+    }
     assert live, "no settings are declared: the snapshot is testing nothing"
     committed = json.loads(SNAPSHOT.read_text())
     assert live == committed, (

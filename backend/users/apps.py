@@ -25,6 +25,15 @@ class UsersConfig(AppConfig):
                 model="users.MfaDevice", field="totp_secret_ciphertext", purpose="mfa_totp"
             )
         )
+        from core.registry import StateField
+
+        registry.state_fields.register(
+            StateField(key="users.user.is_active", model="users.User", field="is_active")
+        )
+        from .scoping import SPECS as SCOPING
+
+        for scope_spec in SCOPING:
+            registry.scoping.register(scope_spec)
         from .notifications import PURPOSES as NOTIFICATION_PURPOSES
 
         for notification_purpose in NOTIFICATION_PURPOSES:

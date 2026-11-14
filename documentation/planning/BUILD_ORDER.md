@@ -1047,12 +1047,14 @@ renamed to `.png` but containing HTML is refused.
 
 *Proved by:* `backend/tests/core/test_api_platform.py::test_a_list_sorted_on_a_non_unique_column_never_repeats_or_drops_a_row_across_pages`; `::test_an_upload_renamed_to_png_but_containing_html_is_refused`; the machine-caller gates in the same file (`test_both_gates_must_pass`, `test_revoked_expired_and_inactive_are_401`, `test_a_typo_scope_and_an_ungranted_scope_are_refused_at_issue`, …). *Done 2026-11-14 (owner decision ADR-0016).* Built: consumers and tokens, the 26 views in the contract and the lookups operationId collisions, the list pipeline, the error catalogue and 429 contract, sniffed uploads with private serving. Not built: see DB-105 to DB-112 (no token-accepting endpoint yet, `ENUM_NAME_OVERRIDES` needs the protected `settings.py`, request log, `Role.audience`, wider catalogue and list features).
 
-### 9.3 — Data lifecycle ⬜
+### 9.3 — Data lifecycle ✅
 Soft delete with partial unique constraints and the recycle bin; state-transition history; provenance; every
 listable model registered for scoping, with write-path narrowing.
 
 **Done when:** a test fails if any model with a tenant or owner field is not registered for scoping; a user who
 cannot see a row gets 404 on `PATCH` to it.
+
+*Proved by:* `backend/tests/architecture/test_scoping.py::test_every_model_with_an_owner_or_tenant_field_is_registered_for_scoping`; `backend/users/tests/test_users_api.py::test_a_row_the_caller_cannot_see_is_a_404_on_patch_not_a_403`, `examples/plugins/notes/djx_notes/tests/test_notes.py::test_a_view_holder_gets_404_not_403_when_patching_a_note_they_cannot_see`. Built: the scoping registry and write-path narrowing, state-transition history, soft delete with the recycle bin and its retention policy, provenance. Closes **DB-67**; the rest is deferred to DB-123 to DB-128.
 
 ### 9.4 — Domain primitives ⬜
 Document sequences (peek vs reserve), the state-machine helper, the business calendar, bulk actions, the

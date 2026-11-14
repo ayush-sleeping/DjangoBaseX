@@ -1128,6 +1128,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/recycle-bin/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Without ?type= the registered types; with it, that type's binned rows (newest first). */
+        get: operations["recycle_bin_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recycle-bin/{type_key}/{public_id}/force-delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions: None denies everyone; [] means any signed-in user; ["a.b.c"] needs each.
+         *     public = True opens it to anyone, and its URL name must be in registry.public_routes
+         *     (dbx.E007). See core.permissions for the full rule.
+         */
+        post: operations["recycle_bin_force_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recycle-bin/{type_key}/{public_id}/restore/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions: None denies everyone; [] means any signed-in user; ["a.b.c"] needs each.
+         *     public = True opens it to anyone, and its URL name must be in registry.public_routes
+         *     (dbx.E007). See core.permissions for the full rule.
+         */
+        post: operations["recycle_bin_restore_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/system/crypto/": {
         parameters: {
             query?: never;
@@ -1566,6 +1625,22 @@ export interface components {
         AssignRoleRequest: {
             /** Format: uuid */
             role: string;
+        };
+        BinList: {
+            results: components["schemas"]["BinRow"][];
+            type: string;
+        };
+        BinRow: {
+            /** Format: date-time */
+            deleted_at: string;
+            deleted_by: string | null;
+            /** Format: uuid */
+            id: string;
+            title: string;
+        };
+        BinType: {
+            key: string;
+            label: string;
         };
         CatalogGroup: {
             code: string;
@@ -3358,6 +3433,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    recycle_bin_retrieve: {
+        parameters: {
+            query?: {
+                type?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BinList"];
+                };
+            };
+        };
+    };
+    recycle_bin_force_delete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+                type_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    recycle_bin_restore_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+                type_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BinType"];
+                };
             };
         };
     };

@@ -3,7 +3,7 @@
 from typing import ClassVar
 
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
 from rest_framework.settings import api_settings
 
 from core.api.listing import run_list
@@ -39,6 +39,17 @@ class BaseViewSet(viewsets.GenericViewSet):
         if self.public:
             return [HasPermission()]
         return [CredentialKindAllowed(), IsAuthenticated(), *super().get_permissions()]
+
+    def scope(self, queryset):
+        """
+        The one way a viewset applies Layer-2 scoping (DATA_LIFECYCLE.md § 12.4): reads narrow with
+        visible_to(), every unsafe method (update, destroy and any write @action) with
+        writable_by(). Pass the model's manager or queryset; an invisible row is then a 404.
+        """
+        user = self.request.user
+        if self.request.method in SAFE_METHODS:
+            return queryset.visible_to(user)
+        return queryset.writable_by(user)
 
     def filter_queryset(self, queryset):
         return run_list(queryset, self, self.request.query_params)

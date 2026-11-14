@@ -2048,6 +2048,27 @@ class ServiceProvider:
     impl: Callable[..., object]
 
 
+@dataclass(frozen=True)
+class Recyclable:
+    """A soft-deletable model the recycle bin lists and restores (DATA_LIFECYCLE.md § 7.4). The
+    request's `type` is only ever looked up by `key`; a class name is never turned into a model."""
+
+    key: str  # "notes.note"
+    model: str  # "notes.Note"
+    label: str  # "Notes"
+    title_field: str  # the column shown as the row's name
+    delete_permission: str  # force-delete also needs the model's own delete code
+
+
+@dataclass(frozen=True)
+class StateField:
+    """A column whose every change is recorded in core_state_transition (§ 5)."""
+
+    key: str  # "users.user.is_active"
+    model: str  # "users.User"
+    field: str  # "is_active"
+
+
 class ServiceContractError(Exception):
     """A service contract that cannot answer. Callers check has_service() or handle this."""
 
@@ -2131,6 +2152,23 @@ class HelpPageRegistry(ContributionRegistry):
     spec_type = HelpPage
 
 
+class RecyclableRegistry(ContributionRegistry):
+    kind = "recyclable type"
+    spec_type = Recyclable
+
+    def get(self, key: str):
+        """The enabled type registered as `key`, or None (the bin answers 404 for None)."""
+        return next((item for item in self.enabled() if item.key == key), None)
+
+
+class StateFieldRegistry(ContributionRegistry):
+    kind = "state field"
+    spec_type = StateField
+
+    def get(self, model_label: str, field: str):
+        return next((i for i in self.all() if i.model == model_label and i.field == field), None)
+
+
 class ServiceRegistry(ContributionRegistry):
     """Service contracts (§ 18): a named contract with exactly one provider. A second provider is
     refused at boot; a disabled provider's contract is unavailable, not removed."""
@@ -2156,6 +2194,72 @@ class ServiceRegistry(ContributionRegistry):
         if not self.owner_enabled(name):
             raise ServiceUnavailable(f"{name!r} is provided by a plugin that is disabled")
         return self._items[name][0].impl(**kwargs)
+
+
+# --- Object scoping (DATA_LIFECYCLE.md § 12.1, BUILD_ORDER 9.3) --------------------------------
+
+
+@dataclass(frozen=True)
+class ScopeSpec:
+    """
+    One model's answer to "who may see its rows?". Either it is scoped (its default manager's
+    queryset implements visible_to(), which fails closed), or it is explicitly NOT scoped and says
+    why in `not_scoped_because`: silence is not an option. `owner_field` / `tenant_field` name the
+    column that scoping (or the own-rows endpoint) keys on, when there is one.
+    """
+
+    model: str  # "users.User"
+    owner_field: str | None = None
+    tenant_field: str | None = None
+    not_scoped_because: str = ""
+
+    @property
+    def key(self) -> str:
+        return self.model
+
+    @property
+    def scoped(self) -> bool:
+        return not self.not_scoped_because
+
+
+class ScopingRegistry(_Catalog):
+    """Every model with an owner or tenant field, and every listable model, declares its scoping
+    here, from AppConfig.ready(). tests/architecture/test_scoping.py walks apps.get_models()."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._specs: dict[str, ScopeSpec] = {}
+
+    def register(self, spec: ScopeSpec) -> None:
+        owner = _caller_module()
+        with self._lock:
+            name = f"scoping for {getattr(spec, 'model', spec)!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(spec, ScopeSpec):
+                raise RegistryError(f"expected a ScopeSpec, got {type(spec).__name__}")
+            if not isinstance(spec.model, str) or not _MODEL_LABEL.match(spec.model):
+                raise RegistryError(f"{name}: model must be 'app_label.ModelName'")
+            if spec.model in self._specs:
+                raise RegistryError(f"{name} is already registered by {self._owner_of[spec.model]}")
+            if spec.not_scoped_because and len(spec.not_scoped_because.strip()) < 12:
+                raise RegistryError(f"{name}: not_scoped_because must be a real sentence")
+            for field in (spec.owner_field, spec.tenant_field):
+                if field is not None and not (isinstance(field, str) and field.isidentifier()):
+                    raise RegistryError(f"{name}: owner_field/tenant_field must be a field name")
+            self._specs[spec.model] = spec
+            self._owner_of[spec.model] = owner
+
+    def specs(self) -> tuple[ScopeSpec, ...]:
+        self.seal()
+        return tuple(self._specs[k] for k in sorted(self._specs))
+
+    def get(self, model: str) -> ScopeSpec | None:
+        self.seal()
+        return self._specs.get(model)
+
+    def __contains__(self, model: str) -> bool:
+        self.seal()
+        return model in self._specs
 
 
 # --- The whole seam -----------------------------------------------------------------------------
@@ -2193,6 +2297,9 @@ class Registry:
         self.search_sources = SearchSourceRegistry()
         self.help_pages = HelpPageRegistry()
         self.services = ServiceRegistry()
+        self.scoping = ScopingRegistry()
+        self.recyclable = RecyclableRegistry()
+        self.state_fields = StateFieldRegistry()
         # A reconciler registers its job and its give-up kind into THIS registry's catalogs.
         self.reconcilers = ReconcilerRegistry(self.jobs, self.finding_kinds)
 

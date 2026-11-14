@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from core import webhooks
 from core.audit import log_activity
+from core.lifecycle.transitions import change_state
 
 from .. import emails, tokens
 from ..models import PasswordResetToken, User, UserSession
@@ -84,10 +85,16 @@ def deactivate(*, actor, user: User, reason: str = "") -> User:
         and not User.objects.filter(is_superuser=True, is_active=True).exclude(pk=user.pk).exists()
     ):
         raise LastSuperuser
-    user.is_active = False
     user.deactivated_at = timezone.now()
     user.deactivated_reason = reason[:255]
-    user.save(update_fields=["is_active", "deactivated_at", "deactivated_reason", "updated_at"])
+    change_state(
+        user,
+        "is_active",
+        False,
+        actor=actor,
+        reason=reason,
+        also_save=("deactivated_at", "deactivated_reason", "updated_at"),
+    )
     # § 8.5: access already stops (the authenticator checks is_active), but the session RECORD
     # must say so too — it is what an incident is reconstructed from.
     tokens.revoke_all_for_user(user, UserSession.RevokedReason.ADMIN)
@@ -98,10 +105,15 @@ def deactivate(*, actor, user: User, reason: str = "") -> User:
 
 @transaction.atomic
 def activate(*, actor, user: User) -> User:
-    user.is_active = True
     user.deactivated_at = None
     user.deactivated_reason = ""
-    user.save(update_fields=["is_active", "deactivated_at", "deactivated_reason", "updated_at"])
+    change_state(
+        user,
+        "is_active",
+        True,
+        actor=actor,
+        also_save=("deactivated_at", "deactivated_reason", "updated_at"),
+    )
     log_activity("users.user.activated", actor=actor, target=user)
     return user
 

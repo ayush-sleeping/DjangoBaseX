@@ -588,6 +588,8 @@ occurred_at)`. `StatefulMixin` declares `STATE_FIELDS = ("status",)`. Detail end
 **Configurable, not hard-coded.** `STATE_FIELDS` per model; SLA/target values are settings
 (`CONFIGURATION.md`), read at computation time.
 
+**As built (9.3).** `core/lifecycle/{models,transitions}.py`. Not a `StatefulMixin`: one helper, `change_state(obj, field, to, actor=, reason=, also_save=)`, saves the field and writes the `core_state_transition` row in one transaction, and refuses a field not declared in `registry.state_fields` (`StateField`). Columns: `object_type`, `object_id` (public id), `field`, `from_state`, `to_state` (raw `str`), `actor_id`, `actor_label` (`system` when no actor), `source`, `reason`, `occurred_at`; append-only through the model; indexed as above. Wired to `users.User.is_active` (`deactivate`/`activate`). Not built: model-level capture on every `save()`, the `update(status=…)` refusal, `is_reconstructed`/`measured()`, `batch_id`, `recorded_at` (TECH_DEBT DB-125).
+
 ---
 
 ## 6. The retention engine — **Tier 2 · Core**
@@ -815,6 +817,8 @@ scoped listing, held values shown, force-delete blocked by `PROTECT` reported;
 **Configurable, not hard-coded.** `recycle_bin.retention_days` (default 90, floor 7); types via
 registry.
 
+**As built (9.3).** `core/lifecycle/{models,recyclebin}.py`. `SoftDeleteModel` (`deleted_at`, `deleted_by`, `deletion_batch`); `objects, all_objects = soft_delete_managers(MyQuerySet)` (default hides binned rows; `SoftDeleteQuerySet.delete()` bins, `hard_delete()` is the named destructive call); `Model.delete()` bins, `soft_delete(actor=)` returns the batch id; `restore()` raises `RestoreConflict` (API 409 `restore_conflict`) when a live row holds the value. Uniqueness is `live_unique(...)`; boot check `dbx.E050` fails a soft-deletable model with `unique=True` (except `public_id`). Cascade: `SOFT_DELETE_CASCADE` names reverse relations, binned in one bulk UPDATE per relation sharing the batch, one level deep (a decision per relation, as the owner chose). The bin: `register_recyclable(spec, days=90)` (SDK) validates the model, registers `registry.recyclable` and the policy `<owner>.recycle_bin_<name>`; `GET /api/recycle-bin/` (types, or `?type=<key>` rows, newest 100), `POST /api/recycle-bin/<key>/<id>/restore/` and `…/force-delete/` (also needs the type's `delete_permission`; a `PROTECT` block is 409 `delete_blocked`); unknown or class-name keys are 404; rows are `all_objects.deleted()` narrowed by `visible_to` / `writable_by`; audited `core.recycle_bin.restored` / `force_deleted`; permission `core.recycle_bin.manage`. Demonstrated on notes; `users.User` is deliberately not soft-deletable (ADR-0008). Not built: the bin screen, held-unique-value display, a single `recycle_bin.retention_days` setting (each policy has its own `retention.<key>.days`), cascade beyond one level (DB-126).
+
 ---
 
 ## 8. Provenance — **Tier 2 · Core**
@@ -846,6 +850,8 @@ about ~20,000 rows nobody had verified.
 
 **Configurable, not hard-coded.** The `source_ref` pattern is a setting (`provenance.source_ref_regex`)
 with the default above.
+
+**As built (9.3).** `ProvenanceModel` (`created_via` FK to `core.ApiConsumer`, `origin`, `source_ref`, all nullable; NULL = unknown, never backfilled) and `stamp_provenance(actor=, source_ref=)` (SDK), which takes the consumer from the authenticated machine principal and `origin` from the write's ambient provenance (`api` for a consumer; `web`; `system` for commands and jobs). `source_ref` is checked against `SOURCE_REF_PATTERN` and has a plain index. Demonstrated on notes (the serializer exposes `origin` and `source_ref` read-only; `created_via` is never read from the payload). Not built: the `provenance.source_ref_regex` setting (a constant today), `import` and `job` origins, the "—" tooltip (DB-127).
 
 ---
 
@@ -1066,6 +1072,8 @@ Only when `DATA_MODEL.md` D3 introduces a tenant model (⚠️ C1).
 
 **Configurable, not hard-coded.** The tenant field name (`CORE_TENANT_FIELD`) if tenancy exists;
 nothing else — scope rules are code.
+
+**As built (9.3).** `registry.scoping.register(ScopeSpec(model, owner_field=, tenant_field=, not_scoped_because=))` (registry key = `app.Model`; SDK `register_scoping`), declared from each app's `scoping.py`. This is not `registry.scopes(Model, …)` of the sketch above: ADR-0011 keeps tenancy out of core, so a model is either scoped (its default queryset implements `visible_to`) or says why not. Registered scoped: `users.User`, `rbac.Role`, `notes.Note`. Registered not scoped, each with its reason: admin-managed tables (`ApiConsumer`, `ApiToken`, `WebhookEndpoint`, `NotificationRoute`), `FeatureFlag` (targeting list), own-row tables (`Notification`, `NotificationPreference`), `NotificationDelivery`, `PrivateFile`, `rbac.UserRole`, and the auth records (`UserSession`, `LoginAttempt`, `MfaDevice`, `MfaRecoveryCode`, `PasswordResetToken`). `admin.LogEntry` is a framework table and outside the scan. Write path: `VisibleToQuerySet.writable_by` (default `visible_to`) and `BaseViewSet.scope()` (reads `visible_to`, every unsafe method `writable_by`). Owner field, precisely: a forward relation to the user model named `owner`, `user`, `created_by`, `uploaded_by` or `recipient`, or any field named `tenant*`; audit stamps (`updated_by`, `resolved_by`, …) do not count. Not built: the typed `Scope`, `assert_writable`, `public_predicate`, the viewset walk for "every listed model" (DB-123, DB-124).
 
 ---
 
