@@ -1,5 +1,7 @@
 # Deployment
 
+> **Status:** checked 2026-11-14 · never deployed; dev Compose only. Readiness probe, invitations, RBAC and the `FIELD_ENCRYPTION_KEYS` keyring are built; production Docker, SECURE_* settings and Sentry wiring are not.
+
 > ## ⚠️ § 0 — Read this first
 >
 > **This application has never been deployed.** There is no staging environment, no production
@@ -14,10 +16,10 @@
 
 | # | Blocker | Required change |
 |---|---------|-----------------|
-| 1 | **Authentication is incomplete** | Login, refresh, logout, `/me`, password reset, throttling, progressive lockout, TOTP two-factor and re-auth exist (ADR-0009). No invitation flow yet, so the first account needs `createsuperuser`. Set `MFA_ENCRYPTION_KEY` before anyone enrols, and do not rotate it (`TECH_DEBT` DB-33). `forgot/` is a timing oracle until mail is enqueued (DB-32). No RBAC either (1.2–1.4) |
-| 2 | **A young test suite** | CI (`.github/workflows/ci.yml`) runs the `AGENTS.md` § 2 gate on every push and PR, with backend tests on PostgreSQL 16 — but coverage is thin until Phase 1's features land with their tests, and there are no frontend tests. `TECH_DEBT` **DB-5** |
+| 1 | **Auth is built; the open items are operational** | Login, refresh, logout, `/me`, password reset, throttling, progressive lockout, TOTP two-factor, re-auth, invitations and RBAC exist (ADR-0009). Create the first admin with `manage.py bootstrap_admin` (`backend/rbac/management/commands/`). Set `FIELD_ENCRYPTION_KEYS` (newest first) before anyone enrols in MFA; rotate with `manage.py rotate_encryption` (DB-33, done). `forgot/` is a timing oracle until mail is enqueued (DB-32, still open) |
+| 2 | **A young test suite** | CI (`.github/workflows/ci.yml`) runs the `AGENTS.md` § 2 gate on every push and PR, with backend tests on PostgreSQL 16 — and the frontend runs lint, typecheck, vitest (`npm test`) and `next build`. Coverage is still young. `TECH_DEBT` **DB-5** |
 | 3 | **No production topology** | No release image or production Compose (the `Dockerfile.dev` files and `docker-compose.yml` are a development stack: `runserver`, `next dev`, source bind mounts), no Nginx/TLS terminator, no WSGI/ASGI server config, no static-file strategy. `runserver` is a development server and must never face the internet |
-| 4 | **No monitoring yet; logging is structured** | JSON logs with request ids and one scrubber since 6.1 (`LOG_FORMAT=json` is enforced in production). No error tracker, metrics or aggregation yet (6.2+) |
+| 4 | **No monitoring yet; logging is structured** | JSON logs with request ids and one scrubber since 6.1 (`LOG_FORMAT=json` is enforced in production). Error tracking is decided as Sentry-only ([ADR-0013](../adr/0013-sentry-only-error-tracking.md)) but **not wired**: no code initialises Sentry or reads `SENTRY_DSN`. No metrics or log aggregation either |
 | 5 | **SQLite is the default** | `DATABASE_URL` must be set to PostgreSQL. A deploy that forgets it silently runs on a file that vanishes with the container ([ADR-0005](../adr/0005-sqlite-for-dev-postgres-by-url.md)) |
 | 6 | ~~No `APP_ENV`-style guard on unsafe defaults~~ | **Fixed 2026-10-11 (`BUILD_ORDER` 5.1).** Set `APP_ENV=production` (or any non-development label): settings import then **refuses to boot** on `DEBUG`, placeholder or equal secrets, http/wildcard origins, console mail, a per-process cache, SQLite, a non-https `FRONTEND_BASE_URL` or non-JSON logs, listing every problem. Run `python -m core.config_audit` against the target environment before deploying |
 
@@ -128,11 +130,11 @@ Sketch, for when the topology is decided:
 
 | Endpoint | Use |
 |----------|-----|
-| `GET /api/health/` | Liveness. Public, no auth |
+| `GET /api/health/live/` (alias `/api/health/`) | Liveness. Public, no auth |
+| `GET /api/health/ready/` | Readiness. Use this for load-balancer routing |
+| `GET /api/health/components/` | Per-component detail; needs `core.health.view` |
 
-🔜 There is no readiness probe — nothing that checks the database is reachable. A liveness probe that
-answers while the database is down will keep a broken instance in the load balancer. Worth adding
-before the first deploy.
+Routes are in `backend/core/urls.py`; the design is `OBSERVABILITY.md` § 6.
 
 ---
 
@@ -145,7 +147,7 @@ uv run python manage.py makemigrations --check --dry-run   # no un-migrated mode
 uv run ruff check . && uv run ruff format --check .
 
 cd ../frontend
-npm run lint && npx tsc --noEmit && npm run build
+npm run lint && npm run typecheck && npm test && npm run build
 ```
 
 Then, by hand, confirm: `DEBUG=False` · `SECRET_KEY` is unique to this environment ·

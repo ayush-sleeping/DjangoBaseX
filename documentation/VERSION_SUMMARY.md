@@ -10,12 +10,14 @@ exist before does.
 
 ## Unreleased
 
+> **Status:** checked 2026-11-14 · `VERSION` is 0.1.0, no tagged section yet. Capabilities below track the ✅ marks in [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md); not built: 7.4–7.8, 8.5, Phase 9.
+
 - **Sign in** (2026-10-11): email + password login into `httpOnly` cookie JWTs, rotating refresh
   tokens with reuse detection and a two-tab grace window, logout, sign-out-everywhere-else and
   `/api/auth/me/`, with a minimal `/login` page ([ADR-0009](adr/0009-jwt-in-httponly-cookies.md)).
   Password reset by email, throttling and progressive lockout followed the same day.
   TOTP two-factor (setup, recovery codes, a login code step) and re-auth for sensitive actions
-  followed. Not deployable yet: no invitations or RBAC. See
+  followed. Not deployable yet: no production Docker or deployment topology. See
   [`planning/ROADMAP.md`](planning/ROADMAP.md).
 - **One-command setup** (2026-10-22): `./scripts/setup.sh` goes from a fresh clone to a signed-in
   app on PostgreSQL 16 + Redis in Docker (or `--no-docker` on SQLite). It generates every secret,
@@ -33,6 +35,15 @@ exist before does.
   - **Breaking:** `MFA_ENCRYPTION_KEY` is replaced by `FIELD_ENCRYPTION_KEYS` (comma-separated,
     newest first). Put the old key's value there before migrating; `users` migration 0006 reads the
     old key once to re-encrypt and refuses to run if devices exist and no key is available.
+- **Permissions (RBAC)**: code-declared permission catalog, roles and grants with an audit trail, and a gate that denies every endpoint unless it declares its permissions (BUILD_ORDER 1.2–1.4).
+- **Users module and invitations**: user CRUD, set-your-password email, invitations, and `manage.py bootstrap_admin` for the first account (1.5, 1.5b).
+- **`core/` / `project/` split and plugins**: a product's code lives in `project/`; plugins are discovered from `plugin.toml`, scaffolded by `scripts/plugins.py`, with an example plugin (1.6, Phase 3).
+- **Test suite and CI**: pytest architecture tests, a Vitest frontend suite, and `ci.yml` running the gate on every push (Phase 2).
+- **Development Docker Compose stack**: PostgreSQL 16, Redis, both apps and a Celery worker (4.4).
+- **Production guard rails**: environment classification with a boot refusal, project identity, the typed settings registry, feature flags, lookups, locale and currency settings (Phase 5).
+- **Observability and audit**: request ids, structured logs with one scrubber, three-rung health checks, and an audit engine (6.1, 6.2, 6.4).
+- **Background jobs**: Celery and beat from a job registry, a job-run monitor and doctor, the outbox with reconcilers and locks (7.1–7.3).
+- **Frontend platform**: typed transport and data layer, bootstrap and navigation-as-gate, design system and app shell, i18n and generated API contracts (8.1–8.4).
 - **Money** (2026-10-24): `core.money` value objects, `allocate()`, string amounts on the wire.
 - **Project identity** (2026-10-22): set `PRODUCT_NAME` (and `PRIMARY_DOMAIN`), and page titles,
   the sign-in page, the API title, the authenticator issuer, the from-address and the cookie and

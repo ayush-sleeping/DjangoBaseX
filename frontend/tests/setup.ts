@@ -7,6 +7,8 @@ import { setupServer } from "msw/node";
 import { type ComponentType, createElement, type ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
+import { resetWarnings } from "@/core/lib/i18n/messages";
+
 export const server = setupServer();
 
 // Every render and renderHook runs inside the source catalogue (tests/i18n.tsx), around any wrapper
@@ -41,6 +43,7 @@ if (typeof globalThis.ResizeObserver === "undefined") {
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
+  resetWarnings(); // the i18n development warnings are once-per-text: start each test fresh
   server.resetHandlers();
   cleanup();
 });

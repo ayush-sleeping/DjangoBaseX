@@ -5,9 +5,9 @@
 
 A secure, modular, production-ready base project using **Django 5 + Django REST Framework** for the API and **Next.js (App Router)** for the frontend — ideal for building scalable web applications with a Python backend and a TypeScript frontend.
 
-> **Status:** early scaffold with a settled architecture. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following the [Django-Nextjs-Journey](https://github.com/ayush-sleeping/Django-Nextjs-Journey) Level 2 plan.
+> **Status:** checked 2026-11-14 · a platform with auth, RBAC, a Users module, plugins, jobs and an app shell built; phases 0–8 of the build order are done except 7.4–7.8 and 8.5. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md).
 >
-> **Not deployable yet.** Auth is nearly complete (login, refresh, logout, me, password reset, throttling, lockout, TOTP two-factor, re-auth; invitations wait for RBAC), no RBAC, a young test suite, no production Docker (a development Compose stack exists). That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
+> **Not deployable yet.** Auth, RBAC, the Users module with invitations, plugins and a pytest + Vitest suite with CI are built; there is no production Docker (a development Compose stack exists) and no deployment topology. That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
 
 ## Overview
 
@@ -17,14 +17,16 @@ A starter kit for developers who want to skip repetitive setup work and start bu
 - **Django 5 backend** → clean REST API architecture (DRF), OpenAPI docs, env-driven settings.
 - **Next.js frontend** → App Router, TypeScript, Tailwind CSS, typed API client.
 - **Security baked in** → CORS, CSRF, rate limiting (DRF throttling), secrets from `.env`.
-- **Roles & Permissions** → Django groups + DRF permission classes *(planned)*.
-- **Full CRUDs ready** → Users, Employees, Enquiries *(planned)*.
+- **Roles & Permissions** → a code-declared permission catalog, roles and grants, enforced on every endpoint.
+- **Users module** → list, create, edit, deactivate, invitations, role assignment (the reference module to copy).
 - **Deployment ready** → Docker, VPS *(planned)*.
 
 **Included right now**
-- Backend → Django 5.2, DRF, `django-cors-headers`, `django-environ`, `drf-spectacular` (Swagger UI), public `/api/health/` probe.
-- Frontend → Next.js 16, React 19, Tailwind 4, `src/core/lib/api.ts` fetch wrapper, home page showing live backend health.
-- Dev Tools → `uv` (Python), Ruff (lint + format), ESLint, TypeScript strict.
+- Backend → Django 5.2, DRF, cookie-JWT auth, RBAC, Celery jobs, `drf-spectacular` (Swagger UI), health probes under `/api/health/`.
+- Frontend → Next.js 16, React 19, Tailwind 4, typed API client, app shell and design system, i18n.
+- Dev Tools → `uv` (Python), Ruff (lint + format), ESLint, TypeScript strict, pytest, Vitest, CI, development Docker Compose.
+
+The complete built / not-built list is [Project Status](#project-status).
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
 
@@ -54,7 +56,7 @@ A starter kit for developers who want to skip repetitive setup work and start bu
 > A modern tech stack for building scalable web applications.
 - **Backend**: Django 5 + Django REST Framework (Python 3.12)
 - **Frontend**: Next.js 16 (App Router) + React 19 + Tailwind CSS 4 + TypeScript
-- **Database**: SQLite (default) / PostgreSQL (via `DATABASE_URL`)
+- **Database**: PostgreSQL 16 in the Compose stack and CI; plain `runserver` defaults to SQLite (via `DATABASE_URL`; ADR-0005)
 - **API Docs**: OpenAPI 3 via drf-spectacular (Swagger UI at `/api/docs/`)
 - **Tooling**: uv, Ruff, ESLint
 
@@ -154,7 +156,7 @@ host still uses SQLite (ADR-0005).
       ```sh
       cd backend && uv run python manage.py check
       ```
-    - Tests (backend — pytest; in-memory database, cache and email, so safe to run any time):
+    - Tests (backend — pytest; by default an in-memory database, cache and email, so safe to run any time; CI uses PostgreSQL 16):
       ```sh
       cd backend && uv run pytest
       ```
@@ -175,8 +177,8 @@ DjangoBaseX/
 ├── backend/                     # Django 5 + DRF API
 │   ├── config/                  # Project package (settings, urls, asgi, wsgi)
 │   │   ├── settings.py          # All settings; env values via django-environ
-│   │   └── urls.py              # /admin, /api/health, /api/schema, /api/docs
-│   ├── core/  users/  rbac/     # The platform layer (ADR-0010): registry, gate, auth, RBAC
+│   │   └── urls.py              # root URLconf: admin, health, schema, docs, plus core/users/rbac and registry routes
+│   ├── core/  users/  rbac/     # The platform layer (ADR-0010): registry, API gate, jobs, auth, RBAC, users
 │   ├── project/                 # This product's code; registers through core.registry
 │   ├── plugins/                 # Plugins (git submodules), discovered from plugin.toml
 │   ├── tests/                   # pytest: architecture tests, harness, platform tests
@@ -195,7 +197,12 @@ DjangoBaseX/
 │   ├── next.config.ts
 │   ├── tsconfig.json
 │   └── .env.example
-├── scripts/plugins.py           # new / link / list / registry for plugins
+├── scripts/                     # setup.sh, core_doctor.py, plugins.py (new / link / list / registry)
+├── docker-compose.yml           # Development stack: PostgreSQL, Redis, both apps, Celery worker
+├── core.manifest.json           # Core file hashes, checked by core_doctor.py
+├── VERSION
+├── .github/workflows/           # ci.yml, core-guard.yml
+├── .claude/                     # Agent skills, subagents, hooks
 ├── examples/plugins/notes/      # The example plugin; never loaded, installed by CI
 ├── documentation/               # All project docs — start at INDEX.md
 │   ├── INDEX.md                 # The doc map
@@ -204,11 +211,15 @@ DjangoBaseX/
 │   ├── UPGRADING.md             # Taking a core update into a product
 │   ├── ADR.md + adr/            # Architecture decisions, numbered and immutable
 │   ├── core/                    # How built subsystems work
-│   ├── VISION.md                # What this is for; the tie-breaker when designs conflict
+│   ├── DAILY_CHANGES.md · VERSION_SUMMARY.md   # Change log; shippable features by version
+│   ├── PURPOSE.md               # What this is for; the tie-breaker when designs conflict
+│   ├── INVARIANTS.md · DOMAIN.md · ARCHITECTURE.md   # Rules that never break; vocabulary; the system map
+│   ├── CODE_STANDARDS.md · UI_STANDARDS.md · TESTING.md · SECURITY.md   # Standards hubs
+│   ├── PRODUCTION.md · RELEASE.md · DEFINITION_OF_DONE.md   # Ops hubs and the done checklist
 │   ├── system-design/           # Data model, RBAC, API, security, Django/Next.js, deployment
 │   └── planning/                # Intent: build order, architecture plan, tech debt, R&D
 ├── AGENTS.md                    # Operating contract — rules, gate, boundaries
-├── CLAUDE.md                    # Agent entry point; imports AGENTS.md
+├── CLAUDE.md · GEMINI.md        # Agent entry points; import AGENTS.md
 ├── .editorconfig
 ├── .gitignore
 ├── LICENSE
@@ -231,7 +242,7 @@ which single file to read for the area you are working on rather than making you
 
 | I want to… | Read |
 |------------|------|
-| **Understand what this is for, and why** | [`documentation/VISION.md`](documentation/VISION.md) |
+| **Understand what this is for, and why** | [`documentation/PURPOSE.md`](documentation/PURPOSE.md) |
 | Understand the repo end to end, day one | [`documentation/ONBOARDING.md`](documentation/ONBOARDING.md) |
 | **Start a new product from this boilerplate** | [`documentation/NEW_PROJECT.md`](documentation/NEW_PROJECT.md) |
 | Take a core update into my product | [`documentation/UPGRADING.md`](documentation/UPGRADING.md) |
@@ -261,7 +272,7 @@ design is [`documentation/planning/CORE_ARCHITECTURE_PLAN.md`](documentation/pla
 
 | Layer | What it is | Who owns it |
 |-------|-----------|-------------|
-| **`core/`** | The reusable platform — auth, RBAC, users, settings | the boilerplate maintainer |
+| **`core/`** (with `users/`, `rbac/`) | The reusable platform — registry, API gate, settings, jobs, auth, RBAC, users (ADR-0010) | the boilerplate maintainer |
 | **`project/`** | This product's code | the team that copied the boilerplate |
 | **`plugins/`** | Self-contained features, **one GitHub repo each**, mounted as git submodules | one team per plugin |
 
@@ -272,13 +283,13 @@ plugin's name.
 
 ```
 Browser ──► Next.js 16 (App Router)  ──►  Django 5.2 + DRF  ──►  PostgreSQL
-            src/core/lib/api.ts                /api/…                  (SQLite in dev)
+            src/core/lib/api.ts                /api/…                  (SQLite: bare runserver)
             the only module that
             makes HTTP calls
 ```
 
 Every boundary above is enforced by a test rather than by convention — see
-[`documentation/planning/TESTING_STRATEGY.md`](documentation/planning/TESTING_STRATEGY.md).
+[`documentation/TESTING.md`](documentation/TESTING.md).
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
 
@@ -301,14 +312,14 @@ Stated plainly, because assuming otherwise wastes time.
 - **Users module** (the reference module to copy) — list/search, create (set-your-password email), edit, deactivate/activate (sessions revoked), sign-out-everywhere, role assignment; **invitations** with accept-and-sign-in; `manage.py bootstrap_admin` for account one
 - A custom `users.User` (email login, no username) as `AUTH_USER_MODEL` — [ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md)
 - `docker compose up` development stack with live reload on both halves, plus Redis as the shared cache
-- Argon2 password hashing; a proxy-aware `client_ip()` with tests (`manage.py test core`); `/admin/` only when `ADMIN_ENABLED`
+- Argon2 password hashing; a proxy-aware `client_ip()` with tests; `/admin/` only when `ADMIN_ENABLED`
 - **Plugins** — drop a directory with a `plugin.toml` into `backend/plugins/` and it is installed: its models, permissions, API routes, navigation and frontend pages mount through the registries, and architecture tests keep it inside its prefixes. `scripts/plugins.py` scaffolds and links them; [`examples/plugins/notes`](examples/plugins/notes/README.md) is a worked example that CI installs on every push
-- Full documentation set, 11 ADRs, an agent contract, and a ranked tech-debt register
+- Full documentation set, 15 ADRs, an agent contract, and a ranked tech-debt register
 
 **❌ Not built yet**
 - **Domain models** — the platform holds identity and RBAC only; no organisation model ([ADR-0011](documentation/adr/0011-no-organisation-in-core.md))
-- **Frontend tests** — the backend has a pytest suite and the frontend a Vitest + MSW suite (8.1); no browser end-to-end tests yet. **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
-- **The app shell** — the bootstrap call (`/api/me/bootstrap/`), the fail-closed permission provider, a server-built menu that is also the default-deny route gate, and the session-marker proxy exist (`BUILD_ORDER` 8.2); no sidebar or design system yet (`BUILD_ORDER` 8.3)
+- **Browser end-to-end tests** — none yet; the backend has a pytest suite and the frontend a Vitest + MSW suite (8.1). **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
+- **Not yet in the app shell** — CSP and runtime branding (8.5). The shell itself is built: the bootstrap call (`/api/me/bootstrap/`), the fail-closed permission provider, a server-built menu that is also the default-deny route gate, and the session-marker proxy exist (`BUILD_ORDER` 8.2); the sidebar and design system are built (8.3); CSP and runtime branding are not (8.5)
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
 **✅ Both foundational decisions are settled:** custom `User` model ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md))
@@ -350,21 +361,21 @@ Taking a core update later is `git fetch core && git merge core/main` —
 #
 
 ## Roadmap
-Built by accumulation, one module at a time (see the [Journey's North Star table](https://github.com/ayush-sleeping/Django-Nextjs-Journey/tree/main/Projects)).
+Built by accumulation, one module at a time.
 
 > **The executable version of this table is [`documentation/planning/BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md)** — numbered tasks with acceptance criteria, in dependency order. Start there; this table is the summary.
 
 | Capability | How it is built here | Status |
 |------------|----------------------|--------|
-| Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ⬜ |
-| Roles & permissions | Code-declared catalog + DRF permission classes + object-level scoping | ⬜ |
-| Admin UI | Next.js dashboard — data tables, forms, ShadCN | ⬜ |
-| Core CRUD modules | DRF viewsets + Next.js pages | ⬜ |
-| Activity log | Append-only audit trail | ⬜ |
+| Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ✅ (1.1) |
+| Roles & permissions | Code-declared catalog + the `core/api/` gate + object-level scoping | ✅ (1.2–1.4) |
+| Admin UI | Next.js dashboard — data tables, forms, ShadCN | 🔄 app shell and design system (8.3); CSP and branding ⬜ (8.5) |
+| Core CRUD modules | DRF viewsets + Next.js pages | 🔄 Users module (1.5) |
+| Activity log | Append-only audit trail | ✅ audit engine (6.4) |
 | Background jobs | Celery + Redis + Flower | ✅ Celery + beat, generated from the job registry (7.1); Flower not |
-| Social login / 2FA | django-allauth + `pyotp` TOTP | ⬜ |
-| Static analysis | mypy + Ruff | 🔄 Ruff done |
-| Test suite | pytest + pytest-django + factory_boy | ⬜ |
+| Social login / 2FA | `pyotp` TOTP | 🔄 TOTP 2FA done (1.1d); social login not |
+| Static analysis | mypy + Ruff | 🔄 Ruff done; mypy not |
+| Test suite | pytest + pytest-django + factory_boy | ✅ backend (2.1–2.3), CI on PostgreSQL 16; frontend Vitest + MSW (8.1) |
 | Containerisation | docker-compose (Django + Next + Postgres + Redis) | 🔄 dev stack done |
 | Health check | `/api/health/` | ✅ |
 | API docs | drf-spectacular | ✅ |

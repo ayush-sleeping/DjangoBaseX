@@ -3,8 +3,9 @@
 **The contract between the Django API and every client.** One shape, decided once — the frontend
 writes one error handler and one pagination reader instead of one per endpoint.
 
-> ⚠️ Partly built: pagination, throttling, `IsAuthenticated` and the OpenAPI schema are configured in
-> `config/settings.py`. The envelope, error shape and filtering conventions below are design.
+> **Status:** Spec, built — checked 2026-11-14. The error envelope (`core/api/errors.py`,
+> `core/api/exceptions.py`), pagination (`max_page_size = 100` in `core/api/viewsets.py`), default-deny
+> permissions, throttling and the OpenAPI schema are built. Filtering conventions below remain a convention.
 
 ---
 
@@ -55,21 +56,22 @@ with 50 rows and an outage at 500,000.
 ### Errors — one shape
 
 DRF's default error body varies by exception type, which means the frontend needs several handlers.
-Normalise it with a custom exception handler:
+Normalise it with a custom exception handler (`core.api.exceptions`) and build typed errors with `core.api.errors.error_response(code, message, status, details=None)`. `details` is optional:
 
 ```jsonc
 {
   "error": {
-    "code": "validation_error",
-    "message": "This request could not be processed.",
-    "fields": { "email": ["A user with this email already exists."] }
+    "code": "invalid",
+    "message": "Check the fields.",
+    "details": { "email": ["A user with this email already exists."] },
+    "request_id": "…"   // added by the exception handler (core/api/exceptions.py)
   }
 }
 ```
 
 | Status | When |
 |--------|------|
-| `400` | Validation failed — `fields` populated |
+| `400` | Validation failed — `details` populated (field → messages) |
 | `401` | Not authenticated |
 | `403` | Authenticated, not permitted |
 | `404` | Not found, **or found but not visible to this user** |
@@ -148,8 +150,8 @@ Plugins and integrations get credentials, not user accounts. Key points:
 drf-spectacular generates `/api/schema/`; Swagger UI is at `/api/docs/`.
 
 - Non-obvious endpoints get `@extend_schema`. **A wrong schema is worse than none**
-- The committed schema must match the routes — CI should fail on drift, because the frontend's types
-  are generated from it (`TECH_DEBT` **DB-4**) and a stale schema types the frontend against
+- The committed schema must match the routes — CI fails on drift (backend `test_contracts_export.py`, frontend `contracts.test.ts`; DB-4 closed), because the frontend's types
+  are generated from it and a stale schema types the frontend against
   yesterday's API while passing every check
 
 ---

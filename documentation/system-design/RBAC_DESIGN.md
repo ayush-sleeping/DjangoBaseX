@@ -8,8 +8,9 @@
 **How permissions work, and why this shape.** The hardest thing in the core to retrofit, because
 every endpoint and every query depends on it.
 
-> ⚠️ **Not built yet.** Today the only authorization is DRF's `IsAuthenticated` default — which is a
-> good fail-closed starting point, but it is binary: signed in or not.
+> **Status:** Spec, built — checked 2026-11-14. The `rbac` app (models, services, seeding, backends), the
+> `required_permissions` mechanism with `core.permissions.DefaultDeny`, `/api/auth/me/` permission codes and
+> the roles screen exist. The build order at the end is kept as history.
 
 ---
 
@@ -77,7 +78,7 @@ Always module-prefixed. Never a bare `view` or `create`.
 
 ```
 users.users.view          core
-users.roles.update        core
+rbac.roles.update          core
 settings.settings.manage  core
 billing.invoices.create        plugin — the prefix IS the plugin name
 ```
@@ -95,9 +96,13 @@ bug.
 ### Layer 1 — entity: *may this user use this feature at all?*
 
 ```python
-class UserViewSet(viewsets.ModelViewSet):
-    permission_classes = [HasPermission("users.users.view")]
+class UserViewSet(BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
+    required_permissions = {"list": ["users.users.view"], "retrieve": ["users.users.view"]}
 ```
+
+`required_permissions` lives on `core.api.views.BaseAPIView` / `core.api.viewsets.BaseViewSet`: a list of codes,
+`[]` for any signed-in user, or a per-action dict. `None`/undeclared denies everyone, superusers included,
+and `dbx.E001` / `dbx.E004` (`backend/core/checks.py`) refuse to boot a view that skips the bases.
 
 ### Layer 2 — object: *may this user touch **this row**?*
 
@@ -115,11 +120,11 @@ def get_queryset(self):
 
 ## Fail closed, everywhere
 
-From [`../VISION.md`](../VISION.md) § principle 3 — the default answer is no.
+From [`../PURPOSE.md`](../PURPOSE.md) § principle 3 — the default answer is no.
 
 | Situation | Answer |
 |-----------|--------|
-| No `permission_classes` on a view | denied — DRF's `IsAuthenticated` default, never removed globally |
+| No `required_permissions` on a view | denied — `core.permissions.DefaultDeny` is the DRF default, and the boot checks refuse the view |
 | Permission code not in the catalog | denied, and **logged as a bug** — it means a typo or a missing seed |
 | A role with no permissions | sees nothing |
 | `visible_to()` with no rule for this user | returns `.none()`, never `.all()` |
@@ -192,11 +197,11 @@ UI** — never as the authorization decision.
 
 ---
 
-## Build order
+## Build order (done — BUILD_ORDER 1.2-1.5)
 
 1. `Permission`, `PermissionGroup`, `Role`, `UserRole` models
 2. The code-declared catalog + an idempotent seeder
-3. `HasPermission` DRF permission class
+3. The `required_permissions` check on the API base classes (`core.permissions`)
 4. `visible_to()` on the first model, with its test
 5. `/me` returning permission codes; the `can()` helper
 6. The roles admin screen — **last**, because it is the easiest part and the one most likely to be

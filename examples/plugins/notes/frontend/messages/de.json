@@ -1,0 +1,6 @@
+{
+  "notes": {
+    "count": "{count, plural, one {# Notiz} other {# Notizen}}",
+    "title": "Notizen"
+  }
+}

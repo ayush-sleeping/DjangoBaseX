@@ -24,6 +24,128 @@ Newest first.
 
 ---
 
+## 2026-11-14
+
+### Docs plan phase 5: proved with the gate and a fresh agent; friction fixed
+**What:**
+- Ran the full § 2 gate on the branch (results below) and a link check over every Markdown file.
+- **Fresh-agent test:** a new agent with only the docs planned one past bug (the `/api/me/navigation/` 500) and
+  one small feature (invitation lifetime as a runtime setting). It reached the bug's cause in ~5 reads via the
+  Need → read table and `TRAPS.md`. Its friction list drove these fixes:
+  - `CONFIGURATION.md`: § 9.11 test paths corrected (`backend/tests/…`, not `tests/core/…`); § 6
+    (`core/env_schema.py`) and § 9.14's `test_moved_settings_not_read` marked **not built**, with the steps to
+    follow until they are.
+  - `ARCHITECTURE.md` runtime-setting recipe: moving an existing env value, and that `settings.py`/`.env.example`
+    are protected.
+  - `PRODUCTION.md`: a triage row for "menu empty / navigation 5xx". `TRAPS.md`: `dbx.E009` surfaces only in
+    `manage.py check`/`runserver`. `DOMAIN.md`: an Invitation term naming `INVITATION_LIFETIME`.
+- `planning/DOCS_PLAN.md` marked done.
+
+**Why:** a doc set is proven by someone using it cold, not by its author re-reading it.
+**Files:** `documentation/system-design/CONFIGURATION.md`, `system-design/OBSERVABILITY.md` (a line merged by
+phase 4's edit restored), `system-design/TRAPS.md`, `ARCHITECTURE.md`, `PRODUCTION.md`, `DOMAIN.md`,
+`planning/DOCS_PLAN.md`.
+**Verification:** backend `ruff check` ✅, `ruff format --check` ✅, `manage.py check` (test settings — the
+worktree has no `.env`) ✅ no issues, `makemigrations --check --dry-run` ✅ no changes, `pytest` ✅ 1651 passed / 7
+skipped (no plugin installed), `ruff` on `scripts/` and `examples/` ✅; frontend `npm run lint` ✅,
+`npm run typecheck` ✅, `npm test` ✅ 292/292; `test_agent_guard.py` ✅ 18. Not run: `npm run build`, the
+PostgreSQL-only tests (CI runs them).
+**Notes:** left for later, recorded here rather than fixed: `PURPOSE.md` is 202 lines of mandatory reading — its
+first two sections carry the tie-breakers; `INDEX.md` and the AGENTS Need → read table are two routers by design
+(short and full).
+
+### Docs plan phase 4: the index, and ~85 stale claims in the older docs fixed
+**What:**
+- `INDEX.md` opens with "Start here": the eleven hubs plus `TRAPS.md`, each with what it answers and when to read it.
+- A read-only audit compared 19 existing docs with the code (~85 rows); each row was re-verified before editing:
+  - `core/ARCHITECTURE.md` (dated 2026-09-15) rebuilt from the code: routes, models, DRF defaults
+    (`CookieJWTAuthentication`, `DefaultDeny`), Celery, vitest; its "not built" list is now the real unbuilt set.
+  - `README.md`, `planning/ROADMAP.md`: statuses match BUILD_ORDER; ADR count 15; links to another repository
+    removed (rule 5a).
+  - `ONBOARDING.md`, `NEW_PROJECT.md`, `UPGRADING.md`, `VERSION_SUMMARY.md`, `DEPLOYMENT.md`:
+    `FIELD_ENCRYPTION_KEYS` (not `MFA_ENCRYPTION_KEY`), CI and frontend tests exist, readiness probes exist, gate
+    steps link `AGENTS.md` § 2.
+  - `DJANGO_STANDARDS.md`, `RBAC_DESIGN.md`: examples on `BaseViewSet` + `required_permissions` (the old
+    `ModelViewSet` + `IsAuthenticated` example is refused by `dbx.E001`/`E004`); public routes via the ledger.
+  - `NEXTJS_STANDARDS.md`: real API client import, generated types, `npm test` in the gate. `API_DESIGN.md`:
+    envelope is `details` + `request_id`. `DATA_MODEL.md`, `DATABASE_MIGRATIONS.md`, deep `SECURITY.md`,
+    `OBSERVABILITY.md` (Sentry marked not built), `AGENT_TOOLING.md`: brought to today.
+- `TECH_DEBT.md`: DB-66 (Sentry unbuilt), DB-67 (no 404 scoping test), DB-68 (`storage` lint ban points nowhere),
+  DB-69 (long specs). IDs start at 66 because uncommitted 7.4 work on another branch already uses 62–65.
+
+**Why:** a doc that overstates or understates the system is worse than none — agents build on it. Several of
+these sent readers to code that the system checks now refuse.
+**Files:** `documentation/INDEX.md`, `planning/TECH_DEBT.md`, `planning/ROADMAP.md`, `README.md`,
+`ONBOARDING.md`, `NEW_PROJECT.md`, `UPGRADING.md`, `VERSION_SUMMARY.md`, `ARCHITECTURE.md`, `core/ARCHITECTURE.md`,
+`core/AGENT_TOOLING.md`, and in `system-design/`: `DEPLOYMENT`, `OBSERVABILITY`, `DJANGO_STANDARDS`,
+`NEXTJS_STANDARDS`, `API_DESIGN`, `RBAC_DESIGN`, `DATA_MODEL`, `DATABASE_MIGRATIONS`, `SECURITY`.
+**Verification:** link check over all 90 Markdown files under `documentation/`, `.claude/` and the root — 0 broken
+(3 hits are the intentional `NNNN-….md` placeholders in ADR templates); `rg` for other-codebase names — 0 hits.
+
+### Docs plan phase 3: AGENTS.md "Follow the protocol" and the pointers into the new docs
+**What:**
+- `AGENTS.md` § 0 is now "Follow the protocol": `CLAUDE.md` → `AGENTS.md` → `PURPOSE.md` → `INVARIANTS.md` →
+  the task's docs from a **Need → read** table → verified state → banner. The "what exists" list now matches
+  BUILD_ORDER (it omitted jobs, outbox, settings, flags, audit, health, i18n and Compose). Banner says SQLite
+  locally, PostgreSQL in CI. § 3 is a one-paragraph summary pointing at `ARCHITECTURE.md`/`CODE_STANDARDS.md`;
+  § 4 gains define-done, blast radius, two-strikes and the TRAPS row; § 6 shrinks to `INDEX.md` plus the
+  code-wins-over-docs rule. Section numbers 0–7 kept: other docs cite them. 195 lines.
+- `.claude/rules/backend.md`, `frontend.md` point at the hubs and `TRAPS.md`; `/verify` now runs `npm test`
+  (the gate had it, the skill did not); the SessionStart hook prints the protocol line.
+
+**Why:** the protocol is the first thing every session runs; it pointed at a doc that no longer exists
+(`VISION.md`) and at none of the new hubs.
+**Files:** `AGENTS.md`, `.claude/rules/backend.md`, `.claude/rules/frontend.md`, `.claude/skills/verify/SKILL.md`,
+`.claude/hooks/session_context.py`.
+**Verification:** every link in `AGENTS.md` resolves (script); the SessionStart hook emits valid JSON with the
+protocol line; `python3 .claude/hooks/test_agent_guard.py` — 18 tests OK. `CLAUDE.md` and `GEMINI.md` needed no
+change: both only import `AGENTS.md`.
+
+### Docs plan phase 2: the standards set — one short hub per dimension
+**What:** nine new docs at the top of `documentation/`, each ≤ ~125 lines with a `Status · checked` line,
+every rule written as Rule · Gold-standard file · Anti-pattern · Check, linking the deep `system-design/`
+specs by section instead of copying them:
+- `DOMAIN.md`: 31 platform concepts → the one module that owns each; login, job and outbox flows step → file.
+- `ARCHITECTURE.md`: overview diagram (every edge says why), layers, dependency rule, 9 "add a new X" recipes.
+- `CODE_STANDARDS.md`, `UI_STANDARDS.md`: gold-standard files and pages (the Users module), the component kit,
+  every page state, tokens, breakpoints, accessibility, i18n.
+- `TESTING.md`: the gate, what each change type must test, what each architecture test guarantees, what
+  SQLite does not prove. Replaces `planning/TESTING_STRATEGY.md` (deleted — tests exist now, so this is
+  reality, not intent).
+- `SECURITY.md`, `PRODUCTION.md` (diagnosing a running instance), `RELEASE.md` (releasing the core),
+  `DEFINITION_OF_DONE.md` (14-line scorecard), `system-design/TRAPS.md` (34 incidents from this repo).
+
+**Why:** the deep specs are 800–2,400 lines each; an agent needs the one rule, the one file to copy and the
+one check, then a link. Without a gold-standard file, the second way of doing a thing appears.
+**Files:** the ten docs above; links repointed from `TESTING_STRATEGY.md` in `README.md`,
+`documentation/INDEX.md`, `documentation/planning/BUILD_ORDER.md`,
+`documentation/system-design/ENGINEERING_PRACTICES.md`.
+**Verification:** a script resolved every relative link and every backticked repo path in the new docs — 0
+broken; identifiers spot-checked with `rg`/`find` (one wrong path fixed, one class name fixed).
+**Notes:** found while writing — `eslint.config.mjs`'s `storage` ban points at `src/core/lib/storage/`, which
+does not exist; no test asserts a scoped detail lookup answers 404; `/verify` omits `npm test`.
+
+### Docs plan phase 1: PURPOSE and INVARIANTS — the two docs every session reads first
+**What:**
+- `VISION.md` renamed `PURPOSE.md`; content kept, template sections added (problem it solves, where it sits,
+  priorities when trade-offs appear, current focus). Links repointed everywhere except this log's history.
+- New `INVARIANTS.md`: 37 hard rules, one line each, each citing an Accepted ADR or `AGENTS.md`, and the
+  architecture test that goes red when it breaks.
+- New `planning/DOCS_PLAN.md`: the multi-session plan, its six decisions and its phases.
+
+**Why:** an agent arriving cold had no single page of "what must never break", and the rules were scattered
+across 15 ADRs, `AGENTS.md` and 32 architecture tests. `PURPOSE.md` is the name every session's protocol now
+looks for.
+**Files:** `documentation/PURPOSE.md` (was `VISION.md`), `documentation/INVARIANTS.md`,
+`documentation/planning/DOCS_PLAN.md`, link updates in `README.md`, `documentation/INDEX.md`,
+`documentation/planning/PLATFORM_BLUEPRINT.md` and nine `documentation/system-design/` files.
+**Verification:** a script resolved every relative link and every cited test path in the new files — 0
+missing; `rg` confirmed `visible_to`, `core.audit.record`, `core.jobs.enqueue` and `RetryPolicy` exist.
+**Notes:** ADR-0013 (Sentry) is Accepted but unbuilt — no code reads `SENTRY_DSN` — so invariant 29 states
+only what is true today: the core builds no error tracker.
+
+---
+
 ## 2026-11-06
 
 ### BUILD_ORDER 7.4: safe outbound HTTP, provider errors and the non-production guard
@@ -78,6 +200,63 @@ control that shows the leak. The frontend was not touched, so its gate was not r
   exactly.
 - Deferred: per-purpose and breaker settings, SMTP pinning for a user-configurable host, the chat/SMS test
   destination, and the first production purpose (7.6).
+||||||| 92e3314
+### BUILD_ORDER 8.4d: per-plugin catalogues, and translations that are present but wrong
+**What** (Dev 2 `djangobasex-bc`; manager review and gate):
+- **Plugin catalogues:**
+  - A plugin's copy lives in `frontend/messages/<locale>.json` under ONE key, its NAME (not its URL
+    prefix). `en` is required.
+  - Typed by augmenting `PluginMessages` from the plugin's `i18n.ts`, the PermissionCodes pattern.
+  - Mounted by `app/(plugins)/[plugin]/layout.tsx` → core's `<ExtendMessages>`.
+  - Catalogues layer key by key, least specific first: the plugin's `de`, then `de-AT`, over its
+    `en`, then the key path. Core's catalogues layer the same way.
+  - An out-of-lane key is dropped. A plugin whose name is already a namespace in the app's messages
+    is refused at runtime and core's copy is left intact.
+  - Plugins may read core's `common`.
+- **Backend:** core's message namespaces are reserved plugin labels (`RESERVED_LABELS`); a test keeps
+  the two lists in step.
+- **Present-but-wrong translations:**
+  - A translation of a different shape keeps the source copy for that key at load time and warns
+    once. That covers different ICU arguments or tags, a `plural`/`select` without `other`, and
+    unbalanced braces.
+  - Merging skips `__proto__`, `constructor` and `prototype`.
+  - `validate.ts` formats every message in the tests.
+  - `getServerT` warns once on a missing key instead of swallowing it.
+- **Lint and tests:**
+  - Lint's translated scope adds `src/plugins/`.
+  - `plugin-messages.test.ts` covers the examples, the scaffold template and linked plugins, with 7
+    positive controls.
+  - `validate.test.ts`.
+  - `extend-messages.test.tsx`.
+- **Example and template:** the notes example ships `en.json`, a deliberately partial `de.json` and
+  `i18n.ts`; its page uses `useT("notes")`. The scaffold template ships the same skeleton.
+
+**Why:** a plugin's copy needs the same catalogue as core's, or every product with a plugin ships
+English-only screens. A plugin must never overwrite core's copy, whether by an out-of-lane key, by
+its name, or through a prototype key, and a bad translation must not break a screen. A translation
+that drops `{email}` should show correct English, not a sentence with a hole.
+
+**Files:**
+- `backend/core/plugins.py`, `backend/tests/{test_plugins,test_plugins_script}.py`.
+- `frontend/src/core/lib/i18n/{messages,validate,ExtendMessages,index,server,I18nProvider}.ts(x)`
+  and their tests, and `frontend/src/core/lib/plugin-pages.ts`.
+- `frontend/src/app/(plugins)/[plugin]/{layout,plugin-catalogue}.tsx`.
+- `frontend/eslint.config.mjs`, `frontend/tests/{setup.ts,lint-smoke.test.ts}`,
+  `frontend/tests/architecture/{i18n-scan.ts,messages.test.ts,plugin-messages.test.ts,hand-typed-contracts.test.ts}`.
+- `examples/plugins/notes/frontend/**`, `scripts/plugin_template/frontend/**`.
+- `FRONTEND_PLATFORM.md` §§ 22, 25, `NEXTJS_STANDARDS.md` § 5, `BUILD_ORDER.md`.
+
+**Verification:** Dev's run, exit codes captured directly:
+- No plugin: backend ruff, format, scripts lint and format, check, makemigrations and contracts all
+  0; pytest 0. Frontend lint 0, typecheck 0, vitest 0. `next build` 0.
+- With the notes plugin linked: lint, typecheck and vitest 0; `next build` 0; pytest 0.
+- A misspelt plugin key fails `tsc` (TS2345).
+- The final counts are in the review report. The manager's gate on `main` is in the commit.
+
+**Notes:** deferred: server-side plugin copy (plugin pages are client components; `getServerT`
+knows only core's catalogue). Parked for later (manager): the copy ban is a deny-list of prop names,
+the key scanner sees only `const t = useT("ns")`, and the first paint of a plugin page is blank
+until its catalogue loads (documented).
 
 ### BUILD_ORDER 7.3: the outbox, reconcilers, locks and the findings queue
 **What** (Dev 1, manager review):

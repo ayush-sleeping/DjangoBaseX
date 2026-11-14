@@ -15,12 +15,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { useLocalization } from "@/core/lib/format/use-format";
 
-import { catalogueFor, loadMessages, type Messages, missingMessage, SOURCE_MESSAGES } from "./messages";
-
-function reportMissing(error: { code: string; message: string }) {
-  // A missing key renders its path (getMessageFallback); say so in development, never throw.
-  if (process.env.NODE_ENV !== "production") console.warn(`i18n: ${error.code}: ${error.message}`);
-}
+import { catalogueFor, loadMessages, type Messages, missingMessage, reportIntlError, SOURCE_MESSAGES } from "./messages";
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const { locale, timezone } = useLocalization();
@@ -45,7 +40,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       locale={locale}
       timeZone={timezone}
       messages={messages}
-      onError={reportMissing}
+      onError={reportIntlError}
       getMessageFallback={missingMessage}
     >
       {children}

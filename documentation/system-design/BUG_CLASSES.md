@@ -978,7 +978,7 @@ frozen, safe defaults and never raise (CONFIGURATION); a scan flagging exemption
 
 **Review question.** *When this lookup finds nothing, does the caller get the safe answer?*
 
-**See also.** VISION principle 3 · CONFIGURATION · EXTENSIBILITY.
+**See also.** PURPOSE principle 3 · CONFIGURATION · EXTENSIBILITY.
 
 ### BC-37 — Environment checks that a typo defeats
 

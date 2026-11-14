@@ -1,5 +1,7 @@
 # Onboarding
 
+> **Status:** Guide — checked 2026-11-14 · hubs: [`PURPOSE.md`](PURPOSE.md), [`INVARIANTS.md`](INVARIANTS.md), [`TESTING.md`](TESTING.md), [`system-design/TRAPS.md`](system-design/TRAPS.md).
+
 **First day on DjangoBaseX, end to end.** About 20 minutes to a running stack, plus reading.
 
 If you only want the commands, [`../README.md`](../README.md) § Getting Started has them. This file
@@ -74,12 +76,17 @@ npm run dev                               # :3000
 knowing before you plan anything:
 
 ✅ Django 5.2 + DRF · drf-spectacular OpenAPI · CORS/CSRF configured · DRF throttling ·
-`IsAuthenticated` by default · Next 16 + React 19 + Tailwind 4 · a typed API wrapper · Ruff ·
+every endpoint denied unless it declares its permissions · Next 16 + React 19 + Tailwind 4 · a typed API wrapper · Ruff ·
 a custom `users.User` (email login) · a development `docker compose` stack
 
-❌ **No `core/`/`project/` split or plugins yet (1.6, Phase 3). No domain models. No frontend tests. No production Docker. No deployment.**
+Also built: RBAC and the Users module with invitations, the `core/` / `project/` split and plugins
+(ADR-0010), a Vitest frontend suite, CI, Celery jobs, the settings registry, the audit engine and the
+frontend app shell — the ✅/⬜ marks in [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md) are the
+exact list.
 
-The ❌ list is not a criticism — it is a one-commit-old scaffold. But assuming otherwise is the
+❌ **No domain models. No production Docker. No deployment.** Not built either: BUILD_ORDER 7.4–7.8, 8.5 and Phase 9.
+
+The ❌ list is not a criticism — it is a platform, not a product. But assuming otherwise is the
 fastest way to waste an afternoon. [`planning/ROADMAP.md`](planning/ROADMAP.md) has the plan.
 
 ---
@@ -98,7 +105,8 @@ and AI agents alike, and it is short. The parts people get caught by:
    cd frontend && npm run lint && npm run typecheck
    ```
    After any model change, also `uv run python manage.py makemigrations --check --dry-run`.
-   **There is no CI** — running these by hand is the entire safety net.
+   CI (`.github/workflows/ci.yml`) runs the gate on every push and PR, but run it before you push. The exact
+   gate is [`AGENTS.md` § 2](../AGENTS.md); the block above omits its frontend `npm test` and script checks.
 4. **Log the change** in [`DAILY_CHANGES.md`](DAILY_CHANGES.md), in the same commit as the code.
 5. **Report honestly.** A failed check gets reported with its output. A green summary over a red run
    is the one unrecoverable mistake, because it destroys the value of every other report.

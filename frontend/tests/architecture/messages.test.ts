@@ -1,23 +1,26 @@
 /**
- * The catalogue and the code agree, both ways (FRONTEND_PLATFORM § 22, BUILD_ORDER 8.4c).
+ * Core's catalogue and core's code agree, both ways (FRONTEND_PLATFORM § 22, BUILD_ORDER 8.4c).
+ * Plugins' catalogues have their own test, plugin-messages.test.ts (8.4d).
  *
  * - Every key the code translates exists in src/core/messages/en.json (the compiler checks this too,
  *   from the typed catalogue; this also covers what it cannot, such as a dynamic key).
  * - Every key in en.json is translated somewhere: an orphan is copy nobody reads, and it rots.
  * - Each namespace is used only by the code that owns it, so a module's copy moves with the module,
- *   and a plugin's catalogue (when plugins bring one) cannot collide with core's.
+ *   and core's namespaces are reserved plugin names (backend core.plugins.RESERVED_LABELS).
  * - Keys are string literals: `t(\`status.${x}\`)` cannot be checked, so it is refused here.
  *
- * How: the TypeScript AST of every source file. A translator is a const bound to useT("ns") or
- * await getServerT("ns"); every call of it, or of its .rich/.markup/.has, is a reference.
+ * How: the TypeScript AST of every core source file (the scanner is i18n-scan.ts).
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-import { FRONTEND, iterSources, parse, rel } from "./walk";
+import { CATALOGUES, catalogueModule, SOURCE_LOCALE, SOURCE_MESSAGES } from "@/core/lib/i18n/messages";
+import { catalogueProblems } from "@/core/lib/i18n/validate";
+
+import { leaves, references } from "./i18n-scan";
+import { FRONTEND, iterSources, rel } from "./walk";
 
 /** Top-level namespace → the source paths that may use it. `common` is shared by all of core. */
 const OWNERS: Record<string, readonly string[]> = {
@@ -32,58 +35,14 @@ const OWNERS: Record<string, readonly string[]> = {
 };
 
 const CATALOGUE = path.join(FRONTEND, "src/core/messages/en.json");
-const TRANSLATORS = new Set(["useT", "getServerT"]);
-const METHODS = new Set(["rich", "markup", "has", "raw"]);
-
-type Ref = { file: string; line: number; key: string | null; namespace: string };
-
-function leaves(node: unknown, prefix = ""): string[] {
-  if (typeof node === "string") return [prefix];
-  return Object.entries(node as Record<string, unknown>).flatMap(([k, v]) => leaves(v, prefix ? `${prefix}.${k}` : k));
-}
-
-/** The namespace a `useT("x")` / `await getServerT("x")` initializer names, or null. */
-function translatorNamespace(init: ts.Expression | undefined): string | null {
-  const call = init && ts.isAwaitExpression(init) ? init.expression : init;
-  if (!call || !ts.isCallExpression(call) || !ts.isIdentifier(call.expression) || !TRANSLATORS.has(call.expression.text)) return null;
-  const [arg] = call.arguments;
-  if (!arg) return "";
-  return ts.isStringLiteral(arg) ? arg.text : "<dynamic>";
-}
-
-export function references(file: string, text: string): Ref[] {
-  const source = parse(file, text);
-  const bound = new Map<string, string>();
-  const refs: Ref[] = [];
-  const line = (node: ts.Node) => source.getLineAndCharacterOfPosition(node.getStart()).line + 1;
-  const visit = (node: ts.Node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-      const ns = translatorNamespace(node.initializer);
-      if (ns !== null) bound.set(node.name.text, ns);
-    }
-    if (ts.isCallExpression(node)) {
-      const callee = node.expression;
-      const name = ts.isIdentifier(callee)
-        ? callee.text
-        : ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression) && METHODS.has(callee.name.text)
-          ? callee.expression.text
-          : null;
-      if (name && bound.has(name)) {
-        const ns = bound.get(name)!;
-        const [arg] = node.arguments;
-        const key = arg && (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg)) ? arg.text : null;
-        refs.push({ file, line: line(node), namespace: ns, key: key === null || ns === "<dynamic>" ? null : ns ? `${ns}.${key}` : key });
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return refs;
-}
 
 const catalogue = JSON.parse(readFileSync(CATALOGUE, "utf8")) as Record<string, unknown>;
 const KEYS = new Set(leaves(catalogue));
-const REFS = [...iterSources()].flatMap((file) => references(rel(file), readFileSync(file, "utf8")));
+// A linked plugin's files (src/plugins/<prefix>, a symlink) are checked against ITS catalogue by
+// plugin-messages.test.ts, not against core's.
+const REFS = [...iterSources()]
+  .filter((file) => !rel(file).startsWith("src/plugins/"))
+  .flatMap((file) => references(rel(file), readFileSync(file, "utf8")));
 
 describe("the message catalogue", () => {
   it("is read by the code (the scan is not vacuous)", () => {
@@ -113,17 +72,24 @@ describe("the message catalogue", () => {
     expect(strays, "move the copy into the file's own namespace").toEqual([]);
   });
 
-  it("holds only ICU messages with balanced braces and no concatenation seams", () => {
-    const bad = [...KEYS].filter((key) => {
+  it("holds only ICU messages that format, with no concatenation seams", () => {
+    // Every message formatted through next-intl with sample values (validate.ts): a malformed
+    // plural or an unbalanced brace fails here, not on a customer's screen.
+    expect(catalogueProblems(SOURCE_MESSAGES, SOURCE_MESSAGES, SOURCE_LOCALE)).toEqual([]);
+    const seams = [...KEYS].filter((key) => {
       const text = key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown>)[part], catalogue) as string;
-      let depth = 0;
-      for (const ch of text) {
-        depth += ch === "{" ? 1 : ch === "}" ? -1 : 0;
-        if (depth < 0) return true;
-      }
-      return depth !== 0 || text !== text.trim() || text.length === 0;
+      return text !== text.trim() || text.length === 0;
     });
-    expect(bad).toEqual([]);
+    expect(seams).toEqual([]);
+  });
+
+  it("ships translations that match the source, key by key", async () => {
+    const problems: string[] = [];
+    for (const [tag, load] of Object.entries(CATALOGUES)) {
+      const translated = catalogueModule(await load());
+      problems.push(...catalogueProblems(SOURCE_MESSAGES, translated, tag).map((p) => `${tag}: ${p}`));
+    }
+    expect(problems).toEqual([]);
   });
 });
 

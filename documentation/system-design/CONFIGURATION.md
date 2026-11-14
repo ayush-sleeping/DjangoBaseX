@@ -85,7 +85,7 @@ college project (everything a literal) or an unusable one (everything a switch).
 | Rule | **Never hard-coded.** Always read from the right rung of the ladder | **Few.** Each one must pass the admission test (§ 10) |
 | Cost of getting it wrong | A grep project across hundreds of call sites the day the second product has a different answer | A branch someone must maintain, test and document forever |
 
-**Why.** [`../VISION.md`](../VISION.md) lists *"Not maximal configurability"* as a non-goal, and the
+**Why.** [`../PURPOSE.md`](../PURPOSE.md) lists *"Not maximal configurability"* as a non-goal, and the
 owner's requirement is *"nothing should be hard-coded"*. **They do not conflict — they are about
 different things.** The vision forbids *knobs* nobody asked for; the requirement forbids *values*
 written as literals. A base that hard-codes one market's currency, timezone or company name is not
@@ -106,7 +106,7 @@ every test fixture.
   (currency, country), which have no default and are asked for at first run (§ 15).
 - **Formatting is not translation.** Locale-driven *formatting* (dates, numbers, money) is day-one
   core, because it is cheap now and a grep project later. Shipping a *second language* stays out
-  of scope per [`../VISION.md`](../VISION.md) *"Not multi-language … on day one"* — but, as that
+  of scope per [`../PURPOSE.md`](../PURPOSE.md) *"Not multi-language … on day one"* — but, as that
   non-goal now says, copy goes through the translation layer from day one even while only one
   catalogue exists ([`FRONTEND_PLATFORM.md`](FRONTEND_PLATFORM.md) owns the mechanism), so the
   second language is data, not a sweep.
@@ -479,6 +479,8 @@ would let the environment being audited weaken its own audit.
 ---
 
 ## 6. `validate_env` — the release-image environment validator — **Tier 1 · Core**
+
+> 🔜 **Not built (checked 2026-11-14):** `core/env_schema.py` and `tests/core/test_env_schema.py` do not exist yet; this section is the design.
 
 **What.** A command that compares the environment a release will run with against the declared
 schema, **inside the new image, before it takes traffic**: unknown keys, missing required keys, keys
@@ -925,6 +927,8 @@ encoding and treat an unparseable value as "no state".
 
 ### 9.14 Moving a value from env to the registry
 
+> **Built vs planned (checked 2026-11-14):** `core/env_schema.py` (§ 6) and `test_moved_settings_not_read` (§ 18) are **not built**, so steps 2 and 5 cannot be done yet. Until they are: remove the env read from `backend/config/settings.py` and the key from `backend/.env.example` (both protected — ask), drop it from `backend/config/settings_test.py`, replace every `settings.<KEY>` reader with the registry read, and `rg` the old name to prove nothing reads it.
+
 1. Declare the setting with the env value's current default.
 2. Mark the env key `retired=True, moved_to=…` in `core/env_schema.py` (§ 6).
 3. Prefill once from env where it was set (§ 16), never overwriting.
@@ -940,19 +944,19 @@ encoding and treat an unparseable value as "no state".
 bootstrap.
 
 **Enforced by.**
-- `tests/core/test_settings_registry.py` — wrapper round trip for `false`, `0`, `""`, `null`;
+- `backend/tests/test_settings_registry.py` — wrapper round trip for `false`, `0`, `""`, `null`;
   `sync_settings` twice writes nothing; strict coercion table (`"false"` refused for `bool`, `True`
   refused for `int`, floats refused for `decimal`); a row below `min` is clamped on read; resolution
   with the database unavailable returns the code default and increments the fallback metric; an
   unregistered key raises; the cascade honours declared scopes and `is_locked`; every write produces
   one `ActivityLog` row with old and new.
-- `tests/core/test_settings_namespace_guard.py` — the Security endpoint answers `404` for a
+- 🔜 *not built yet:* `tests/core/test_settings_namespace_guard.py` — the Security endpoint answers `404` for a
   `billing.*` key, even for a superuser.
 - `tests/architecture/test_settings_are_read.py` — AST-walks `backend/` (and `frontend/src/` for
   `useSetting("…")`): every registered key is read somewhere other than the settings app, **and** every
   literal key read is registered; dynamic keys fail. Shrink-only baseline
   ([`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md)).
-- `tests/core/test_setting_defaults_snapshot.py` — the code defaults match a committed snapshot; a
+- `backend/tests/test_setting_defaults_snapshot.py` — the code defaults match a committed snapshot; a
   change is a reviewed diff.
 - `tests/architecture/test_plugin_conventions.py` — a plugin's keys start with its label.
 
@@ -1557,7 +1561,7 @@ registry-completeness test.
 ESLint/vitest rule, with a shrink-only baseline for pre-existing hits
 ([`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md)).
 
-**Why.** A rule that is only written down is already half-broken ([`../VISION.md`](../VISION.md)
+**Why.** A rule that is only written down is already half-broken ([`../PURPOSE.md`](../PURPOSE.md)
 principle 2). One codebase's written standard for "no hard-coded values" used, as its own example, a
 constants file of hard-coded admin role names.
 
@@ -1612,7 +1616,7 @@ Recorded, not edited — each needs the owner or the owning doc's next change.
 | 7 | `backend/config/settings.py` (`SPECTACULAR_SETTINGS`); [`../NEW_PROJECT.md`](../NEW_PROJECT.md) § 2 | The API title and description are the boilerplate's name, renamed by hand from a table | Derive from `PRODUCT_NAME` (§ 7); the rename table shrinks to setting env keys |
 | 8 | `AGENTS.md` § 3 "Settings" row; [`DJANGO_STANDARDS.md`](DJANGO_STANDARDS.md) § 8; [`SECURITY.md`](SECURITY.md) § Secrets | "Every environment-dependent value comes from `.env`" is too absolute — it forbids runtime configuration (§ 16) and the credential store | Reword to: *bootstrap values from env; operator-tunable values from the registry; third-party secrets from the credential store; nothing from a literal.* (`AGENTS.md` is protected — the owner's edit) |
 | 9 | [`DATA_MODEL.md`](DATA_MODEL.md) § 3 | Lists `FeatureFlag` as "Phase 2+, as needed" | § 11 is Tier 1 because "ship dark" needs it from the first product module. Sequencing is `BUILD_ORDER.md`'s call — Pending decision #4 |
-| 10 | [`../VISION.md`](../VISION.md) non-goals | *"Not maximal configurability"* and *"Not multi-language … on day one"* read as against this file | Not a real conflict: § 1 distinguishes values from knobs, and formatting from translation. Worth one sentence in `VISION.md` pointing here, so the non-goal is not cited against removing a literal |
+| 10 | [`../PURPOSE.md`](../PURPOSE.md) non-goals | *"Not maximal configurability"* and *"Not multi-language … on day one"* read as against this file | Not a real conflict: § 1 distinguishes values from knobs, and formatting from translation. Worth one sentence in `PURPOSE.md` pointing here, so the non-goal is not cited against removing a literal |
 
 ---
 

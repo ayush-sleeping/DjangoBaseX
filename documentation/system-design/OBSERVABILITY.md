@@ -5,7 +5,9 @@ important — what it is *not* measuring: request correlation, structured logs, 
 tracking, health, data-plane checks, metrics, self-watching alerts, the System Health page, the
 "zero is not a fact" state model, and the doctors.**
 
-> 🔜 **Blueprint — nothing in this file is built yet.** It is the specification to build against. Priority and
+> **Status:** checked 2026-11-14 · **partly built.** Code exists for the request id, structured logging, the scrubber, the three health rungs, data-plane checks and doctors (`backend/core/observability/`, `core/dataplane.py`, `core/doctors.py`). **§ 4 Sentry and § 5 the built-in tracker are not built** (ADR-0013). Other sections are the specification to build against; check `BUILD_ORDER.md` before trusting one.
+>
+> 🔜 **Blueprint for what is not built.** Priority and
 > sequencing live in [`../planning/PLATFORM_BLUEPRINT.md`](../planning/PLATFORM_BLUEPRINT.md) and
 > [`../planning/BUILD_ORDER.md`](../planning/BUILD_ORDER.md). When a section is built, move its "how it works" into
 > `documentation/core/` and leave the rules here.
@@ -413,8 +415,11 @@ a settings change). Module additions are registry entries. `SCRUB_MAX_DEPTH` is 
 
 ## 4. Sentry — **Tier 2 · Core**
 
+> 🔜 **Not built.** Decided in [ADR-0013](../adr/0013-sentry-only-error-tracking.md), but `core/observability/sentry.py` and
+> `init_sentry()` do not exist and no code reads `SENTRY_DSN`. Everything below is the planned design.
+
 **What.** Optional Sentry integration, configured once in core
-(`core/observability/sentry.py::init_sentry()`), active only when `SENTRY_DSN` is set; the matching
+(planned: `core/observability/sentry.py::init_sentry()`, 🔜 not built), active only when `SENTRY_DSN` is set; the matching
 Next configuration for client, server and edge. Sentry is one **backend** of the error-reporting
 facade (§ 5); the built-in tracker is the other; either, both or neither may be on.
 
@@ -1311,5 +1316,4 @@ growth tables).
 
 ## Doc accuracy
 
-> Written 2026-09-29 from research across several production codebases. Nothing here is implemented; verify
-> against the code before relying on any section.
+> Written 2026-09-29 from research across several production codebases. Partly implemented since — see the status line at the top (checked 2026-11-14).

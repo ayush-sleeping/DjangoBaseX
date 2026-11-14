@@ -1,5 +1,8 @@
 # Security
 
+> **Status:** Spec, mostly built — checked 2026-11-14. The boot guard (DB-7) is done; only DB-8 (the production
+> `SECURE_*` settings) is open.
+
 **What the core guarantees, what it does not, and the rules that keep it true.**
 
 Written down because a boilerplate's security posture is inherited silently. A weakness here ships to
@@ -104,7 +107,9 @@ Both layers, every time — entity **and** object ([`RBAC_DESIGN.md`](RBAC_DESIG
 
 ## Production checklist
 
-Nothing below is optional, and none of it is configured yet (`TECH_DEBT` **DB-7**, **DB-8**).
+Nothing below is optional. The `SECURE_*` / cookie settings are **not yet in `settings.py`** (`TECH_DEBT`
+**DB-8**, open); `core/config_audit.py` already refuses a production-like boot on the unsafe defaults it
+covers (DB-7, closed).
 
 ```python
 DEBUG = False
@@ -124,9 +129,10 @@ CORS_ALLOWED_ORIGINS = ["https://your.frontend"]                 # never "*" wit
 uv run python manage.py check --deploy    # run it — it names what is missing
 ```
 
-🔜 **DB-7 — a startup guard that refuses to boot** with `DEBUG=True` or a placeholder `SECRET_KEY`
-outside development. A default that is safe locally and unsafe in production is invisible until
-something asserts it.
+**DB-7 (done) — a startup guard that refuses to boot.** `core/config_audit.py` `enforce()` runs at the end
+of settings import and refuses a production-like boot with `DEBUG`, a placeholder `SECRET_KEY`, wildcard or
+http origins and more. A default that is safe locally and unsafe in production is invisible until something
+asserts it.
 
 ---
 

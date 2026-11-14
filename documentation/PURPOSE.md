@@ -1,17 +1,54 @@
-# Vision
+# DjangoBaseX — purpose
 
-**What DjangoBaseX is for, who it serves, and how we will know it worked.**
+> **Status:** Accepted — checked 2026-11-14 · owner: the repository owner · renamed from `VISION.md` on
+> 2026-11-14 (content kept; template sections added)
 
-Every other document answers *how*. This one answers *why*, and it is the tie-breaker when two
-designs are both defensible. Read it before proposing anything structural.
+**What DjangoBaseX is for, who it serves, and how we will know it worked.** The first doc every session
+reads, after [`../AGENTS.md`](../AGENTS.md). Every other document answers *how*; this one answers *why*,
+and it is the tie-breaker when two designs are both defensible. Read it before proposing anything structural.
 
 ---
 
-## The one-sentence version
+## In one sentence
 
 > **A Django + Next.js core you copy into a new project and start building on the same day — where
 > the platform work is already done, several teams can build on it at once without colliding, and a
 > fix made here reaches every product already built on it.**
+
+## The problem it solves
+
+- **Before:** every new product rebuilds the same platform — login, sessions, roles and permissions,
+  users, settings, jobs, audit, health checks, the dashboard shell — slightly differently each time, with
+  the same bugs rediscovered and no way to push a fix into products already shipped.
+- **After:** a product starts from a tested platform, adds only its own domain (in `project/` or a
+  plugin), and takes later core fixes with `git merge`. The platform is built once, enforced by tests,
+  and maintained upstream.
+
+## Where it sits
+
+| Direction | What | How it connects |
+|---|---|---|
+| **Downstream** | Products copied from this repo | Clone and re-origin; take updates with `git fetch core && git merge core/main` ([`UPGRADING.md`](UPGRADING.md)) |
+| **Sideways** | Plugins owned by separate teams, in their own repos | Mounted through the registries; never edit the core ([`planning/PLUGIN_DEVELOPMENT.md`](planning/PLUGIN_DEVELOPMENT.md)) |
+| **Upstream** | Nothing | DjangoBaseX depends only on open-source packages; it has no product or client of its own |
+
+## Priorities when trade-offs appear
+
+Ordered. The first three come from the properties below; the rest from the design principles.
+
+1. **Correct and secure** — fail closed; a wrong answer or a leak is never traded for speed
+2. **Reusable** — would the next product want this? If not, it is `project/` code or a plugin
+3. **Parallel** — a seam that lets a team ship without touching the core beats a core edit
+4. **Maintained** — nothing that makes `git merge core/main` harder for products already shipped
+5. **Enforced** — a rule with a test beats a rule in a doc
+6. **Simple** — fewest moving parts; no abstraction without two products' evidence
+7. **Fast** — only when something is measured slow
+
+## Current focus
+
+The executable backlog is [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md) — the lowest-numbered ⬜
+item is next (Phase 7: outbound HTTP, retention, webhooks, notifications, ops alerting; Phase 8.5: CSP
+and branding). What exists versus what is planned: [`planning/ROADMAP.md`](planning/ROADMAP.md).
 
 ---
 

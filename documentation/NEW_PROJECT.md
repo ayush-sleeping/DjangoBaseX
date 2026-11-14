@@ -3,7 +3,7 @@
 **From an empty repo to a renamed, running product you can build on.** This is the document that
 makes the boilerplate worth having — if copying it is fiddly or risky, nobody copies it.
 
-> **Status:** built. `scripts/setup.sh` (BUILD_ORDER 4.1) does steps 1 and 6, and project identity
+> **Status:** built · checked 2026-11-14. `scripts/setup.sh` (BUILD_ORDER 4.1) does steps 1 and 6, and project identity
 > (BUILD_ORDER 5.2) turns most of step 2 into setting one env key.
 
 ---
@@ -39,7 +39,7 @@ Works, but **delete the git history and the database**, then re-point the remote
 
 ```bash
 cp -r DjangoBaseX my-product && cd my-product
-rm -rf .git backend/db.sqlite3 backend/.env frontend/.env.local
+rm -rf .git backend/db.sqlite3 .env backend/.env frontend/.env.local
 git init && git branch -m main
 ```
 
@@ -61,8 +61,8 @@ Nothing below is optional. Work top to bottom.
 ./scripts/setup.sh --no-docker     # or on the host, with SQLite
 ```
 
-It writes `backend/.env` from `.env.example` and generates `SECRET_KEY`, `JWT_SIGNING_KEY`,
-`MFA_ENCRYPTION_KEY` and the database and cache passwords. A re-run keeps every value it already
+It writes the root `.env` (compose ports and secrets), `backend/.env` and `frontend/.env.local`, and generates
+`SECRET_KEY`, `JWT_SIGNING_KEY`, `FIELD_ENCRYPTION_KEYS` and the database and cache passwords. A re-run keeps every value it already
 wrote. To make one key by hand: `cd backend && uv run python manage.py generate_secret`.
 
 > **This one is security, not tidiness.** Django signs session cookies, password-reset tokens and

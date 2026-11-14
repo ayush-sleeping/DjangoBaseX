@@ -53,6 +53,11 @@ problem was real.
 | **DB-63** | 🟢 | **Outbound HTTP and breaker limits are constants** | `HttpPurpose` timeouts/retries and `BreakerPolicy` (3 failures, 1 h doubling to 24 h) are constants; `http.<purpose>.*` and `breaker.*` settings join the registry when a product needs to tune one (same rule as DB-58) |
 | **DB-64** | 🟢 | **SMTP is not pinned through the SSRF vetting** | `EMAIL_HOST` is an operator constant today, so the mail backend dials it directly. When a user-configurable SMTP host arrives (JOBS § 26 credential store), route it through `core.http.vetting` before connecting |
 | **DB-65** | 🟢 | **No `NONPROD_TEST_CHAT_DESTINATION`** | The non-production guard redirects mail and refuses HTTP; a chat/SMS transport does not exist yet, so its redirect target (JOBS § 27) is not built. Add it with the first chat/SMS adapter |
+||||||| 92e3314
+| **DB-66** | 🟠 | **ADR-0013 (Sentry) is Accepted but not built** | No code reads `SENTRY_DSN` and `core/observability/sentry.py` does not exist, so errors are recorded only in logs. ADR-0013 is in no numbered BUILD_ORDER item; `OBSERVABILITY.md` § 4–5 hold the design. Found 2026-11-14 (docs plan) |
+| **DB-67** | 🟡 | **No test asserts a scoped detail lookup answers 404** | `UserViewSet.get_queryset` goes through `visible_to()`, so another user's row should be 404 on `GET`/`PATCH` (BUILD_ORDER 9.3's done-when), but nothing in `users/tests/` proves it for a user who holds the view permission but not the row. Add the two-user test when touching scoping |
+| **DB-68** | 🟢 | **ESLint `storage` ban points at a directory that does not exist** | `frontend/eslint.config.mjs` tells the reader to use `src/core/lib/storage/`, which is not in the tree. Either build the wrapper or reword the message; until then `UI_STANDARDS.md` § 2 warns |
+| **DB-69** | 🟢 | **Most `system-design/` specs exceed the short-doc rule** | 17 specs run 800–2,450 lines. The hubs at `documentation/*.md` (docs plan, 2026-11-14) now give the one-hop summary, so agents read the specs by section; splitting them is its own task. Stale `TESTING_STRATEGY.md` mentions remain as plain text in `ENGINEERING_PRACTICES.md`'s historical conflict tables |
 
 ---
 

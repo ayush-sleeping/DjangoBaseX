@@ -15,13 +15,26 @@ import { useTranslations } from "next-intl";
 
 import type { Messages } from "./messages";
 
+/**
+ * Linked plugins' catalogues, each under the plugin's NAME (BUILD_ORDER 8.4d). A plugin adds its own
+ * by augmentation, from its frontend package, so its keys are typed only while it is linked:
+ *
+ *   import type en from "./messages/en.json";
+ *   declare module "@/core/lib/i18n" {
+ *     interface PluginMessages { notes: (typeof en)["notes"] }
+ *   }
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an augmentation point
+export interface PluginMessages {}
+
 declare module "next-intl" {
   interface AppConfig {
-    Messages: Messages;
+    Messages: Messages & PluginMessages;
   }
 }
 
 export const useT = useTranslations;
 
+export { ExtendMessages } from "./ExtendMessages";
 export { I18nProvider } from "./I18nProvider";
 export { SOURCE_LOCALE, type Messages } from "./messages";

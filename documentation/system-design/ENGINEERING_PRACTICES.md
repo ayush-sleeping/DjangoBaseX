@@ -33,7 +33,7 @@ built on it.**
 
 | Topic | Owner |
 |-------|-------|
-| The stack choice and order of work for the test suite (pytest, factory_boy, Vitest) | [`../planning/TESTING_STRATEGY.md`](../planning/TESTING_STRATEGY.md) — this file extends it and does not repeat it |
+| The stack choice and order of work for the test suite (pytest, factory_boy, Vitest) | [`../TESTING.md`](../TESTING.md) — this file extends it and does not repeat it |
 | The recurring bug-class register used as the review checklist | [`BUG_CLASSES.md`](BUG_CLASSES.md) |
 | The narrative catalogue of what went wrong elsewhere, and why | [`LESSONS_LEARNED.md`](LESSONS_LEARNED.md) |
 | The production-settings audit itself (what it refuses) | [`CONFIGURATION.md`](CONFIGURATION.md) — this file only runs it in CI |
@@ -581,7 +581,7 @@ runs `seed_demo` twice on a fresh database ([§ 13](#13-the-backend-job--process
 
 ## 10. Coverage: per-file floors, a default for new code, a ratchet that never lowers — Process
 
-**What.** The global floor and per-file floors from [`TESTING_STRATEGY.md`](../planning/TESTING_STRATEGY.md), made
+**What.** The global floor and per-file floors from [`TESTING.md`](../TESTING.md), made
 into a ratchet: `backend/coverage_floors.json` pins each file at its measured coverage (rounded down), any core
 service **not listed** must clear a default, and the update script only ever raises floors.
 
@@ -656,7 +656,7 @@ page list is data from the running API.
 
 ## Part B — CI gates
 
-> **Premise.** [`../planning/TESTING_STRATEGY.md`](../planning/TESTING_STRATEGY.md) § CI and `BUILD_ORDER` 2.3 define
+> **Premise.** [`../TESTING.md`](../TESTING.md) § CI and `BUILD_ORDER` 2.3 define
 > the first workflow (two jobs, PostgreSQL 16, no `continue-on-error`). This part is the full gate it grows into.
 > Every step below **blocks**. A step that cannot yet block is not added until it can.
 
@@ -1068,7 +1068,7 @@ generic credential store that had **zero** registered consumers.
   you search for, and what did you find?"*
 - **Extract a shared primitive at the third genuine consumer**, not the second — and never before the first (a
   speculative primitive with no consumer is how the unused credential store happened). This is
-  [`../VISION.md`](../VISION.md) principle 4 applied inside the codebase.
+  [`../PURPOSE.md`](../PURPOSE.md) principle 4 applied inside the codebase.
 - **Identical names never hide different semantics.** If two functions must differ, their names say how.
 - **One home per formatter, primitive and client namespace**, enforced by the ESLint rules in
   [§ 20](#20-eslint-as-an-architecture-tool--process) and the duplicate-definition guard in [§ 2](#2-architecture-tests-ast-source-scans-with-two-way-ratchets--tier-1--core).
@@ -1741,7 +1741,7 @@ project | <plugin>), tier, flag, notes` — referenced from [`../NEW_PROJECT.md`
 mapping each requirement to core, project or a named plugin at that moment is what keeps product code out of the
 core.
 
-**Rules.** A requirement whose owner is `core` needs the [`../VISION.md`](../VISION.md) test ("would the next product
+**Rules.** A requirement whose owner is `core` needs the [`../PURPOSE.md`](../PURPOSE.md) test ("would the next product
 want this?") answered in its notes; otherwise it is `project` or a plugin.
 
 **Enforced by.** Convention.
@@ -2006,7 +2006,7 @@ touches the named doc.
 | 2 | [`../ADR.md`](../ADR.md) opening paragraph; [`../INDEX.md`](../INDEX.md) folder table row `adr/` | an ADR is "immutable", "superseded by a new ADR, never edited" | refinements that do not reverse a decision, and corrections of fact, then force a new number each time — the studied registers folded such ADRs back into the one they refined | keep *supersede* for reversals; allow dated **Amendment** and **Correction** sections for refinements and factual fixes, never rewriting original text ([§ 24](#24-the-adr-register-upgraded--process)) |
 | 3 | [`../adr/0000-template.md`](../adr/0000-template.md); `ADR.md` § Status meanings | Context / Decision / Consequences / Alternatives considered; four statuses | lacks Invariant, Where it bites, Decided by, Tags, Where this is enforced; no `Reverted` status | adopt the template in [§ 24](#24-the-adr-register-upgraded--process); add `Reverted` to the status table; add "Agent defaults we reject" and "Open decisions" to `ADR.md` |
 | 4 | [`../adr/0006-one-agent-contract.md`](../adr/0006-one-agent-contract.md) § Context | cites another codebase's ADR by its number | the writing rules for this repository forbid citing a source's record numbers, in the spirit of `AGENTS.md` rule 5a | drop the number; keep the reasoning ("an earlier core that tried the split retired it; its record says …") |
-| 5 | [`../planning/TESTING_STRATEGY.md`](../planning/TESTING_STRATEGY.md) § "Why this is the highest-leverage thing" | a table headed "What enforces it in the source project", naming that project's test file paths | records the source rather than the mechanism, against the spirit of rule 5a | re-head the table "What will enforce it here" and use DjangoBaseX's planned paths from [`../planning/CORE_ARCHITECTURE_PLAN.md`](../planning/CORE_ARCHITECTURE_PLAN.md) § 6 |
+| 5 | [`../TESTING.md`](../TESTING.md) § "Why this is the highest-leverage thing" | a table headed "What enforces it in the source project", naming that project's test file paths | records the source rather than the mechanism, against the spirit of rule 5a | re-head the table "What will enforce it here" and use DjangoBaseX's planned paths from [`../planning/CORE_ARCHITECTURE_PLAN.md`](../planning/CORE_ARCHITECTURE_PLAN.md) § 6 |
 | 6 | `TESTING_STRATEGY.md` § CI and § Order of work; `BUILD_ORDER.md` 2.3 | CI "on every PR" | a PR-only trigger leaves direct pushes and non-PR branches unchecked; studied CI filtered on a branch that did not exist and never ran | every push and every PR, no branch filter, plus the trigger test ([§ 12](#12-ci-runs-on-every-push-every-branch-and-every-step-blocks--process)) |
 | 7 | `TESTING_STRATEGY.md` § Coverage floors | global + per-file floors, "raise deliberately" | no default floor for new files and no never-lower rule, so a new module arrives untested because nothing lists it | add the default and the ratchet ([§ 10](#10-coverage-per-file-floors-a-default-for-new-code-a-ratchet-that-never-lowers--process)) |
 | 8 | [`../DAILY_CHANGES.md`](../DAILY_CHANGES.md) § Format | one *Verification* field | cannot hold how a guard was proven red, what was found while verifying, what is still open, or deploy state | adopt the fields in [§ 33](#33-daily_changes-fields-that-answer-the-reviewers-questions--process) for entries after adoption |

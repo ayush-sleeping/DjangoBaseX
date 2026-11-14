@@ -25,7 +25,7 @@ The owner's brief, recorded because it is the tie-breaker for everything below:
 > building on day one. It must be reliable and powerful, and **nothing may be hard-coded**. A product, not a college
 > project.
 
-That brief is now principle 7 of [`../VISION.md`](../VISION.md).
+That brief is now principle 7 of [`../PURPOSE.md`](../PURPOSE.md).
 
 ---
 
@@ -62,7 +62,7 @@ Every capability carries exactly one tier. The tier decides *where* it lives and
 | **Tier 3 · Module** | Some products need it — a reusable plugin, not core | its own plugin repo | When the first product that needs it arrives |
 | **Process** | A practice, gate or document convention | docs, CI, `AGENTS.md` | As soon as the thing it governs exists |
 
-⚠️ **The VISION test still applies to every row:** *"Would the next product want this?"* If only some products do,
+⚠️ **The PURPOSE test still applies to every row:** *"Would the next product want this?"* If only some products do,
 it is Tier 3 — however useful it is.
 
 ---
@@ -311,7 +311,7 @@ Beyond § 5, the specs raise these. None blocks Phases 1–2.
 ## 7. How to use this document
 
 - **Proposing a feature for DjangoBaseX?** Find its row. If it has one, read the linked spec first. If it has none,
-  apply the VISION test and the tier table in § 2 before writing anything.
+  apply the PURPOSE test and the tier table in § 2 before writing anything.
 - **Building one?** Take the task from [`BUILD_ORDER.md`](BUILD_ORDER.md), build to the spec, then flip the row
   here to ✅ and move the "how it works" into `documentation/core/`.
 - **Found a spec that is wrong?** Fix it in the same change as the code that proved it wrong, and note it in

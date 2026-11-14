@@ -1,5 +1,7 @@
 # Next.js Standards
 
+> **Status:** Spec, built — checked 2026-11-14.
+
 **Conventions for the frontend.** Installed: **Next.js 16.3.4, React 19.2.8, Tailwind CSS 4,
 TypeScript 5** — read [`frontend/package.json`](../../frontend/package.json) rather than trusting
 this line if it matters.
@@ -58,15 +60,16 @@ before.
 
 **All backend calls go through `src/core/lib/api.ts`. Never `fetch()` inside a component.**
 
-That wrapper is where the base URL, error shape, headers, and (🔜) auth token handling and refresh
-live. A component that calls `fetch()` directly opts out of all of it, and the failure is not
+That wrapper is where the base URL, error shape, headers, and auth handling (cookies, CSRF echo,
+refresh-and-retry once on a 401) live. A component that calls `fetch()` directly opts out of all of it, and the failure is not
 immediate — it shows up when auth lands, or when error handling changes, and then it shows up in
 every component that did this.
 
 ```ts
 // ✅
-import { api } from "@/lib/api";
-const health = await api.get<HealthResponse>("/api/health/");
+import { get } from "@/core/lib/api/client";   // also: request, post, patch, del, upload, download
+const health = await get<HealthResponse>("/api/health/");
+// or the older call shape the existing pages use: api<HealthResponse>("/api/health/") from "@/core/lib/api"
 
 // ❌ — bypasses the wrapper
 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health/`);
@@ -79,9 +82,9 @@ picks between them. Never read either variable anywhere else (`OPERATIONS.md` §
 
 **Type every response.** An untyped API response is an `any` that spreads through the component tree.
 
-🔜 Generating types from the backend's `/api/schema/` is planned (`TECH_DEBT` **DB-4**). Until then
-response types are hand-written in `src/core/lib/`, and they can silently drift from the API — which is
-exactly why the generation is worth doing.
+Types are generated from the backend's `/api/schema/` into `src/generated/api.d.ts`
+(`npm run contracts`; `TECH_DEBT` **DB-4**, closed) — see the `src/generated/` rule further down. API response types
+are aliases of the generated schemas, not hand-written (`hand-typed-contracts.test.ts`).
 
 ---
 
@@ -237,6 +240,13 @@ author meets:
     `toast("…")`, `{ title: "…" }`) in `src/core/` shells, components, modules, shell and theme.
     Pages under `src/app/` are held by a ratchet (`untranslated-pages.test.ts`) until translated: a
     new page must not join its list.
+  - A plugin's copy lives in its own `frontend/messages/<locale>.json`, under ONE key, its name
+    (`en` required). It is typed by its `frontend/i18n.ts` (augmenting `PluginMessages`), read with
+    `useT("<name>")`, and may also read core's `common`. Lint covers `src/plugins/`, and
+    `plugin-messages.test.ts` keeps it in its lane (§ 22 of FRONTEND_PLATFORM; the notes example
+    and the scaffold template show the shape).
+  - A translation must keep the source's ICU arguments and tags. One that does not falls back to the
+    source for that key at load time and fails the test suite.
 
 ---
 
@@ -265,11 +275,12 @@ refused and signed-in users are sent to sign-in.
 cd frontend
 npm run lint
 npm run typecheck
+npm test
 ```
 
 ⚠️ **`npm run build` is not part of the routine gate** — it is slow and it writes `.next/`, which the
 running dev server is also using. Run it deliberately, with the dev server stopped, when you have
 changed something only a production build exercises.
 
-There are **no frontend tests**. These two commands are the whole safety net; report their real
-output (`AGENTS.md` § 1, rule 9).
+`npm test` runs vitest (`vitest run`), including the architecture tests in `frontend/tests/architecture/`
+and the contracts-drift test. Report the real output of all three (`AGENTS.md` § 1, rule 9).

@@ -9,3 +9,8 @@ symlinks this directory to `frontend/src/plugins/{{route}}` and regenerates
 - Import platform code by alias (`@/core/lib/api`, `@/core/lib/permissions`), never another
   plugin and never `@/project`.
 - A page the API refuses still renders: gate each control on the exact code its endpoint enforces.
+- Copy lives in `messages/<locale>.json`, under ONE top-level key, `{{name}}` (FRONTEND_PLATFORM § 22):
+  `messages/en.json` is the source and required; `i18n.ts` types it; pages read it with
+  `useT("{{name}}")`. Lint refuses literal copy in plugin pages, and `plugin-messages.test.ts`
+  refuses a key outside `{{name}}`, a key nothing uses, or a translation that does not match the
+  source's arguments.

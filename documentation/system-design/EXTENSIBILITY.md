@@ -1045,7 +1045,7 @@ contracts and adds almost nothing of its own.
 | `core.sdk.testing` — factories, `registry.isolated`, API client | `@/core/sdk/testing` |
 
 **Why.** Without a facade, plugins reach into kernel internals, and every internal refactor in the
-core breaks a plugin owned by a team that never opened the core — the opposite of VISION property 2.
+core breaks a plugin owned by a team that never opened the core — the opposite of PURPOSE property 2.
 A versioned surface is also what makes "this plugin was built against core X" a checkable statement
 instead of folklore.
 
@@ -1469,7 +1469,7 @@ proves the mock. These delete it:
 1. **`core-only`** — copy the checkout, `rm -rf backend/project frontend/src/project backend/plugins/*
    frontend/src/plugins/*`, then run `manage.py check`, `makemigrations --check --dry-run`, `migrate` on
    an empty database, the core test suite, `npx tsc --noEmit` and `npm run lint`. **"Deleting
-   `project/` leaves a working platform" (VISION principle 1) is this job going green.**
+   `project/` leaves a working platform" (PURPOSE principle 1) is this job going green.**
 2. **`plugin-alone` matrix** — core plus **one** plugin at a time: `manage.py check` and that plugin's
    tests. Proves no plugin silently depends on another being installed.
 
@@ -1494,7 +1494,7 @@ Anything cross-app goes through an existing seam — a registry, a service contr
   drive-by in a feature PR.
 - **One app per commit.** Reviewable by one owner, revertable without collateral.
 - **A core edit carries the `core-change` label** (existing `core-guard.yml`, BUILD_ORDER 4.3), and
-  needs a reason that applies to more than one product (VISION principle 4).
+  needs a reason that applies to more than one product (PURPOSE principle 4).
 - **A product's `project/` never patches core to make its feature work** — it asks for a seam
   upstream, and every product gets it.
 - **When a reusable thing is born inside a plugin**, promote it to the core **stripped of the
@@ -1568,7 +1568,7 @@ Not edited here — each needs the owner's fix in its own file.
 | 2 | `CORE_ARCHITECTURE_PLAN.md` § 1 layer table, and `PLUGIN_DEVELOPMENT.md` § "Your entire integration surface" | plugin "may import Django, third-party, `core.*`"; the example writes `from core import registry` | plugin may import Django, third-party and **`core.sdk` only**; the example becomes `from core.sdk import registrar` + `r = registrar(self)` | An unversioned `core.*` import surface breaks plugins on every internal refactor (§ 16) |
 | 3 | `CORE_ARCHITECTURE_PLAN.md` § 1 layer table (`project` row) | project "may import everything, including `core.*`" | project apps import `core.sdk`; core internals only through a shrinking baseline; plugins only through contracts/events | A project importing a plugin breaks when that plugin is disabled or removed; importing core internals makes every core update a product conflict |
 | 4 | `CORE_ARCHITECTURE_PLAN.md` § 4 and `PLUGIN_DEVELOPMENT.md` rule 5 | first preference: "**A Django signal** B emits and A receives" | first preference: **a declared event on the core event bus** (§ 19); Django signals only for framework hooks, via `plugin_receiver` | Signals re-raise receiver errors into the sender, have no wildcard, are undeclared, and model signals skip bulk operations |
-| 5 | `CORE_ARCHITECTURE_PLAN.md` § 4 option 2, `PLUGIN_DEVELOPMENT.md` rule 5 | "A contract in `core/contracts/` that B implements" | platform-wide contracts in `core/contracts/`; **plugin-to-plugin contracts in the provider's `contracts.py`, imported by the consumer under `TYPE_CHECKING` only** (§ 18) | A plugin contract in core puts the plugin's vocabulary in core (fails the vocabulary scan) and every new contract through the core's review queue — the bottleneck VISION property 2 removes |
+| 5 | `CORE_ARCHITECTURE_PLAN.md` § 4 option 2, `PLUGIN_DEVELOPMENT.md` rule 5 | "A contract in `core/contracts/` that B implements" | platform-wide contracts in `core/contracts/`; **plugin-to-plugin contracts in the provider's `contracts.py`, imported by the consumer under `TYPE_CHECKING` only** (§ 18) | A plugin contract in core puts the plugin's vocabulary in core (fails the vocabulary scan) and every new contract through the core's review queue — the bottleneck PURPOSE property 2 removes |
 | 6 | `CORE_ARCHITECTURE_PLAN.md` § 2 rule 4 | "A registry holds a key, a label, and a callable — never a plugin's model, schema or vocabulary" | "A registry holds **values the registrant supplies** — keys, labels, callables, `"app_label.Model"` strings resolved lazily. Core never *imports* a plugin's model, and never *names* one in a literal." | Several required registries (search sources, export specs, scopes, API resources) must reference a model; the rule's intent is "core never learns it", which lazy strings preserve |
 | 7 | `CORE_ARCHITECTURE_PLAN.md` § 2 table, `BUILD_ORDER.md` 1.3 | eight registries (permissions, navigation, api_routes, events, jobs, search, settings, health) | the generic `Registry[T]` + the catalogue in § 7, built as consumers land; Phase 1 needs at least `roles`, `role_grants`, `default_roles`, `public_routes`, `error_codes`, `feature_flags` | Each missing registry is a literal the second product must edit core to extend (§ 2) |
 | 8 | `AUTH_BLUEPRINT.md` § 9.2 (`core/routes.py`) | `PUBLIC_ROUTES: dict[str, str]` — a core-only constant | the core's entries become registrations into `registry.public_routes`; `dbx.E001`, `dbx.E007` and the route test read **the union** (§ 9) | A plugin's anonymous endpoint (a provider callback) otherwise needs a core edit or an inline `AllowAny` |
