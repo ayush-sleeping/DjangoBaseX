@@ -93,7 +93,11 @@ def _close_connections(**kwargs) -> None:
 
 
 def _connect_worker_hygiene() -> None:
-    from celery.signals import task_postrun, task_prerun
+    from celery.signals import task_postrun, task_prerun, worker_process_shutdown
+
+    from core.http import close_all
 
     task_prerun.connect(_close_connections, weak=False, dispatch_uid="core.jobs.prerun")
+    # Outbound HTTP pools are per process (§ 18): closed with the process, never inherited.
+    worker_process_shutdown.connect(close_all, weak=False, dispatch_uid="core.http.close_all")
     task_postrun.connect(_close_connections, weak=False, dispatch_uid="core.jobs.postrun")

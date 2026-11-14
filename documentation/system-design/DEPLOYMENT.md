@@ -45,6 +45,10 @@
 | `TRUSTED_PROXY_COUNT` | `0` | **The number of proxies in front of the app.** Left at `0` behind a load balancer, every user shares one IP and one attacker locks everyone out (§ 17.3) |
 | `ADMIN_ENABLED` | defaults to `DEBUG` | **`False`** unless you deliberately want `/admin/` reachable (Ch. 20) |
 | `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` | console / `no-reply@example.com` | A real mail backend and a sender on your domain |
+| `APP_ENV` (outbound) | — | **Exactly `production`** on a box that may message real people. Anything else (staging, a typo) keeps the outbound guard on ([`JOBS_AND_INTEGRATIONS.md`](JOBS_AND_INTEGRATIONS.md) § 27) |
+| `NONPROD_TEST_RECIPIENT` | unset | **Staging:** the one address all mail goes to. Unset with an SMTP backend outside production, every message is refused (`dbx.http.E011`) |
+| `OUTBOUND_ALLOWLIST` | unset | **Staging:** the partner sandboxes it may call (`api.sandbox.example`, `*.sandbox.example`, `host=ro`). Ignored in production |
+| `EMAIL_TIMEOUT` | `10` | Seconds before an SMTP connect or send gives up |
 | `FRONTEND_BASE_URL` | `http://localhost:3000` | The public frontend URL, **https**. Emailed links point here |
 
 ### Frontend

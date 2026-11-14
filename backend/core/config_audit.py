@@ -32,6 +32,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from core.env import is_production_like
 from core.identity import SHIPPED_DOMAIN, SHIPPED_PRODUCT_NAME
+from core.mail.policy import is_log_only
 
 logger = logging.getLogger("core.config_audit")
 
@@ -213,12 +214,10 @@ def _cookies(ns):
         )
 
 
-_LOG_ONLY_EMAIL = ("console", "filebased", "locmem", "dummy")
-
-
 def _email(ns):
-    backend = str(_get(ns, "EMAIL_BACKEND") or "").lower()
-    if any(name in backend for name in _LOG_ONLY_EMAIL):
+    # Outside production EMAIL_BACKEND is the guard's wrapper; what would deliver is the inner one.
+    backend = str(_get(ns, "EMAIL_BACKEND_INNER", "") or _get(ns, "EMAIL_BACKEND") or "").lower()
+    if is_log_only(backend):
         yield Finding(
             "cfg.E008",
             "EMAIL_BACKEND",

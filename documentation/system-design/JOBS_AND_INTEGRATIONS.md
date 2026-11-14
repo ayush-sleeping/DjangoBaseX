@@ -378,6 +378,80 @@ arrives with the first broker-scheduled retry policy (7.6). No production topic 
 | One open finding per object, history, unregistered kind refused, clear | `tests/core/test_findings.py` |
 | No session advisory locks; no blanket auto-retry; every transient state has a reconciler | `tests/architecture/test_no_session_advisory_locks.py`, `test_no_blanket_autoretry.py`, `test_every_pending_state_has_a_reconciler.py` |
 
+## As built — BUILD_ORDER 7.4
+
+The SSRF-safe client (§ 18), per-target breaking (§ 19), provider errors (§ 20) and the
+non-production guard (§ 27). Like the sections above, this records reality.
+
+**Where it lives.**
+
+| Piece | File |
+|---|---|
+| `client(purpose)`, `SafeClient`, `fan_out`, `close_all`, `validate_display_url` | `backend/core/http/client.py` (re-exported from `core.http`, with `client_ip` from `inbound.py`) |
+| `vet`, `is_safe`, `embedded_ipv4`, `resolve` | `backend/core/http/vetting.py` |
+| `VettingBackend`, `PinnedTransport`, `HostPoolTransport`, `validate_url` | `backend/core/http/transport.py` |
+| `active`, `allows`, `GuardTransport` | `backend/core/http/guard.py` |
+| `OUTBOUND_HTTP_MODULES`, `OUTBOUND_MAIL_MODULES`, `OUTBOUND_SDK_MODULES` | `backend/core/http/policy.py` |
+| `GuardedEmailBackend`, `redirected` | `backend/core/mail/backends.py` |
+| `ProviderError` and its subclasses, `raise_for_upstream`, `from_exception`, `parse_retry_after` | `backend/core/providers/errors.py` |
+| The `ProviderError` → response branch | `backend/core/api/exceptions.py` |
+| `CircuitBreakerMixin`, `BreakerPolicy`, `BreakerQuerySet.due_for_sweep` | `backend/core/breaker.py` |
+| `HttpPurpose`, `registry.http_purposes`; `OutboxTopic.http_purpose` | `backend/core/registry.py` |
+| `outbound_guard_active` | `backend/core/env.py` |
+| `dbx.http.E010`, `dbx.http.E011`, `dbx.jobs.E022` | `backend/core/checks.py` (`dbx.http.E001` is refused at `register()`) |
+
+**Pinning.** Vetting runs inside the connection. `VettingBackend.connect_tcp(host, port)`
+resolves the name, refuses unless every address is global (IPv4 inside IPv6 unwrapped first), and
+dials the first vetted address. The URL keeps the hostname, so the Host header, SNI and certificate
+checks use the real name. Each new connection is vetted, so redirects are covered. httpx 0.28 has
+no public hook for a network backend, so `PinnedTransport` rebuilds httpx's private `_pool` around
+it. `httpx>=0.28,<0.29` and `test_the_pool_dials_through_the_vetting_backend` hold that in place:
+revisit both on upgrade. Pools are one per (process, purpose, hostname), so two names on one CDN
+address never share a TLS connection. Worker processes close them on `worker_process_shutdown`.
+`fixed_hosts` purposes skip DNS vetting but refuse every other host.
+
+**The client.** Timeouts come from the purpose, which must declare them. `trust_env=False`, so
+a proxy variable cannot route around the vetting. A cookie jar that keeps nothing. Redirects only
+when the purpose allows them, and a caller cannot widen that. GET/HEAD/OPTIONS/PUT/DELETE, or any
+request with `Idempotency-Key`, is retried on transport errors and on 5xx/408/425/429 with the
+purpose's `RetryPolicy`; `Retry-After` is honoured up to its cap. The **decoded** body is cut at
+`max_response_bytes`, so a small gzip cannot inflate past it. Each attempt is logged with method,
+host, path, status, duration, purpose and attempt, never the query, a header or a body. Turning a
+failed call into a `ProviderError` is the adapter's job (`raise_for_upstream`, `from_exception`).
+
+**The guard.** On unless `APP_ENV` is exactly `production` (staging and a typo included; see
+[`CONFIGURATION.md`](CONFIGURATION.md) § 4). HTTP permits `OUTBOUND_ALLOWLIST` entries (`host`,
+`*.host` for subdomains, IP literals, a `=ro` suffix for GET/HEAD/OPTIONS), loopback and the
+product's own hosts (`PRIMARY_DOMAIN`, the `FRONTEND_BASE_URL` host). A bare `*` or a dotless entry
+is ignored. Anything else gets a synthetic `423` from the transport, marked `X-Blocked-Locally`,
+before the network is touched; the client raises `OutboundBlocked`. A real upstream `423` without
+the marker is an ordinary response. Mail: `config/settings.py` sets `EMAIL_BACKEND` to the guarded
+backend and keeps the configured one as `EMAIL_BACKEND_INNER`. With `NONPROD_TEST_RECIPIENT`, every
+message is copied to that address only: Cc/Bcc removed, the subject prefixed, `X-Original-Recipients`
+added, alternatives and attachments kept. Without one, only a log-only inner backend runs; any other
+is refused, including `open()`, and `dbx.http.E011` reports it. `EMAIL_TIMEOUT` (10 s) bounds SMTP.
+
+**Lease vs handler (TECH_DEBT DB-59).** `OutboxTopic.http_purpose` names the purpose its handler
+uses. `dbx.jobs.E022` requires `lease_seconds` > the purpose's worst case (attempts × (connect + read)
+\+ the longest backoff between them) + 10 s, or > 2 × `EMAIL_TIMEOUT` for `"smtp"`. A topic that names
+no purpose is not checked.
+
+**Not built (deferred):** per-purpose settings overrides (`http.<purpose>.*`) and `breaker.*`
+settings (constants today); SMTP to a user-configurable host (no such host exists until § 26);
+the chat/SMS test destination (no transport yet); a production purpose (`webhooks.deliver` arrives
+with 7.6). No adapter exists yet; `core.http.guard.allows()` is ready for the first SDK.
+
+| Invariant | Test |
+|---|---|
+| **Acceptance:** a private address (the § 18 table, NAT64/6to4/Teredo/mapped forms, one-public-one-private) is refused **before any socket is dialled**; resolution failure refused; the vetted IP is the one dialled; userinfo, scheme, fixed hosts; redirects not followed, and revalidated per hop when they are | `tests/core/http/test_ssrf.py` |
+| Timeouts, `trust_env`, retry with `Retry-After`, only idempotent retries, the decoded size cap, no cookies, redaction, the private-pool pin, per-host pools, fan-out | `tests/core/http/test_client.py` |
+| **Acceptance:** a non-allow-listed POST in development gets 423 and never leaves (plus its guard-patched-out control); the allow-list; on everywhere but production; no setting disables it | `tests/core/http/test_guard_http.py` |
+| **Acceptance:** mail goes only to the test recipient (alternatives and attachments too); without one, SMTP never opens; each with a guard-patched-out control; E010, E011; the audit judges the inner backend | `tests/core/test_outbound_guard.py` |
+| Every § 20 row; an upstream 401 never becomes our 401; sanitised detail; `Retry-After`; translation | `tests/core/providers/test_error_mapping.py` |
+| Threshold, doubling, cap, reset, manual refresh | `tests/core/test_circuit_breaker.py` |
+| `dbx.jobs.E022` | `tests/core/outbox/test_lease_check.py` |
+| HTTP libraries, `smtplib` and SDKs only in `core/http`, `core/mail`, `core/providers`, `*/adapters`; no hand-rolled 401/403 mapping | `tests/architecture/test_outbound_http_goes_through_core_http.py`, `test_no_hand_rolled_status_mapping.py` |
+
 ---
 
 # Part A — Background work

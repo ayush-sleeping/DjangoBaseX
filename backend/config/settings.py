@@ -11,7 +11,7 @@ import environ
 from corsheaders.defaults import default_headers
 
 from core.config_audit import enforce
-from core.env import is_production_like
+from core.env import is_production_like, outbound_guard_active
 from core.identity import (
     SHIPPED_DOMAIN,
     SHIPPED_PRODUCT_NAME,
@@ -76,6 +76,10 @@ env = environ.Env(
     CELERY_VISIBILITY_TIMEOUT=(int, 3600),
     CELERY_TIMEZONE=(str, "UTC"),
     LOCKS_REDIS_URL=(str, ""),  # unset = the cache's Redis (JOBS_AND_INTEGRATIONS § 9)
+    # The non-production outbound guard (JOBS_AND_INTEGRATIONS § 27). Neither can switch it off.
+    OUTBOUND_ALLOWLIST=(list, []),
+    NONPROD_TEST_RECIPIENT=(str, ""),
+    EMAIL_TIMEOUT=(int, 10),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -291,7 +295,20 @@ TRUSTED_PROXY_COUNT = env("TRUSTED_PROXY_COUNT")
 # The Django admin is a second auth system; /admin/ is mounted only when this is on (Ch. 20).
 ADMIN_ENABLED = env.bool("ADMIN_ENABLED", default=DEBUG)
 # Console in development, so a missing SMTP configuration is visible rather than silent (Ch. 18).
-EMAIL_BACKEND = env("EMAIL_BACKEND")
+# The configured backend is the INNER one. Outside production (APP_ENV not exactly "production",
+# staging included: core.env.outbound_guard_active) it is wrapped by the guard, which redirects
+# every message to NONPROD_TEST_RECIPIENT or, without one, lets only log-only backends run (§ 27).
+EMAIL_BACKEND_INNER = env("EMAIL_BACKEND")
+EMAIL_BACKEND = (
+    "core.mail.backends.GuardedEmailBackend"
+    if outbound_guard_active(APP_ENV)
+    else EMAIL_BACKEND_INNER
+)
+NONPROD_TEST_RECIPIENT = env("NONPROD_TEST_RECIPIENT").strip()
+# Seconds. Django's default is no timeout: one dead relay would hang every worker sending mail.
+EMAIL_TIMEOUT = env("EMAIL_TIMEOUT")
+# Outside production, the only hosts core.http may reach besides loopback and our own (§ 27).
+OUTBOUND_ALLOWLIST = env("OUTBOUND_ALLOWLIST")
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env("EMAIL_PORT")
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")

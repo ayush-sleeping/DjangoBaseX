@@ -157,6 +157,14 @@ You stay on the shared history, and the next update still merges.
 *Until `CHANGELOG.md` exists (BUILD_ORDER 9.6), each core change that alters a setting default, a contract or a
 required process records its note here, newest first.*
 
+- **2026-11-06, BUILD_ORDER 7.4:** the non-production outbound guard. On every box whose `APP_ENV`
+  is not exactly `production`, **staging included**, outbound HTTP through `core.http` reaches only
+  `OUTBOUND_ALLOWLIST` hosts (plus loopback and your own), and mail is either redirected to
+  `NONPROD_TEST_RECIPIENT` or, without one, refused unless the backend is console/file. A staging box
+  that sends real mail today must set `NONPROD_TEST_RECIPIENT` (`dbx.http.E011` says so), and a
+  production box must say `APP_ENV=production` exactly. `EMAIL_TIMEOUT` (10 s) now bounds SMTP. New
+  dependency: `httpx` (pinned `<0.29`). `core/http.py` became the package `core/http/`; `from core.http
+  import client_ip` still works.
 - **2026-11-06, BUILD_ORDER 7.3:** a new queue, `outbox`: add it to every worker's `-Q`
   (`default,bulk,outbox`), or `core.outbox_drain` and `core.outbox_recover` never run. Migration `core/0007` adds
   `core_outbox`, `core_finding` and `core_job_state`. Jobs declared `single_flight=True` (the default) now take a

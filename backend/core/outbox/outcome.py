@@ -3,14 +3,11 @@
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
+# Re-exported: handlers import it from core.outbox, adapters from core.providers. One class.
+from core.providers.errors import ProviderNotConfigured  # noqa: F401
+
 EVIDENCE_VALUES = (str, int, float, bool, type(None))
 SENT, RETRY, FAILED, SKIPPED, UNKNOWN = "sent", "retry", "failed", "skipped", "unknown"
-
-
-class ProviderNotConfigured(Exception):
-    """Raised by a handler whose integration the product has not switched on. The message is
-    recorded as `skipped`, not dead-lettered: a dormant integration must not fill the dead letters.
-    """
 
 
 @dataclass(frozen=True)

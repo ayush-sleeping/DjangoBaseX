@@ -1217,6 +1217,9 @@ class OutboxTopic:
     retry: object = None
     lease_seconds: int = 60  # the most one send may take; the lease covers exactly one message
     batch_size: int = 50  # messages per drain run
+    # The registry.http_purposes name its handler calls through ("smtp" for mail). With it,
+    # dbx.jobs.E022 checks the lease outlasts that purpose's worst case; without it, nothing can.
+    http_purpose: str = ""
 
 
 class OutboxTopicRegistry(_Catalog):
@@ -1270,6 +1273,105 @@ class OutboxTopicRegistry(_Catalog):
     def topics(self) -> tuple[OutboxTopic, ...]:
         self.seal()
         return tuple(self._topics[k] for k in sorted(self._topics))
+
+
+HTTP_PURPOSE_PATTERN = JOB_NAME_PATTERN
+_HOST_PATTERN = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
+
+
+@dataclass(frozen=True)
+class HttpPurpose:
+    """
+    Why this process calls out, and under which policy (JOBS_AND_INTEGRATIONS.md § 18). Either the
+    URLs are user-controlled (every connection's address is vetted) or the purpose names its
+    `fixed_hosts` (any other host is refused). Timeouts are required: a client with none turns one
+    dead partner into a worker pool that never returns. `retry` is a core.jobs.retry.RetryPolicy or
+    None (one attempt), typed loosely because this module stays standard library only.
+    """
+
+    name: str  # "<owner>.<purpose>": "webhooks.deliver"
+    owner_module: str
+    description: str
+    connect_timeout: float
+    read_timeout: float
+    user_controlled_urls: bool = True
+    fixed_hosts: tuple[str, ...] = ()
+    allow_http: bool = False
+    follow_redirects: bool = False
+    revalidate_redirects: bool = False
+    max_redirects: int = 5
+    max_response_bytes: int = 1_000_000
+    retry: object = None
+
+
+class HttpPurposeRegistry(_Catalog):
+    """Registered outbound HTTP purposes. dbx.http.E001 is refused here, at register()."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._purposes: dict[str, HttpPurpose] = {}
+
+    def register(self, purpose: HttpPurpose) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(purpose, HttpPurpose):
+                raise RegistryError(f"expected an HttpPurpose, got {type(purpose).__name__}")
+            name = f"http purpose {purpose.name!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(purpose.name, str) or not HTTP_PURPOSE_PATTERN.match(purpose.name):
+                raise RegistryError(f"{name}: not <owner>.<purpose> (lowercase, digits, _)")
+            for field_name in ("owner_module", "description"):
+                value = getattr(purpose, field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            for field_name in ("connect_timeout", "read_timeout"):
+                value = getattr(purpose, field_name)
+                if not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
+                    raise RegistryError(
+                        f"{name} (dbx.http.E001): {field_name} must be a positive number of "
+                        "seconds; no timeout is never a choice"
+                    )
+            if not isinstance(purpose.fixed_hosts, tuple) or not all(
+                isinstance(h, str) and _HOST_PATTERN.match(h) for h in purpose.fixed_hosts
+            ):
+                raise RegistryError(f"{name}: fixed_hosts must be a tuple of lowercase hostnames")
+            if bool(purpose.fixed_hosts) == bool(purpose.user_controlled_urls):
+                raise RegistryError(
+                    f"{name}: declare either user_controlled_urls=True (every address vetted) or "
+                    "the fixed_hosts it may call, not both and not neither"
+                )
+            if (
+                purpose.user_controlled_urls
+                and purpose.follow_redirects
+                and not purpose.revalidate_redirects
+            ):
+                raise RegistryError(
+                    f"{name} (dbx.http.E001): follows redirects on user-controlled URLs without "
+                    "revalidate_redirects=True"
+                )
+            for field_name in ("max_redirects", "max_response_bytes"):
+                value = getattr(purpose, field_name)
+                if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+                    raise RegistryError(f"{name}: {field_name} must be a positive int")
+            if purpose.name in self._purposes:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[purpose.name]}; "
+                    f"registered again by {owner}"
+                )
+            self._purposes[purpose.name] = purpose
+            self._owner_of[purpose.name] = owner
+
+    def __contains__(self, name: str) -> bool:
+        self.seal()
+        return name in self._purposes
+
+    def get(self, name: str) -> HttpPurpose:
+        self.seal()
+        return self._purposes[name]
+
+    def purposes(self) -> tuple[HttpPurpose, ...]:
+        self.seal()
+        return tuple(self._purposes[k] for k in sorted(self._purposes))
 
 
 RECONCILER_RUNNER = "core.jobs.reconciler.run_registered"
@@ -1479,6 +1581,7 @@ class Registry:
         self.doctors = DoctorRegistry()
         self.finding_kinds = FindingKindRegistry()
         self.outbox_topics = OutboxTopicRegistry()
+        self.http_purposes = HttpPurposeRegistry()
         # A reconciler registers its job and its give-up kind into THIS registry's catalogs.
         self.reconcilers = ReconcilerRegistry(self.jobs, self.finding_kinds)
 

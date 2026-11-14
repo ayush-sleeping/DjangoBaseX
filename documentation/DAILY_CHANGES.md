@@ -26,6 +26,59 @@ Newest first.
 
 ## 2026-11-06
 
+### BUILD_ORDER 7.4: safe outbound HTTP, provider errors and the non-production guard
+**What** (Dev 1, manager review):
+- **`core.http.client(purpose)`** (`core/http/`, httpx): the one way to call another system. Purposes are registered
+  (`registry.http_purposes`, `HttpPurpose`) with required timeouts, either user-controlled URLs or `fixed_hosts`, a
+  size cap and a `RetryPolicy`. Every connection's address is vetted **inside** the connect: every A/AAAA record must
+  be global, with IPv4 inside IPv6 (mapped, NAT64, 6to4, Teredo, compatible) unwrapped first. The vetted IP is then
+  dialled, with the hostname kept for Host, SNI and certificate checks, so DNS rebinding has no window. The client
+  has no proxy variables and no cookie jar. Redirects are off unless the purpose allows them, and then re-vetted per
+  hop. Idempotent requests are retried with `Retry-After`. The decoded body is capped. Logs carry method, host,
+  path and status, never a query, header or body. Pools are per process, purpose and hostname. `core/http.py` is
+  now `core/http/inbound.py`, and `from core.http import client_ip` still works.
+- **Provider errors** (`core/providers/errors.py`): the § 20 hierarchy, `raise_for_upstream()` as the only status
+  mapping, `from_exception()` at adapter boundaries, and one DRF branch. An upstream 401/403 is our **502**, never
+  our 401. `ProviderNotConfigured` moved here (still importable from `core.outbox`).
+- **The non-production guard** (§ 27), on unless `APP_ENV` is exactly `production`
+  (`core.env.outbound_guard_active`, documented next to `is_production_like`):
+  - HTTP reaches only `OUTBOUND_ALLOWLIST`, loopback and our own hosts. Anything else gets a synthetic **423**
+    from the transport, raised as `OutboundBlocked`.
+  - Mail: `GuardedEmailBackend` wraps the configured backend and sends everything to `NONPROD_TEST_RECIPIENT`
+    (Cc/Bcc dropped, subject prefixed, original recipients in a header, alternatives and attachments kept).
+    Without a test recipient, only console/file backends run; SMTP never even opens.
+  - No setting disables the guard.
+- **Per-target breaker** (`core/breaker.py`, § 19): an abstract mixin; backoff from 3 consecutive failures, 1 h
+  doubling to 24 h.
+- **Checks:** `dbx.http.E001` (at register), `dbx.http.E010` (unguarded delivering mail outside production),
+  `dbx.http.E011` (no test recipient for a delivering backend), and **`dbx.jobs.E022`** (TECH_DEBT DB-59): an
+  outbox topic's lease must outlast its `http_purpose`'s worst case. `EMAIL_TIMEOUT` (10 s) now bounds SMTP.
+**Why:** every URL a user can type is a request our server makes into our own network, and validating once then
+letting the library resolve again leaves a rebinding window. Copies of production data in development hold working
+credentials: queued mail has reached real recipients from a laptop before. And an upstream 401 passed through
+signs our user out over a partner's expired key.
+**Files:** `backend/core/http/{__init__,inbound,client,transport,vetting,guard,policy}.py` (`core/http.py` moved to
+`inbound.py`), `backend/core/mail/{__init__,policy,backends}.py`, `backend/core/providers/{__init__,errors}.py`,
+`backend/core/breaker.py`, `backend/core/{env,registry,checks,config_audit}.py`, `backend/core/api/exceptions.py`,
+`backend/core/outbox/outcome.py`, `backend/core/jobs/celery.py`, `backend/config/{settings,settings_test}.py`,
+`backend/{pyproject.toml,uv.lock,.env.example}` (`httpx>=0.28,<0.29`; three commented keys), `backend/tests/core/http/`, `backend/tests/core/providers/`,
+`backend/tests/core/{test_outbound_guard,test_circuit_breaker}.py`, `backend/tests/core/outbox/test_lease_check.py`,
+`backend/tests/architecture/{test_outbound_http_goes_through_core_http,test_no_hand_rolled_status_mapping}.py`;
+`JOBS_AND_INTEGRATIONS.md` (As built 7.4), `CONFIGURATION.md` § 4, `DEPLOYMENT.md`, `UPGRADING.md`, `BUILD_ORDER.md`.
+**Verification:** every step exited 0. ruff check and format, `manage.py check`, `makemigrations --check` and the
+scripts/examples ruff are clean. pytest on SQLite: 1813 passed, 7 skipped. On **PostgreSQL 16**: 1817 passed,
+3 skipped. With the notes plugin: SQLite 1820 passed, 5 skipped; PostgreSQL 1824 passed, 1 skipped. Mutation check:
+with the vetting removed from the connect, 30 of the 65 SSRF tests fail. Each guard test has a guard-patched-out
+control that shows the leak. The frontend was not touched, so its gate was not run.
+**Notes:**
+- `EMAIL_TIMEOUT`, `OUTBOUND_ALLOWLIST` and `NONPROD_TEST_RECIPIENT` are in `backend/.env.example` (commented, after the
+  SMTP example), and in `DEPLOYMENT.md` and `UPGRADING.md`.
+- The httpx `<0.29` cap exists because `PinnedTransport` replaces httpx's private `_pool`; a test pins it.
+- Staging is guarded: it needs `NONPROD_TEST_RECIPIENT` to send mail, and production must say `APP_ENV=production`
+  exactly.
+- Deferred: per-purpose and breaker settings, SMTP pinning for a user-configurable host, the chat/SMS test
+  destination, and the first production purpose (7.6).
+
 ### BUILD_ORDER 7.3: the outbox, reconcilers, locks and the findings queue
 **What** (Dev 1, manager review):
 - **Outbox** (`core_outbox`, core 0007): `outbox.enqueue()` only inside the business transaction, with a unique

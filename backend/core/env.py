@@ -47,6 +47,19 @@ def is_production_like(app_env: str | None = None) -> bool:
     return normalise(app_env) not in NON_PRODUCTION
 
 
+def outbound_guard_active(app_env: str | None) -> bool:
+    """
+    The second, deliberately different predicate: is the non-production outbound guard on
+    (JOBS_AND_INTEGRATIONS.md § 27)? True unless APP_ENV is exactly "production".
+
+    The two answer different questions and both fail closed. is_production_like() asks "must this
+    box be secured like production?", so staging and a typo get production's refusals. This asks
+    "may this box message real people and real systems?", so staging and a typo do NOT: only a box
+    that says it is production gets real outbound mail and HTTP. There is no setting to turn it off.
+    """
+    return normalise(app_env) != "production"
+
+
 def environment_label(app_env: str | None) -> EnvironmentLabel:
     """
     What the environment ribbon shows (§ 4). Labelling is not classification: an unknown value is

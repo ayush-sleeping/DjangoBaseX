@@ -285,9 +285,15 @@ fixed the predicate in one place and left two security features keyed on the old
 - **Non-production allow-list:** `development`, `local`, `test`, `ci`. Compared after `strip().lower()`.
   **Everything else is production-like, including `staging`** — staging holds real-shaped data and
   real credentials and gets production's refusals.
-- **One predicate.** `core.env.is_production_like()` is the only environment test in the codebase.
-  Never `settings.DEBUG`, never `APP_ENV == "…"`, never hostname, port, or API URL. § 18 bans the
-  alternatives.
+- **One predicate for security.** `core.env.is_production_like()` is the only test of "must this box
+  be secured like production?". Never `settings.DEBUG`, never `APP_ENV == "…"`, never hostname, port,
+  or API URL. § 18 bans the alternatives.
+- **One predicate for outbound, deliberately different.** `core.env.outbound_guard_active()`
+  (BUILD_ORDER 7.4, [`JOBS_AND_INTEGRATIONS.md`](JOBS_AND_INTEGRATIONS.md) § 27) asks "may this box
+  message real people and real systems?", and answers yes **only** when `APP_ENV` is exactly
+  `production`. Both fail closed, in opposite directions: `staging` and a typo get production's
+  security refusals **and** the outbound guard (allow-listed HTTP, mail redirected to
+  `NONPROD_TEST_RECIPIENT`). No setting can turn the guard off.
 - **`DEBUG` is not an environment.** It is a switch that production refuses (`cfg.E002`). "Secure
   cookies when not `DEBUG`" is the wrong question — the right one is "secure cookies when production
   -like", and in production `DEBUG` is already refused. See ⚠️ Conflicts #4.

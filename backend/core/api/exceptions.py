@@ -16,13 +16,46 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
 from core.observability.request_id import current
+from core.providers.errors import ProviderError
 
 errors = logging.getLogger("core.errors")
+providers = logging.getLogger("core.providers")
+
+
+def _provider_error(exc: ProviderError) -> Response:
+    """JOBS_AND_INTEGRATIONS.md § 20: OUR status for a partner's failure. An upstream 401/403 is
+    our 502, never our 401: the frontend would sign the user out over a partner's expired key.
+    The detail is the adapter's chosen, scrubbed field; never the upstream body."""
+    providers.warning(
+        "core.provider.error",
+        extra={
+            "provider": exc.provider,
+            "code": exc.code,
+            "upstream_status": exc.upstream_status,
+            "status": exc.status,
+        },
+    )
+    error = {"code": exc.code, "message": exc.message, "request_id": current()}
+    details = {
+        key: value
+        for key, value in (("provider", exc.provider), ("detail", exc.safe_detail))
+        if value
+    }
+    if details:
+        error["details"] = details
+    response = Response({"error": error}, status=exc.status)
+    if exc.retry_after is not None:
+        response["Retry-After"] = str(max(0, round(exc.retry_after)))
+    return response
+
+
 validation = logging.getLogger("core.validation")
 
 
 def handler(exc, context):
     request = context.get("request")
+    if isinstance(exc, ProviderError):
+        return _provider_error(exc)
     response = exception_handler(exc, context)
     if response is None:
         errors.error("unhandled exception", exc_info=exc)

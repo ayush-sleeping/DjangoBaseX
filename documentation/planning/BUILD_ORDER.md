@@ -857,7 +857,7 @@ Transactional outbox (unique dedupe key, `SKIP LOCKED` leases, stale-lease recov
 **Done when:** killing a worker mid-send leaves the row `unknown`, not re-sent; a rolled-back transaction leaves
 no outbox row.
 
-### 7.4 — Safe outbound HTTP and the non-production guard ⬜
+### 7.4 — Safe outbound HTTP and the non-production guard ✅
 One HTTP client factory (timeouts, retries honouring `Retry-After`, redaction, private-range refusal, per-target
 breaker); provider error mapping; outside production an allow-list transport answering 423 and mail redirected to
 one test recipient.

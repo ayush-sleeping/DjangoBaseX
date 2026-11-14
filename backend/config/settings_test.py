@@ -26,6 +26,10 @@ _PINNED_ENV = {
     "CACHE_URL": "locmemcache://",
     # Never a developer's Redis: single_flight uses its in-process store in tests.
     "LOCKS_REDIS_URL": "",
+    # The outbound guard is ON in tests (APP_ENV=test): nothing allow-listed, no test recipient.
+    "OUTBOUND_ALLOWLIST": "",
+    "NONPROD_TEST_RECIPIENT": "",
+    "EMAIL_TIMEOUT": "10",
     "TRUSTED_PROXY_COUNT": "0",
     "ADMIN_ENABLED": "True",
     "EMAIL_BACKEND": "django.core.mail.backends.locmem.EmailBackend",

@@ -43,6 +43,7 @@ def check_registry_seals(app_configs, **kwargs):
         ("doctors", registry.doctors.doctors),
         ("finding_kinds", registry.finding_kinds.kinds),
         ("outbox_topics", registry.outbox_topics.topics),
+        ("http_purposes", registry.http_purposes.purposes),
         ("reconcilers", registry.reconcilers.specs),
     ):
         try:
@@ -338,6 +339,103 @@ def check_outbox_topics(app_configs, **kwargs):
                     id="dbx.jobs.E030",
                 )
             )
+    return errors
+
+
+# The margin a lease keeps over its handler's worst case (dbx.jobs.E022).
+LEASE_MARGIN_SECONDS = 10
+SMTP_PURPOSE = "smtp"
+
+
+def worst_case_seconds(purpose) -> float:
+    """The longest one call through `purpose` can take: every attempt at its full connect + read
+    timeout, plus the longest backoff between them (the policy's cap bounds Retry-After too)."""
+    per_attempt = purpose.connect_timeout + purpose.read_timeout
+    policy = purpose.retry
+    if policy is None:
+        return per_attempt
+    delays = sum(
+        min(policy.cap_seconds, policy.base_seconds * policy.factor ** (n - 1))
+        for n in range(1, policy.max_attempts)
+    )
+    return policy.max_attempts * per_attempt + delays
+
+
+@register()
+def check_outbox_leases(app_configs, **kwargs):
+    """dbx.jobs.E022 (TECH_DEBT DB-59): an outbox topic's lease must outlast its handler's worst
+    case, or recovery parks a message as unknown while the handler may still be sending it."""
+    from .registry import registry
+
+    errors = []
+    for topic in registry.outbox_topics.topics():
+        if not topic.http_purpose:
+            continue
+        if topic.http_purpose == SMTP_PURPOSE:
+            worst = 2 * (getattr(settings, "EMAIL_TIMEOUT", None) or 0)
+            if not worst:
+                errors.append(
+                    Error(
+                        f"outbox topic {topic.topic} sends mail but EMAIL_TIMEOUT is unset: an "
+                        "SMTP call has no bound, so no lease can cover it",
+                        id="dbx.jobs.E022",
+                    )
+                )
+                continue
+        elif topic.http_purpose not in registry.http_purposes:
+            errors.append(
+                Error(
+                    f"outbox topic {topic.topic}: http_purpose {topic.http_purpose!r} is not "
+                    "registered",
+                    id="dbx.jobs.E022",
+                )
+            )
+            continue
+        else:
+            worst = worst_case_seconds(registry.http_purposes.get(topic.http_purpose))
+        if topic.lease_seconds <= worst + LEASE_MARGIN_SECONDS:
+            errors.append(
+                Error(
+                    f"outbox topic {topic.topic}: lease_seconds {topic.lease_seconds} does not "
+                    f"outlast its handler's worst case ({worst:g}s + {LEASE_MARGIN_SECONDS}s)",
+                    hint="Raise lease_seconds, or lower the purpose's timeouts or retries.",
+                    id="dbx.jobs.E022",
+                )
+            )
+    return errors
+
+
+@register()
+def check_outbound_guard(app_configs, **kwargs):
+    """dbx.http.E010/E011 (JOBS_AND_INTEGRATIONS.md § 27): outside production, mail goes through
+    the guard, and the guard has somewhere safe to send it."""
+    from .env import outbound_guard_active
+    from .mail.policy import GUARDED_BACKEND, is_log_only
+
+    if not outbound_guard_active(settings.APP_ENV):
+        return []
+    errors = []
+    backend = getattr(settings, "EMAIL_BACKEND", "")
+    if backend != GUARDED_BACKEND and not is_log_only(backend):
+        errors.append(
+            Error(
+                f"APP_ENV is {settings.APP_ENV!r} (not production) but EMAIL_BACKEND is {backend}: "
+                "mail would reach real recipients.",
+                hint=f"Leave EMAIL_BACKEND to config/settings.py, which sets {GUARDED_BACKEND}.",
+                id="dbx.http.E010",
+            )
+        )
+    inner = getattr(settings, "EMAIL_BACKEND_INNER", "") or ""
+    recipient = (getattr(settings, "NONPROD_TEST_RECIPIENT", "") or "").strip()
+    if backend == GUARDED_BACKEND and not recipient and inner and not is_log_only(inner):
+        errors.append(
+            Error(
+                f"outside production, {inner} would deliver mail but NONPROD_TEST_RECIPIENT is "
+                "empty: every message is refused.",
+                hint="Set NONPROD_TEST_RECIPIENT, or use the console backend.",
+                id="dbx.http.E011",
+            )
+        )
     return errors
 
 
