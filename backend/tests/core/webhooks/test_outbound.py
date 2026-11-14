@@ -120,7 +120,6 @@ def test_emit_writes_one_outbox_row_in_the_callers_transaction(make_endpoint):
     assert row.payload["event"] == CREATED and row.payload["object_type"] == "user"
 
 
-@pytest.mark.django_db(transaction=True)
 def test_a_rolled_back_transaction_leaves_no_outbox_row():
     user = one()
 

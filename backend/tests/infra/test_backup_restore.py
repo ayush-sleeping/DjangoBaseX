@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connection
 
 from core.operations import backup as bk
 from core.operations import restore as rs
@@ -117,8 +118,11 @@ def test_a_failed_dump_is_exit_3_and_the_error_is_scrubbed(tmp_path):
 
 
 @pytest.mark.django_db
-def test_the_command_exits_with_the_backup_code(tmp_path):
-    # The test database is in memory: a configuration failure, surfaced as returncode 2.
+def test_the_command_exits_with_the_backup_code(tmp_path, monkeypatch):
+    # An engine the backup cannot dump is a configuration failure, surfaced as returncode 2.
+    # Forced so it holds on every test database: PostgreSQL really is dumpable, in-memory SQLite
+    # is not.
+    monkeypatch.setitem(connection.settings_dict, "ENGINE", "django.db.backends.unsupported")
     with pytest.raises(CommandError) as err:
         call_command("backup", "--dir", str(tmp_path / "b"))
     assert err.value.returncode == bk.EXIT_CONFIG

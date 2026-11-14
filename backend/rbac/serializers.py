@@ -13,6 +13,9 @@ class CatalogPermissionSerializer(serializers.ModelSerializer):
 
 class CatalogGroupSerializer(serializers.ModelSerializer):
     permissions = CatalogPermissionSerializer(many=True, read_only=True)
+    # Explicit bounds: a model PositiveIntegerField's validators follow the database (SQLite
+    # 2**63-1, PostgreSQL 2**31-1), so the contract would depend on which one generated it.
+    order = serializers.IntegerField(min_value=0, max_value=2147483647, read_only=True)
 
     class Meta:
         model = PermissionGroup
