@@ -32,6 +32,7 @@ Template: [`adr/0000-template.md`](adr/0000-template.md).
 | [0013](adr/0013-sentry-only-error-tracking.md) | Error tracking is Sentry-only; core builds no error tracker | Accepted | 2026-11-06 |
 | [0014](adr/0014-semver-for-core-releases.md) | Core releases are versioned with SemVer | Accepted | 2026-11-06 |
 | [0015](adr/0015-plugin-docs-live-in-the-plugin.md) | A plugin documents itself; core documents only the contract | Accepted | 2026-11-06 |
+| [0016](adr/0016-machine-callers-scopes-under-a-service-role.md) | Machine callers hold permission-code scopes under a service-role ceiling | Accepted | 2026-11-14 |
 
 ---
 

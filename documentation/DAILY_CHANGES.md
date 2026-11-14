@@ -26,6 +26,12 @@ Newest first.
 
 ## 2026-11-14
 
+### ADR-0016: machine callers hold permission-code scopes under a service-role ceiling
+**What:** the owner decided TECH_DEBT DB-21 (recommended option of `API_PLATFORM.md` § 9); ADR-0016 records it, `ADR.md` lists it, DB-21 is closed.
+**Why:** BUILD_ORDER 9.2 and the webhook endpoint owner (DB-79) cannot be built without it.
+**Files:** `documentation/adr/0016-machine-callers-scopes-under-a-service-role.md`, `documentation/ADR.md`, `documentation/planning/TECH_DEBT.md`.
+**Verification:** docs only; link check and folder-index check below.
+
 ### BUILD_ORDER 8.5b: static headers, revalidate route, TitleSync (partly built)
 **What:** `src/core/lib/security/headers.ts` (`securityHeaders({ isProduction })`: nosniff, X-Frame-Options DENY, Referrer-Policy, Permissions-Policy, COOP, X-XSS-Protection 0, HSTS in production only); `POST /fe/revalidate/` (`src/app/fe/revalidate/route.ts` + pure `security/revalidate.ts`: `x-revalidate-secret` compared with `timingSafeEqual`, `REVALIDATE_SECRET` read per request, unset refuses everything, body `{tags:[...]}` limited to `identity` / `identity:<host>`, `revalidateTag(tag, { expire: 0 })`, 401/400/204); `getIdentity()` fetch is now tagged `identity`; `TitleSync` mounted in the root layout; `security/host-match.ts` (exact host classification); `proxy.ts` matcher skips `/fe/` so the route is not redirected to sign-in.
 **Why:** headers: the browser-side half of the security posture was missing. Revalidate: a saved brand otherwise shows only after the 60 s TTL. TitleSync: the App Router resets the title on navigation.

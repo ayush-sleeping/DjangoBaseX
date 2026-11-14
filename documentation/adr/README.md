@@ -22,3 +22,4 @@ Every document in this folder, with its first heading. The task map is [`../INDE
 | [`0013-sentry-only-error-tracking.md`](0013-sentry-only-error-tracking.md) | ADR-0013: Error tracking is Sentry-only; core builds no error tracker |
 | [`0014-semver-for-core-releases.md`](0014-semver-for-core-releases.md) | ADR-0014: Core releases are versioned with SemVer |
 | [`0015-plugin-docs-live-in-the-plugin.md`](0015-plugin-docs-live-in-the-plugin.md) | ADR-0015: A plugin documents itself; core documents only the contract |
+| [`0016-machine-callers-scopes-under-a-service-role.md`](0016-machine-callers-scopes-under-a-service-role.md) | ADR-0016: Machine callers hold permission-code scopes under a service-role ceiling |
