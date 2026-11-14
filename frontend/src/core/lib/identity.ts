@@ -10,7 +10,14 @@ import { api } from "./api";
 import { SHIPPED_PRODUCT_NAME, SHIPPED_TAGLINE } from "./identity-defaults";
 
 /** Also the platform's locale and timezone: what signed-out pages and server rendering use. */
-export type Identity = { product_name: string; tagline: string; locale: string; timezone: string };
+export type Identity = {
+  product_name: string;
+  tagline: string;
+  locale: string;
+  timezone: string;
+  /** Per theme, the brand colour tokens as OKLCH numbers; null = the stylesheet's own (§ 17). */
+  brand: unknown;
+};
 
 const REVALIDATE_SECONDS = 60;
 
@@ -26,6 +33,7 @@ export async function getIdentity(): Promise<Identity> {
       tagline: SHIPPED_TAGLINE,
       locale: SHIPPED_LOCALIZATION.locale,
       timezone: SHIPPED_LOCALIZATION.timezone,
+      brand: null,
     };
   }
 }

@@ -26,6 +26,9 @@ class CoreConfig(AppConfig):
         from .formatting import register_locale_settings
 
         register_locale_settings(registry)
+        from .theme import register_brand_settings
+
+        register_brand_settings(registry)
         register_core_actions(registry)
         _register_jobs_monitoring(registry)
         from .outbox.jobs import register as register_outbox

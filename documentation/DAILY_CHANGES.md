@@ -26,6 +26,13 @@ Newest first.
 
 ## 2026-11-14
 
+### BUILD_ORDER 8.5: per-request CSP and runtime brand colours
+**What:** `src/proxy.ts` mints a nonce per request, sets request `x-nonce` and `Content-Security-Policy`, and the response `Content-Security-Policy-Report-Only` (default) or enforcing header per `CSP_MODE`, read at request time. Pure builder `core/lib/security/csp.ts`. Backend `core/theme.py` (OKLCH to WCAG solver, `platform.brand.primary`), `brand` in `/api/public/config/`, `POST /api/public/csp-report/`. The root layout passes the nonce to `ThemeScript` and writes the brand tokens as a `<style>` from re-validated numbers (`core/lib/security/brand.ts`).
+**Why:** a CSP that needs a rebuild to enforce never gets enforced; the theme script had no nonce, so enforcing would have blanked the theme; a brand colour must be refused with the measured ratio before it ships an unreadable button.
+**Files:** `frontend/src/proxy.ts`, `frontend/src/app/layout.tsx`, `frontend/src/core/theme/ThemeScript.tsx`, `frontend/src/core/lib/{identity.ts,security/csp.ts,security/brand.ts}`, `frontend/src/generated/{brand.ts,public-routes.ts,openapi.json,api.d.ts}`, `backend/core/{theme.py,views.py,urls.py,routes.py,apps.py,contracts.py}`, tests (`test_theme.py`, `test_csp_report.py`, `proxy.test.ts`, `csp.test.ts`, `brand.test.ts`, ledger, snapshot, contracts), `FRONTEND_PLATFORM.md` 17 and 18, `TECH_DEBT.md` DB-70, DB-71.
+**Verification:** backend `ruff check` ✅, `ruff format --check` ✅, `manage.py check` ✅, `makemigrations --check` ✅, `pytest` ✅ 1859 passed / 7 skipped (PostgreSQL-only and no-plugin skips); frontend `npm run lint` ✅, `npm run typecheck` ✅, `npm test` ✅ 352 passed (38 files). Done-when: `proxy.test.ts` flips `CSP_MODE` between two calls and sees the header change (restart, not rebuild); `test_theme.py` asserts each failing ratio and a re-verified passing suggestion. Reviewed (proxy, CSP builder, brand composer): DB-72 recorded.
+**Notes:** every page is now dynamic (the layout reads `headers()`). Only lightness 0.51 to 0.55 passes at chroma 0.15, hue 260: both themes and both axes are tight. Prefetch is skipped in the handler, not the matcher, so the sign-in guard still runs on it. Needs `frontend/.env.example` entries (DB-71).
+
 ### BUILD_ORDER 7.4 lands on main; the new docs updated to match
 **What:** the 7.4 work (entry under 2026-11-06 below) was finished and reviewed but never committed. Committed on
 `feature/7.4-outbound`, merged with main (8.4c, 8.4d and the docs plan), the two log conflicts kept both sides, and

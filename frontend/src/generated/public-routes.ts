@@ -4,6 +4,7 @@
 // The API routes that answer without a session, and why (registry.public_routes).
 
 export const PUBLIC_ROUTES = {
+  "core:csp-report": "Browsers post Content-Security-Policy violation reports without credentials (FRONTEND_PLATFORM § 18). Write-only telemetry: bounded body, throttled per address, logs origin and path only.",
   "core:health": "Liveness alias (/api/health/): the URL existing probes point at. No I/O.",
   "core:health-live": "Liveness for the container restart policy. No I/O, no identity.",
   "core:health-ready": "Readiness for the container healthcheck and the load balancer: database and cache, named from a closed set on failure, never exception text (OBSERVABILITY § 6).",

@@ -47,8 +47,7 @@ Ordered. The first three come from the properties below; the rest from the desig
 ## Current focus
 
 The executable backlog is [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md) — the lowest-numbered ⬜
-item is next (Phase 7: retention, webhooks, notifications, ops alerting; Phase 8.5: CSP
-and branding). What exists versus what is planned: [`planning/ROADMAP.md`](planning/ROADMAP.md).
+item is next (Phase 7: retention, webhooks, notifications, ops alerting; Phase 8.5b: security headers and logos). What exists versus what is planned: [`planning/ROADMAP.md`](planning/ROADMAP.md).
 
 ---
 

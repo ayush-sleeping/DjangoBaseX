@@ -168,7 +168,7 @@ Stated plainly, because assuming otherwise wastes time. Source of truth: `BUILD_
 | Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |
 | Ops alerting | 7.8 |
-| CSP enforcement and runtime branding (Report-Only nonce CSP exists in `src/proxy.ts`; static security headers 8.5b) | 8.5 |
+| Static security headers, `/fe/revalidate`, logos/favicon/TitleSync, host-matched identity (the per-request nonce CSP and runtime brand colours are built, 8.5) | 8.5b |
 | Platform completeness: full registry catalogue, API platform, data lifecycle, domain primitives, operations, engineering practice (no `CHANGELOG.md`) | Phase 9 |
 | A second product built on the boilerplate | 10.1 |
 | Sentry wiring: chosen ([ADR-0013](../adr/0013-sentry-only-error-tracking.md)), but no code initialises it or reads `SENTRY_DSN` | — |

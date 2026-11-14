@@ -1,6 +1,7 @@
 {
   "operations.queue.stall_threshold_minutes": 15,
   "operations.queue.worker_seen_window_minutes": 15,
+  "platform.brand.primary": null,
   "platform.country": null,
   "platform.currency": null,
   "platform.date_style": "locale",

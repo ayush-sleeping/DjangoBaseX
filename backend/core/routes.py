@@ -20,6 +20,11 @@ CORE_PUBLIC_ROUTES: dict[str, str] = {
         "The product's display name and tagline, which the sign-in page shows before anyone signs "
         "in. Public by nature; no user data, no boot identity (CONFIGURATION.md § 7)."
     ),
+    "core:csp-report": (
+        "Browsers post Content-Security-Policy violation reports without credentials "
+        "(FRONTEND_PLATFORM § 18). Write-only telemetry: bounded body, throttled per address, "
+        "logs origin and path only."
+    ),
     "schema": (
         "OpenAPI document: describes the API surface, holds no data. "
         "To be served only when DEBUG or SCHEMA_PUBLIC (AUTH_BLUEPRINT.md § 9.2)."

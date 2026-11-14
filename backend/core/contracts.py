@@ -10,6 +10,7 @@ changing a serializer field, a permission, a status or a nav item without regene
 - ordering.ts: list views' ordering_fields; a column's sortKey must be one of them.
 - public-routes.ts: registry.public_routes, what answers signed out.
 - localization.ts: the shipped locale defaults, the formatters' last-resort fallback.
+- brand.ts: the brand colour slots and chroma bound the frontend re-validates against.
 - nav-manifest.json: registry.navigation, the route gate and its page test.
 
 The committed files are the BOILERPLATE's own contract: a linked plugin's contributions are left
@@ -282,6 +283,22 @@ def render_localization() -> str:
     )
 
 
+def render_brand() -> str:
+    """The brand slots and the chroma bound (core.theme), so the frontend's re-validation of the
+    numbers it composes into `oklch()` uses the backend's own ranges, never a second copy."""
+    from .theme import BRAND_SLOTS, MAX_CHROMA
+
+    slots = ", ".join(_ts_string(slot) for slot in BRAND_SLOTS)
+    return (
+        TS_HEADER
+        + "//\n"
+        + "// The overridable brand colour slots and the OKLCH chroma bound (core.theme).\n"
+        + "\n"
+        + f"export const BRAND_SLOTS = [{slots}] as const;\n"
+        + f"export const BRAND_MAX_CHROMA = {MAX_CHROMA!r};\n"
+    )
+
+
 # --- The whole set -------------------------------------------------------------------------------
 
 
@@ -295,6 +312,7 @@ def render_all(scope: PluginScope | None = None) -> dict[str, str]:
         "ordering.ts": render_ordering(scope),
         "public-routes.ts": render_public_routes(scope),
         "localization.ts": render_localization(),
+        "brand.ts": render_brand(),
         "nav-manifest.json": _json(navigation.full_manifest(exclude_modules=scope.labels)),
     }
 

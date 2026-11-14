@@ -5,7 +5,7 @@
 
 A secure, modular, production-ready base project using **Django 5 + Django REST Framework** for the API and **Next.js (App Router)** for the frontend — ideal for building scalable web applications with a Python backend and a TypeScript frontend.
 
-> **Status:** checked 2026-11-14 · a platform with auth, RBAC, a Users module, plugins, jobs and an app shell built; phases 0–8 of the build order are done except 7.5–7.8 and 8.5. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md).
+> **Status:** checked 2026-11-14 · a platform with auth, RBAC, a Users module, plugins, jobs and an app shell built; phases 0–8 of the build order are done except 7.5–7.8 and 8.5b. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md).
 >
 > **Not deployable yet.** Auth, RBAC, the Users module with invitations, plugins and a pytest + Vitest suite with CI are built; there is no production Docker (a development Compose stack exists) and no deployment topology. That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
 
@@ -319,7 +319,7 @@ Stated plainly, because assuming otherwise wastes time.
 **❌ Not built yet**
 - **Domain models** — the platform holds identity and RBAC only; no organisation model ([ADR-0011](documentation/adr/0011-no-organisation-in-core.md))
 - **Browser end-to-end tests** — none yet; the backend has a pytest suite and the frontend a Vitest + MSW suite (8.1). **CI** (`.github/workflows/ci.yml`) runs the whole gate on every push and PR, backend tests on PostgreSQL 16
-- **Not yet in the app shell** — CSP and runtime branding (8.5). The shell itself is built: the bootstrap call (`/api/me/bootstrap/`), the fail-closed permission provider, a server-built menu that is also the default-deny route gate, and the session-marker proxy exist (`BUILD_ORDER` 8.2); the sidebar and design system are built (8.3); CSP and runtime branding are not (8.5)
+- **Not yet in the app shell** — static security headers, logos and host-matched identity (8.5b); the per-request nonce CSP and runtime brand colours are built (8.5). The shell itself is built: the bootstrap call (`/api/me/bootstrap/`), the fail-closed permission provider, a server-built menu that is also the default-deny route gate, and the session-marker proxy exist (`BUILD_ORDER` 8.2); the sidebar and design system are built (8.3); CSP and runtime branding are not (8.5)
 - **Production Docker / deployment** — no topology (the Compose stack is for development). See [`documentation/system-design/DEPLOYMENT.md`](documentation/system-design/DEPLOYMENT.md) § 0
 
 **✅ Both foundational decisions are settled:** custom `User` model ([ADR-0008](documentation/adr/0008-custom-user-model-email-identity.md))
@@ -369,7 +369,7 @@ Built by accumulation, one module at a time.
 |------------|----------------------|--------|
 | Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ✅ (1.1) |
 | Roles & permissions | Code-declared catalog + the `core/api/` gate + object-level scoping | ✅ (1.2–1.4) |
-| Admin UI | Next.js dashboard — data tables, forms, ShadCN | 🔄 app shell and design system (8.3); CSP and branding ⬜ (8.5) |
+| Admin UI | Next.js dashboard — data tables, forms, ShadCN | 🔄 app shell and design system (8.3); nonce CSP and brand colours (8.5); headers, logos ⬜ (8.5b) |
 | Core CRUD modules | DRF viewsets + Next.js pages | 🔄 Users module (1.5) |
 | Activity log | Append-only audit trail | ✅ audit engine (6.4) |
 | Background jobs | Celery + Redis + Flower | ✅ Celery + beat, generated from the job registry (7.1); Flower not |

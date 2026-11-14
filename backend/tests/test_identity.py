@@ -188,4 +188,5 @@ def test_public_config_serves_the_display_identity_only(client, settings):
         # The platform defaults (no user): what signed-out pages format and translate with.
         "locale": "en",
         "timezone": "UTC",
+        "brand": None,
     }

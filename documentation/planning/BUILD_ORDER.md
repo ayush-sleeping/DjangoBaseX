@@ -988,7 +988,7 @@ OpenAPI → TypeScript types plus exported enums and permission codes, each with
 **Done when:** changing a serializer field without regenerating fails CI; a hard-coded currency formatter in a
 page fails lint.
 
-### 8.5 — CSP and runtime branding ⬜
+### 8.5 — CSP and runtime branding ✅
 *Split 2026-11-06.* **8.5 (this task):** the per-request nonce CSP in `src/proxy.ts` (Report-Only by
 default, `CSP_MODE` read at runtime), the pure CSP builder, runtime `platform.brand` as OKLCH numbers
 with a stdlib contrast solver that refuses a failing colour with the measured ratio and a passing

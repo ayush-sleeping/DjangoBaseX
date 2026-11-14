@@ -18,6 +18,7 @@ Deep specs: [`FRONTEND_PLATFORM.md`](system-design/FRONTEND_PLATFORM.md) (§ 5 l
 **Rule:** use semantic utilities only (`bg-primary text-primary-foreground`, `bg-err-tint text-err-text`). A `-foreground` is never a fill.
 **Gold:** `frontend/src/core/components/Button.tsx`. **Anti-pattern:** `bg-red-500`, `text-gray-700`, hex values.
 **Check:** `npm run lint` (the `palette` ban in `frontend/eslint.config.mjs`); `frontend/tests/architecture/no-raw-colour-on-tokens.test.ts`.
+A brand colour is numbers, never CSS: `oklch()` is composed only from re-validated `{l, c, h}` (`core/lib/security/brand.ts`), and the backend refuses one failing WCAG AA with the measured ratios and a passing suggestion.
 
 ## 2. Component kit — use these, never re-create
 

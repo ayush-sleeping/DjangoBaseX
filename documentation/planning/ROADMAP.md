@@ -21,7 +21,7 @@ Built by accumulation, one module at a time.
 | Python types | mypy | ⬜ |
 | Authentication | Cookie JWT — access/refresh, rotation, DB-backed sessions | ✅ [ADR-0009](../adr/0009-jwt-in-httponly-cookies.md), BUILD_ORDER 1.1 |
 | Roles & permissions | Code-declared catalog + the `core/api/` gate + object-level scoping | ✅ `rbac/`, the `core/api/` gate, `visible_to()` (1.2–1.4) |
-| Admin UI | Next.js dashboard — data tables, forms, ShadCN | 🔄 app shell and design system (8.3), Users screens (1.5); CSP and runtime branding ⬜ (8.5) |
+| Admin UI | Next.js dashboard — data tables, forms, ShadCN | 🔄 app shell and design system (8.3), Users screens (1.5); nonce CSP and runtime brand colours (8.5); security headers, logos, host identity ⬜ (8.5b) |
 | Core CRUD modules | DRF viewsets + Next.js pages | 🔄 the Users module (1.5); `examples/plugins/notes` |
 | Activity log | Append-only audit trail | ✅ audit engine (6.4) |
 | Background jobs | Celery + Redis + Flower | ✅ Celery + beat from the job registry (7.1, [ADR-0012](../adr/0012-celery-from-day-one.md)); Flower not |

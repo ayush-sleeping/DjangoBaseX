@@ -1448,6 +1448,15 @@ back; no derived token is computed from unvalidated input); `title-sync.test.tsx
 ([`CONFIGURATION.md`](CONFIGURATION.md)); `IDENTITY_CACHE_SECONDS` (300); the overridable slot list is
 one exported constant shared by the solver's tests.
 
+**As built (8.5).** Backend: `core/theme.py` (OKLCH solver; the `platform.brand.primary` setting; `derived_tokens`),
+`PublicConfigView` returns `brand` (per theme `primary`, `primary-foreground`, `ring` as numbers; `null` when unset
+or when a stored value no longer passes), `core/contracts.py` exports `src/generated/brand.ts` (slots and chroma bound).
+Tests: `backend/tests/test_theme.py`. Frontend: `src/core/lib/security/brand.ts` (`composeOklch`, `brandCss`),
+applied in the root layout as a `<style>` in `<head>` from the same `getIdentity()` fetch, so the first paint is branded.
+Not built (8.5b): `/api/public/identity/` and host matching, logos, favicon, `TitleSync`, `/fe/revalidate`, and the
+SURFACES-versus-`tokens.css` drift check (TECH_DEBT DB-70). No preset exists yet, so there is no parametrised preset test
+(`test_there_are_no_built_in_presets_to_check` fails the day one is added).
+
 ---
 
 ## 18. Frontend security — **Tier 1 · Core**
@@ -1480,6 +1489,17 @@ was supposed to carry security headers was not in version control at all.
   a deployment option.
 - The nonce is passed to the theme script and to every `<Script nonce>`; third-party scripts load only
   that way.
+
+**As built (8.5).** `src/core/lib/security/csp.ts` (pure `buildCsp`, `parseCspMode`, `parseExtraOrigins`,
+`parseReportUrl`), `src/proxy.ts` (nonce, request and response headers; the marker guard unchanged), the root layout
+(`x-nonce` to `ThemeScript`), `POST /api/public/csp-report/` (`CspReportView`, public-route ledger entry
+`core:csp-report`, 16 KiB cap, 60/min per address, logs directive, blocked origin and page path only). Runtime variables:
+`CSP_MODE` (`off|report_only|enforce`, default `report_only`, unknown is `report_only`), `CSP_EXTRA_ORIGINS`
+(comma-separated bare origins; an invalid entry is dropped and warned once), `CSP_REPORT_URL` (unset: no `report-uri`,
+`report-to` or `Reporting-Endpoints`; the backend endpoint is `/api/public/csp-report/`). Differences from the rules
+above: prefetch requests are skipped inside the handler (no nonce, no policy) rather than in the matcher, because the
+matcher also runs the sign-in guard and excluding prefetch there would change its behaviour; a sign-in redirect carries
+no policy (it has no document). `<Script nonce>` has no caller yet (none exists).
 
 **Rules — static headers** (in `next.config.ts` `headers()`, so they apply whichever layer serves the
 request): HSTS (production only), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` (aligned

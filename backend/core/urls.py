@@ -5,7 +5,14 @@ from .api.crypto import CryptoStatusView
 from .api.flags import FlagDetailView, FlagListView
 from .api.lookups import LookupListView, LookupWriteView
 from .api.settings import SettingDetailView, SettingListView, SettingResetView
-from .views import ComponentsView, LiveView, NavigationView, PublicConfigView, ReadyView
+from .views import (
+    ComponentsView,
+    CspReportView,
+    LiveView,
+    NavigationView,
+    PublicConfigView,
+    ReadyView,
+)
 
 app_name = "core"
 
@@ -15,6 +22,7 @@ urlpatterns = [
     path("health/ready/", ReadyView.as_view(), name="health-ready"),
     path("health/components/", ComponentsView.as_view(), name="health-components"),
     path("public/config/", PublicConfigView.as_view(), name="public-config"),
+    path("public/csp-report/", CspReportView.as_view(), name="csp-report"),
     path("me/navigation/", NavigationView.as_view(), name="navigation"),
     # CONFIGURATION.md § 9.8. No create, no delete: a key exists because code declared it.
     path("core/settings/", SettingListView.as_view(), name="settings"),

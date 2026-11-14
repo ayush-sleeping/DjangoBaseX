@@ -85,7 +85,7 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |
 | Ops alerting | 7.8 |
-| CSP and runtime branding | 8.5 |
+| Static security headers, revalidation, logos, host-matched identity | 8.5b |
 | Full registry catalogue, plugin lifecycle | 9.1 |
 | API platform | 9.2 |
 | Data lifecycle (soft delete, recycle bin) | 9.3 |

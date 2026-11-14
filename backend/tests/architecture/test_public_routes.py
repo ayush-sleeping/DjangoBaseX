@@ -10,6 +10,7 @@ EXPECTED_PUBLIC = {
     "core:health-live",
     "core:health-ready",
     "core:public-config",
+    "core:csp-report",
     "schema",
     "swagger-ui",
     "users:login",
