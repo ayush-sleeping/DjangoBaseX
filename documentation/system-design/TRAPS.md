@@ -8,6 +8,7 @@
 
 | Trap | Symptom | Fix | Source |
 |---|---|---|---|
+| Gates run only on SQLite while CI runs PostgreSQL | CI red for many pushes (since a9f361d) and nobody noticed: trigger, flush, constraint and integer-range differences are invisible on SQLite | Run the PostgreSQL suite locally before landing anything that touches triggers, constraints or transactions, and check the CI run after every push | DAILY_CHANGES 2026-11-14 (CI on PostgreSQL green again) |
 | Postgres-only behaviour tested only on SQLite | Green locally, red in CI/deploy: `select_for_update()` is a no-op, audit-log triggers and exclusion constraints do not exist | Develop on the Postgres compose stack; run numbering/ledger/audit tests in the PostgreSQL CI job | DB-29, DB-12 |
 | `django_db(transaction=True)` | Teardown `TRUNCATE` refused by the audit log's PostgreSQL trigger; SQLite hides it | Use `django_capture_on_commit_callbacks` | DAILY_CHANGES 2026-11-06 (7.1) |
 | Log scrubber missed random tokens in free text | Secrets (22-char, hex, compact UUID) reached logs; measured 100% miss | Two measured bands in `core/observability/scrub.py`; secrets travel by key | DB-51; DAILY_CHANGES 2026-11-06 |

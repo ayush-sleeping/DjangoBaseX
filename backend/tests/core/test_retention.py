@@ -1,7 +1,7 @@
 """
 The retention engine (BUILD_ORDER 7.5; DATA_LIFECYCLE.md § 6). Real rows through the real engine:
-JobRun and ActivityLog are written by their own code paths and backdated with a plain queryset
-update (the only way to age a row whose timestamp is set on insert).
+JobRun and ActivityLog are written by their own code paths. JobRun is backdated with a queryset
+update; ActivityLog is append-only (a trigger refuses UPDATE), so its row is born old instead.
 
 Custom shapes (a small cap, a small batch) replace a REAL policy's declaration in the catalog for
 one test, so the real setting keys, floors and gates are still the ones exercised.
@@ -11,10 +11,10 @@ import dataclasses
 import io
 import uuid
 from datetime import timedelta
+from unittest import mock
 
 import pytest
 from django.core.management import CommandError, call_command
-from django.db.models import QuerySet
 from django.db.models.signals import post_delete, pre_delete
 from django.utils import timezone
 
@@ -48,9 +48,13 @@ def job_run(status="succeeded", age=timedelta(0), job="core.probe"):
 
 
 def old_audit_row(age, action="core.setting.changed"):
-    row = audit.record(action)
+    # The append-only trigger refuses UPDATE on PostgreSQL, so the row is born old: `created_at`
+    # is auto_now_add, which reads the clock at insert time through the real write path.
+    born = ago(age)
+    with mock.patch.object(timezone, "now", return_value=born):
+        row = audit.record(action)
     assert row is not None
-    QuerySet(ActivityLog).filter(pk=row.pk).update(created_at=ago(age))
+    assert row.created_at == born
     return row
 
 

@@ -1646,8 +1646,7 @@ export interface components {
             code: string;
             label: string;
             module: string;
-            /** Format: int64 */
-            order?: number;
+            readonly order: number;
             readonly permissions: components["schemas"]["CatalogPermission"][];
         };
         CatalogPermission: {

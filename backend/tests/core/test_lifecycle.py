@@ -8,7 +8,7 @@ import uuid
 
 import pytest
 from django.apps import apps
-from django.db import IntegrityError, connection, models
+from django.db import IntegrityError, connection, models, transaction
 from django.test import Client
 
 from core.lifecycle import provenance
@@ -76,9 +76,15 @@ class _ParentQS(SoftDeleteQuerySet):
     pass
 
 
-@pytest.fixture
-def soft_models(transactional_db):
-    """Parent/Child tables for this test only; unregistered from the app registry afterwards."""
+@pytest.fixture(scope="module")
+def _soft_tables(django_db_setup, django_db_blocker):
+    """Parent/Child tables for this module, created and dropped OUTSIDE any test transaction.
+
+    Never `transactional_db`: its teardown flush TRUNCATEs the audit log, which the append-only
+    trigger refuses on PostgreSQL (TRAPS.md). The tables are real DDL, built once; each test runs
+    in the normal rolled-back transaction, so they are empty at the next test and at the drop.
+    The models are unregistered from the app registry afterwards.
+    """
 
     class Parent(SoftDeleteModel):
         sku = models.CharField(max_length=20)
@@ -98,18 +104,24 @@ def soft_models(transactional_db):
             app_label = "core"
             db_table = "t_lifecycle_child"
 
-    with connection.schema_editor() as editor:
-        editor.create_model(Parent)
-        editor.create_model(Child)
-    try:
-        yield Parent, Child
-    finally:
+    with django_db_blocker.unblock():
         with connection.schema_editor() as editor:
-            editor.delete_model(Child)
-            editor.delete_model(Parent)
-        for name in ("parent", "child"):
-            apps.all_models["core"].pop(name, None)
-        apps.clear_cache()
+            editor.create_model(Parent)
+            editor.create_model(Child)
+        try:
+            yield Parent, Child
+        finally:
+            with connection.schema_editor() as editor:
+                editor.delete_model(Child)
+                editor.delete_model(Parent)
+            for name in ("parent", "child"):
+                apps.all_models["core"].pop(name, None)
+            apps.clear_cache()
+
+
+@pytest.fixture
+def soft_models(_soft_tables, db):
+    return _soft_tables
 
 
 def test_the_default_manager_hides_deleted_rows_and_all_objects_shows_them(soft_models):
@@ -136,7 +148,7 @@ def test_queryset_delete_bins_and_never_hard_deletes(soft_models):
 def test_a_deleted_rows_unique_value_can_be_reused_and_restore_then_conflicts(soft_models):
     Parent, _ = soft_models
     first = Parent.objects.create(sku="X-1")
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError), transaction.atomic():
         Parent.objects.create(sku="X-1")  # live rows are still unique
     first.soft_delete()
     second = Parent.objects.create(sku="X-1")  # a binned row's value is free again
