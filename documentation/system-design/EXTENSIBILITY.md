@@ -1128,6 +1128,8 @@ instead of folklore.
 contract, not the environment.
 
 > **As built (2026-11-14, BUILD_ORDER 9.1): `core/sdk/__init__.py`, SDK 1.0.**
+> *SDK 1.1 (9.3) added the data-lifecycle exports; SDK 1.2 (10.1) added the domain primitives: numbering,
+> the state machine and money. `SDK_CHANGELOG` in code lists each.*
 > `SDK_VERSION = (1, 0)`, `SDK_CHANGELOG`, `is_compatible`, `require_version`, `SDKVersionError`, an
 > explicit sorted `__all__`. It re-exports the registry and its contribution specs, `plugin_enabled`,
 > `provide`/`has_service`/`call_service` and the service errors, and lazily (PEP 562, so a plugin's

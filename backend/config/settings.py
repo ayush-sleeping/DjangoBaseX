@@ -415,6 +415,13 @@ SPECTACULAR_SETTINGS = {
     # Separate request and response components (UserRequest vs User), so a read-only field is not
     # required in a request body: the frontend's generated types are right in both directions.
     "COMPONENT_SPLIT_REQUEST": True,
+    # Pin core's enum component names. drf-spectacular names an enum after its field ("status"),
+    # and when a plugin adds a second "status" field it renames core's, changing the committed
+    # contract and the frontend's generated types (BUILD_ORDER 10.1, finding F3).
+    "ENUM_NAME_OVERRIDES": {
+        "StatusEnum": "users.serializers.INVITATION_STATUSES",
+        "ScopeEnum": "core.settings_registry.SCOPES",
+    },
 }
 
 # Logging (OBSERVABILITY § 2): JSON in production (the audit refuses anything else), console in dev.

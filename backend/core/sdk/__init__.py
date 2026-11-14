@@ -26,6 +26,7 @@ from core.registry import (
     NavItem,
     NavSection,
     NoProvider,
+    NumberingSeries,
     PermissionGroupSpec,
     PermissionSpec,
     Recyclable,
@@ -34,11 +35,12 @@ from core.registry import (
     ServiceContractError,
     ServiceUnavailable,
     StateField,
+    StateMachine,
     plugin_state,
     registry,
 )
 
-SDK_VERSION = (1, 1)
+SDK_VERSION = (1, 2)
 
 # One entry per minor: what was added and why.
 SDK_CHANGELOG = {
@@ -51,6 +53,11 @@ SDK_CHANGELOG = {
         "Data lifecycle (BUILD_ORDER 9.3): SoftDeleteModel and its queryset/manager helpers, "
         "ProvenanceModel and stamp_provenance, Recyclable and register_recyclable, StateField and "
         "change_state, ScopeSpec and register_scoping."
+    ),
+    (1, 2): (
+        "Domain primitives (BUILD_ORDER 9.4), needed by the first second product (10.1): "
+        "NumberingSeries with peek_number/reserve_number, StateMachine with transition, "
+        "allowed_transitions and its typed errors, and Money with money_fields/money_property."
     ),
 }
 
@@ -134,6 +141,18 @@ _LAZY = {
     "soft_delete_managers": "core.lifecycle.models",
     "stamp_provenance": "core.lifecycle.provenance:stamp",
     "change_state": "core.lifecycle.transitions",
+    "peek_number": "core.numbering:peek",
+    "reserve_number": "core.numbering:reserve",
+    "transition": "core.statemachine",
+    "allowed_transitions": "core.statemachine:allowed_targets",
+    "StateMachineError": "core.statemachine",
+    "IllegalTransition": "core.statemachine",
+    "ReasonRequired": "core.statemachine",
+    "Money": "core.money",
+    "MoneyError": "core.money",
+    "to_money": "core.money",
+    "money_fields": "core.money",
+    "money_property": "core.money",
 }
 
 
@@ -151,14 +170,19 @@ __all__ = [
     "BootstrapContributor",
     "Cron",
     "HelpPage",
+    "IllegalTransition",
     "Interval",
     "JobSpec",
+    "Money",
+    "MoneyError",
     "NavItem",
     "NavSection",
     "NoProvider",
+    "NumberingSeries",
     "PermissionGroupSpec",
     "PermissionSpec",
     "ProvenanceModel",
+    "ReasonRequired",
     "Recyclable",
     "RestoreConflict",
     "SDKVersionError",
@@ -172,7 +196,10 @@ __all__ = [
     "SoftDeleteModel",
     "SoftDeleteQuerySet",
     "StateField",
+    "StateMachine",
+    "StateMachineError",
     "VisibleToQuerySet",
+    "allowed_transitions",
     "call_service",
     "change_state",
     "error_response",
@@ -183,12 +210,18 @@ __all__ = [
     "is_compatible",
     "live_unique",
     "log_activity",
+    "money_fields",
+    "money_property",
+    "peek_number",
     "plugin_enabled",
     "provide",
     "register_recyclable",
     "register_scoping",
     "registry",
     "require_version",
+    "reserve_number",
     "soft_delete_managers",
     "stamp_provenance",
+    "to_money",
+    "transition",
 ]

@@ -168,7 +168,8 @@ def test_delete_bins_the_note_and_the_bin_restores_it_scoped_to_its_owner():
 
     assert mine.get(NOTES).json()["results"] == []  # hidden from the default manager
     assert Note.all_objects.get(public_id=pid).deleted_at is not None
-    assert [t["key"] for t in mine.get(BIN).json()["types"]] == ["notes.note"]
+    # "in", not "==": another installed plugin may register its own bin type (BUILD_ORDER 10.1 F4).
+    assert "notes.note" in [t["key"] for t in mine.get(BIN).json()["types"]]
     binned = mine.get(BIN, {"type": "notes.note"}).json()["results"]
     assert [r["id"] for r in binned] == [pid] and binned[0]["title"] == "Gone"
 
