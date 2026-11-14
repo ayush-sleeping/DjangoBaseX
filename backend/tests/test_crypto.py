@@ -184,6 +184,11 @@ def test_the_crypto_endpoint_is_gated_and_shows_fingerprints_never_keys(devices)
     body = response.json()
     assert body["configured"] is True and body["keys"][0]["newest"] is True
     assert KEY_A not in str(body)
-    (field,) = body["fields"]
+    by_model = {f["model"] + "." + f["field"]: f for f in body["fields"]}
+    assert {
+        "core.WebhookEndpoint.secret_ciphertext",
+        "core.WebhookEndpoint.previous_secret_ciphertext",
+    } <= set(by_model)
+    field = by_model["users.MfaDevice.totp_secret_ciphertext"]
     assert (field["model"], field["purpose"]) == ("users.MfaDevice", "mfa_totp")
     assert field["rows_per_key"][body["keys"][0]["fingerprint"]] == 3

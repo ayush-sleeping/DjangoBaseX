@@ -5,7 +5,7 @@
 
 A secure, modular, production-ready base project using **Django 5 + Django REST Framework** for the API and **Next.js (App Router)** for the frontend — ideal for building scalable web applications with a Python backend and a TypeScript frontend.
 
-> **Status:** checked 2026-11-14 · a platform with auth, RBAC, a Users module, plugins, jobs and an app shell built; phases 0–8 of the build order are done except 7.6–7.8 and 8.5b. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md).
+> **Status:** checked 2026-11-14 · a platform with auth, RBAC, a Users module, plugins, jobs and an app shell built; phases 0–8 of the build order are done except 7.7–7.8 and 8.5b. The two halves run and talk to each other, and the **conventions, decisions and build order are fully documented** — see [`documentation/INDEX.md`](documentation/INDEX.md). Features are added module-by-module following [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md).
 >
 > **Not deployable yet.** Auth, RBAC, the Users module with invitations, plugins and a pytest + Vitest suite with CI are built; there is no production Docker (a development Compose stack exists) and no deployment topology. That list is honest and tracked — see [Project Status](#project-status) and [`documentation/planning/TECH_DEBT.md`](documentation/planning/TECH_DEBT.md).
 

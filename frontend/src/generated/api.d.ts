@@ -487,6 +487,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/hooks/{provider}/{ingress_token}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /api/hooks/<provider>/<ingress_token>/ : public by declaration (public_routes), no
+         *     session, no CSRF (it is not cookie-authenticated), throttled, JSON body read raw.
+         */
+        post: operations["hooks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/bootstrap/": {
         parameters: {
             query?: never;
@@ -846,6 +866,158 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/webhooks/endpoints/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        get: operations["webhooks_endpoints_list"];
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["webhooks_endpoints_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/endpoints/{public_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        get: operations["webhooks_endpoints_retrieve"];
+        put?: never;
+        post?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        delete: operations["webhooks_endpoints_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        patch: operations["webhooks_endpoints_partial_update"];
+        trace?: never;
+    };
+    "/api/webhooks/endpoints/{public_id}/deliveries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        get: operations["webhooks_endpoints_deliveries_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/endpoints/{public_id}/deliveries/{delivery_id}/redeliver/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["webhooks_endpoints_deliveries_redeliver_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/endpoints/{public_id}/rotate-secret/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["webhooks_endpoints_rotate_secret_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/endpoints/{public_id}/send-test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        post: operations["webhooks_endpoints_send_test_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/events/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description required_permissions maps each action to its codes; an action missing from it denies.
+         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         */
+        get: operations["webhooks_events_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -975,6 +1147,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["User"][];
         };
+        PaginatedWebhookEndpointList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["WebhookEndpoint"][];
+        };
         Role: {
             /** Format: date-time */
             readonly created_at: string;
@@ -1028,6 +1215,29 @@ export interface components {
             /** Format: uuid */
             readonly public_id: string;
             readonly roles: components["schemas"]["RoleSummary"][];
+        };
+        WebhookEndpoint: {
+            readonly consecutive_failures: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly custom_headers: unknown;
+            /** Format: date-time */
+            readonly disabled_at: string | null;
+            readonly events: string[];
+            /** Format: uuid */
+            readonly id: string;
+            readonly is_active: boolean;
+            readonly is_disabled_by_breaker: boolean;
+            /** Format: date-time */
+            readonly last_delivery_at: string | null;
+            readonly name: string;
+            /** Format: date-time */
+            readonly previous_secret_expires_at: string | null;
+            readonly timeout_seconds: number;
+            /** Format: date-time */
+            readonly updated_at: string;
+            /** Format: uri */
+            readonly url: string;
         };
     };
     responses: never;
@@ -1495,6 +1705,27 @@ export interface operations {
             header?: never;
             path: {
                 key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    hooks_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ingress_token: string;
+                provider: string;
             };
             cookie?: never;
         };
@@ -1996,6 +2227,213 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedWebhookEndpointList"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhooks_endpoints_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_deliveries_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_deliveries_redeliver_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delivery_id: string;
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_rotate_secret_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+        };
+    };
+    webhooks_endpoints_send_test_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+        };
+    };
+    webhooks_events_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
                 };
             };
         };

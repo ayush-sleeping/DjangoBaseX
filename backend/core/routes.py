@@ -25,6 +25,11 @@ CORE_PUBLIC_ROUTES: dict[str, str] = {
         "(FRONTEND_PLATFORM § 18). Write-only telemetry: bounded body, throttled per address, "
         "logs origin and path only."
     ),
+    "core:inbound-webhook": (
+        "Third-party callbacks carry no session. Authenticated by the provider's signature over "
+        "the raw body, checked first with the secret the opaque ingress token selects; fails "
+        "closed, deduplicated only after verification, throttled per address (§ 17)."
+    ),
     "schema": (
         "OpenAPI document: describes the API surface, holds no data. "
         "To be served only when DEBUG or SCHEMA_PUBLIC (AUTH_BLUEPRINT.md § 9.2)."

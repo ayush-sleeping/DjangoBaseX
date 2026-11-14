@@ -4,6 +4,8 @@ scope; absence means the code default. What a setting IS (its type, label, defau
 in registry.settings, never here. Read and write through core.settings_service only.
 """
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -477,3 +479,137 @@ class OutboxMessage(models.Model):
 
     def __str__(self):
         return f"{self.topic} {self.status} #{self.pk}"
+
+
+# --- Webhooks (BUILD_ORDER 7.6; JOBS_AND_INTEGRATIONS.md § 16, § 17) -----------------------------
+
+
+class WebhookEndpoint(models.Model):
+    """
+    A URL that receives signed, ids-only event callbacks. Platform-owned: there is no API-consumer
+    model yet (BUILD_ORDER 9.2 adds a nullable `consumer` FK). The signing secret is encrypted, not
+    hashed: we must reproduce it to sign. It is shown once, at creation or rotation.
+    `is_active` is a human switch; `disabled_at` is the circuit breaker's. They are separate columns
+    because "an admin turned it off" and "it tripped" need different fixes.
+    """
+
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    name = models.CharField(max_length=120)
+    url = models.URLField(max_length=2048)
+    secret_ciphertext = models.TextField()
+    previous_secret_ciphertext = models.TextField(blank=True, default="")
+    previous_secret_expires_at = models.DateTimeField(null=True, blank=True)
+    timeout_seconds = models.PositiveSmallIntegerField(default=10)
+    custom_headers = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+    disabled_at = models.DateTimeField(null=True, blank=True)
+    consecutive_failures = models.PositiveIntegerField(default=0)
+    last_delivery_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_webhook_endpoint"
+        ordering = ["-id"]
+
+    def __str__(self):
+        return f"{self.name} #{self.pk}"
+
+
+class WebhookSubscription(models.Model):
+    """A real table, not a JSON list: matching an event is an indexed join (and works on SQLite)."""
+
+    endpoint = models.ForeignKey(
+        WebhookEndpoint, on_delete=models.CASCADE, related_name="subscriptions"
+    )
+    event = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "core_webhook_subscription"
+        constraints = [
+            models.UniqueConstraint(fields=["endpoint", "event"], name="core_webhook_sub_unique")
+        ]
+        indexes = [models.Index(fields=["event"], name="core_webhook_sub_event")]
+
+    def __str__(self):
+        return f"{self.event} -> endpoint #{self.endpoint_id}"
+
+
+class WebhookDelivery(models.Model):
+    """One event x endpoint. The row is the delivery log; the outbox row that carries it is the
+    durable obligation, so `pending` is watched by the outbox's drainer and recovery sweep."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending"
+        DELIVERED = "delivered"
+        FAILED = "failed"
+
+    endpoint = models.ForeignKey(
+        WebhookEndpoint, on_delete=models.CASCADE, related_name="deliveries"
+    )
+    event = models.CharField(max_length=100)
+    event_id = models.CharField(max_length=64)
+    delivery_id = models.CharField(max_length=64)  # stable per event x endpoint; sent to receivers
+    payload = models.JSONField(default=dict)  # ids only
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    response_status = models.PositiveSmallIntegerField(null=True, blank=True)
+    response_body = models.TextField(blank=True, default="")  # first 2 000 characters
+    error_code = models.CharField(max_length=100, blank=True, default="")
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    is_test = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    failed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "core_webhook_delivery"
+        ordering = ["-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["endpoint", "delivery_id"], name="core_webhook_dlv_unique"
+            )
+        ]
+        indexes = [models.Index(fields=["status", "next_attempt_at"], name="core_webhook_dlv_due")]
+
+    def __str__(self):
+        return f"{self.event} {self.status} #{self.pk}"
+
+
+class InboundWebhookEvent(models.Model):
+    """A verified callback from a third party, stored before it is processed (§ 17). The unique
+    `dedupe_key` is the idempotency claim, taken only AFTER the signature is proven."""
+
+    class Status(models.TextChoices):
+        RECEIVED = "received"
+        PROCESSED = "processed"
+        FAILED = "failed"
+        IGNORED = "ignored"
+
+    provider = models.CharField(max_length=64)
+    delivery_id = models.CharField(max_length=255)
+    dedupe_key = models.CharField(max_length=255, unique=True)
+    event_type = models.CharField(max_length=128, blank=True, default="")
+    payload = models.JSONField(default=dict)  # minimised: the verifier's allowlist, never the body
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.RECEIVED)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    error_code = models.CharField(max_length=100, blank=True, default="")
+    received_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "core_inbound_webhook_event"
+        ordering = ["-id"]
+        indexes = [
+            models.Index(fields=["provider", "received_at"], name="core_inbound_wh_provider")
+        ]
+
+    def __str__(self):
+        return f"{self.provider} {self.status} #{self.pk}"

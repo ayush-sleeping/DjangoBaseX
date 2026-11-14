@@ -3,6 +3,7 @@
 from django.urls import NoReverseMatch, reverse
 
 from core.routes import public_routes
+from tests.architecture.url_walk import iter_routes
 
 # Pinned. Opening a route to the internet means editing this set in the same reviewed change.
 EXPECTED_PUBLIC = {
@@ -11,6 +12,7 @@ EXPECTED_PUBLIC = {
     "core:health-ready",
     "core:public-config",
     "core:csp-report",
+    "core:inbound-webhook",
     "schema",
     "swagger-ui",
     "users:login",
@@ -30,12 +32,16 @@ def test_the_ledger_has_not_grown_without_review():
 
 
 def test_every_entry_resolves():
+    walked = {
+        route.name for route in iter_routes()
+    }  # a route with path arguments cannot reverse bare
     missing = []
     for name in public_routes():
         try:
             reverse(name)
         except NoReverseMatch:
-            missing.append(name)
+            if name not in walked:
+                missing.append(name)
     assert not missing, f"public_routes() names routes that do not exist: {missing}"
 
 

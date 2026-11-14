@@ -1701,6 +1701,119 @@ def _caller_module() -> str:
         return "an unknown module"
 
 
+# --- Events and inbound webhooks (BUILD_ORDER 7.6) ------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EventDef:
+    """
+    One domain event, "<module>.<entity>.<verb>" (JOBS_AND_INTEGRATIONS.md § 16). Only events with
+    `external=True` can be subscribed to by a webhook endpoint (the webhook catalogue); an internal
+    event is not a webhook by default. `object_type` is the noun a receiver sees in `data.object`.
+    This is the minimal registry 7.6 needs; BUILD_ORDER 9.1 generalises it.
+    """
+
+    name: str
+    description: str
+    object_type: str
+    external: bool = False
+
+
+class EventRegistry(_Catalog):
+    def __init__(self) -> None:
+        super().__init__()
+        self._events: dict[str, EventDef] = {}
+
+    def register(self, event: EventDef) -> None:
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(event, EventDef):
+                raise RegistryError(f"expected an EventDef, got {type(event).__name__}")
+            name = f"event {event.name!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(event.name, str) or not CODE_PATTERN.match(event.name):
+                raise RegistryError(f"{name}: not <module>.<entity>.<verb> (lowercase, digits, _)")
+            for field_name in ("description", "object_type"):
+                value = getattr(event, field_name)
+                if not isinstance(value, str) or not value.strip():
+                    raise RegistryError(f"{name} has an empty {field_name}")
+            if not isinstance(event.external, bool):
+                raise RegistryError(f"{name}: external is True or False")
+            if event.name in self._events:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[event.name]}; "
+                    f"registered again by {owner}"
+                )
+            self._events[event.name] = event
+            self._owner_of[event.name] = owner
+
+    def __contains__(self, name: str) -> bool:
+        self.seal()
+        return name in self._events
+
+    def get(self, name: str) -> EventDef:
+        self.seal()
+        return self._events[name]
+
+    def events(self) -> tuple[EventDef, ...]:
+        self.seal()
+        return tuple(self._events[k] for k in sorted(self._events))
+
+    def external(self) -> tuple[EventDef, ...]:
+        """The webhook catalogue."""
+        return tuple(e for e in self.events() if e.external)
+
+
+class InboundWebhookRegistry(_Catalog):
+    """Provider name -> (verifier, handler). The verifier's shape is core.webhooks.inbound.Verifier;
+    it is typed loosely here because this module stays standard library only. `handler` is a dotted
+    path to `def handle(event_id: int) -> None`, or None (the event is stored and left)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._providers: dict[str, tuple[object, str | None]] = {}
+
+    def register(self, verifier: object, handler: str | None = None) -> None:
+        owner = _caller_module()
+        with self._lock:
+            provider = getattr(verifier, "provider", None)
+            name = f"inbound webhook provider {provider!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(provider, str) or not _KEY_PATTERN.match(provider):
+                raise RegistryError(f"{name}: provider is a lowercase key")
+            for member in ("verify", "dedupe_key", "secret_for"):
+                if not callable(getattr(verifier, member, None)):
+                    raise RegistryError(f"{name}: the verifier has no {member}()")
+            if not isinstance(getattr(verifier, "durable_dedupe", None), bool):
+                raise RegistryError(
+                    f"{name}: say durable_dedupe = True (database claim) or False (documented "
+                    "fail-open for low-stakes events); silence is not a choice"
+                )
+            if handler is not None and (
+                not isinstance(handler, str) or not _DOTTED_PATTERN.match(handler)
+            ):
+                raise RegistryError(f"{name}: handler must be a dotted path or None")
+            if provider in self._providers:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[provider]}; "
+                    f"registered again by {owner}"
+                )
+            self._providers[provider] = (verifier, handler)
+            self._owner_of[provider] = owner
+
+    def __contains__(self, provider: str) -> bool:
+        self.seal()
+        return provider in self._providers
+
+    def get(self, provider: str) -> tuple[object, str | None]:
+        self.seal()
+        return self._providers[provider]
+
+    def providers(self) -> tuple[str, ...]:
+        self.seal()
+        return tuple(sorted(self._providers))
+
+
 # --- The whole seam -----------------------------------------------------------------------------
 
 
@@ -1728,6 +1841,8 @@ class Registry:
         self.finding_kinds = FindingKindRegistry()
         self.outbox_topics = OutboxTopicRegistry()
         self.http_purposes = HttpPurposeRegistry()
+        self.events = EventRegistry()
+        self.inbound_webhooks = InboundWebhookRegistry()
         # A reconciler registers its job and its give-up kind into THIS registry's catalogs.
         self.reconcilers = ReconcilerRegistry(self.jobs, self.finding_kinds)
 

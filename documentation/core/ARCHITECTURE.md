@@ -164,7 +164,6 @@ Stated plainly, because assuming otherwise wastes time. Source of truth: `BUILD_
 
 | Not built | `BUILD_ORDER` |
 |-----------|---------------|
-| Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |
 | Ops alerting | 7.8 |
 | Static security headers, `/fe/revalidate`, logos/favicon/TitleSync, host-matched identity (the per-request nonce CSP and runtime brand colours are built, 8.5) | 8.5b |

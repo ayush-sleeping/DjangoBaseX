@@ -34,7 +34,7 @@ logger = logging.getLogger("core.crypto")
 
 # Every purpose anything may encrypt under. Adding one is a reviewed code change; the catalog
 # (registry.encrypted_fields) and the boot self-test both read this tuple.
-PURPOSES = ("mfa_totp",)
+PURPOSES = ("mfa_totp", "webhook_secret")
 
 # Masking (§ 25): shorter than this is fully masked — last-4 of an 8-character secret is half of it.
 MASK_LAST4_MINIMUM = 16

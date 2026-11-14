@@ -25,6 +25,10 @@ class UsersConfig(AppConfig):
                 model="users.MfaDevice", field="totp_secret_ciphertext", purpose="mfa_totp"
             )
         )
+        from .events import EVENTS
+
+        for event in EVENTS:
+            registry.events.register(event)
         from .public_routes import PUBLIC_ROUTES
 
         for url_name, reason in PUBLIC_ROUTES.items():

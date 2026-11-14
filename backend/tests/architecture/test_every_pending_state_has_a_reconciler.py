@@ -20,6 +20,8 @@ TRANSIENT = re.compile(r"^pending_|ing$")
 ALLOWED = {
     ("core.JobRun", "retrying"): "Celery owns the retry; the 7.2 monitor and the queue doctor "
     "report a run that never finishes",
+    ("core.WebhookDelivery", "pending"): "its outbox row is the obligation: the drainer sends it, "
+    "the lease sweep recovers it, and the outbox doctor reports it stuck (webhooks.deliver)",
     ("core.OutboxMessage", "pending"): "the drainer itself is what moves it; the outbox doctor "
     "reports a due message waiting too long (outbox.stuck)",
 }

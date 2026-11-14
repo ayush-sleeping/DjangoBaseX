@@ -74,3 +74,18 @@ AUDIT_GROUP = PermissionGroupSpec(
         PermissionSpec("core.audit.export", "Export the audit log (the export is itself audited)"),
     ),
 )
+
+
+WEBHOOKS_GROUP = PermissionGroupSpec(
+    code="webhooks",
+    label="Webhooks",
+    module="core",  # platform-owned endpoints until API consumers exist (BUILD_ORDER 9.2)
+    order=96,
+    permissions=(
+        PermissionSpec("core.webhooks.view", "View webhook endpoints and their delivery log"),
+        PermissionSpec(
+            "core.webhooks.manage",
+            "Create, change, rotate and delete webhook endpoints; redeliver; send a test",
+        ),
+    ),
+)
