@@ -1,6 +1,6 @@
 # DjangoBaseX — Domain (the platform's concepts)
 
-> **Status:** Hub — checked 2026-11-14 · every concept in the glossary is built and read from code; webhooks, notifications, retention, soft delete and similar are in the 🔜 table. A boilerplate has no business domain: its "domain" is the vocabulary below. Products add their own nouns in `backend/project/` or a plugin.
+> **Status:** Hub — checked 2026-11-14 · every concept in the glossary is built and read from code; notifications, soft delete and similar are in the 🔜 table. A boilerplate has no business domain: its "domain" is the vocabulary below. Products add their own nouns in `backend/project/` or a plugin.
 
 Look a term up, go to its **owner** (the one module that decides it — change behaviour there, never in a consumer), then read the spec section. Spec files are in [`system-design/`](system-design/). The layout and recipes are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
@@ -28,6 +28,10 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | **Job** | A `JobSpec` (name, queue, schedule, flags) pointing at `def run(ctx: JobContext) -> int` | `backend/core/registry.py` (spec), `backend/core/jobs/` | `JOBS_AND_INTEGRATIONS.md` § 1 |
 | **Retention policy** | A registered `RetentionPolicy` (model, timestamp, optional filter and row cap, data class, floor, opt-in); one engine deletes by it, in batches, for the daily job and `manage.py retention`. Its window is the setting `retention.<key>.days` (empty keeps forever; below the floor is refused); the audit log is opt-in | `backend/core/retention/` (engine), `backend/core/registry.py` (spec), `backend/users/retention.py` | `DATA_LIFECYCLE.md` § 6 |
 | **Job run** | One `JobRun` row per execution, written from Celery signals, never by the job | `backend/core/jobs/recorder.py` | `JOBS_AND_INTEGRATIONS.md` § 7 |
+| **Event** | A registered domain event `<module>.<entity>.<verb>` (`EventDef`); `external=True` puts it in the webhook catalogue, and every catalogue event needs an `emit()` call site | `backend/core/registry.py` (`EventRegistry`), `backend/users/events.py` | `JOBS_AND_INTEGRATIONS.md` § 16 |
+| **Webhook endpoint** | A platform-owned URL subscribed to catalogue events; encrypted signing secret shown once, rotation with overlap, `is_active` (human) and `disabled_at` (breaker) kept apart | `backend/core/models.py` (`WebhookEndpoint`), `backend/core/webhooks/service.py` | `JOBS_AND_INTEGRATIONS.md` § 16 |
+| **Delivery** | One event x endpoint, ids-only payload, signed `v1=` HMAC over `timestamp.body`; the log row with Redeliver and the outbox row that carries it | `backend/core/webhooks/delivery.py`, `WebhookDelivery` | `JOBS_AND_INTEGRATIONS.md` § 16 |
+| **Inbound webhook** | A third-party callback: verified over the raw body first, then deduplicated by a unique key in the database, stored minimised, processed later | `backend/core/webhooks/inbound.py`, `InboundWebhookEvent` | `JOBS_AND_INTEGRATIONS.md` § 17 |
 | **Outbox row** | An `OutboxMessage` written in the caller's transaction, then leased, sent and settled; the only way to send a side effect | `backend/core/outbox/service.py` | `JOBS_AND_INTEGRATIONS.md` § 12 |
 | **Reconciler** | A `Reconciler` that re-examines rows stuck in a pending state (e.g. expired leases) and fixes or raises a finding | `backend/core/jobs/reconciler.py`, `backend/core/outbox/recovery.py` | `JOBS_AND_INTEGRATIONS.md` § 11 |
 | **Lock** | Redis single-flight lease (memory store in tests); Postgres transaction advisory lock for DB work | `backend/core/locks.py` | `JOBS_AND_INTEGRATIONS.md` § 9 |
@@ -82,7 +86,6 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 
 | Concept | BUILD_ORDER item |
 |---------|------------------|
-| Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |
 | Ops alerting | 7.8 |
 | Static security headers, revalidation, logos, host-matched identity | 8.5b |

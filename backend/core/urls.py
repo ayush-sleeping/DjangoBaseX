@@ -5,6 +5,7 @@ from .api.crypto import CryptoStatusView
 from .api.flags import FlagDetailView, FlagListView
 from .api.lookups import LookupListView, LookupWriteView
 from .api.settings import SettingDetailView, SettingListView, SettingResetView
+from .api.webhooks import WebhookEndpointViewSet
 from .views import (
     ComponentsView,
     CspReportView,
@@ -13,6 +14,7 @@ from .views import (
     PublicConfigView,
     ReadyView,
 )
+from .webhooks.inbound import InboundWebhookView
 
 app_name = "core"
 
@@ -44,5 +46,49 @@ urlpatterns = [
         "core/lookups/<str:set_key>/values/<slug:key>/",
         LookupWriteView.as_view(),
         name="lookup-value",
+    ),
+    # § 16: platform-owned webhook endpoints. The secret is in the create and rotate responses only.
+    path(
+        "webhooks/endpoints/",
+        WebhookEndpointViewSet.as_view({"get": "list", "post": "create"}),
+        name="webhook-endpoints",
+    ),
+    path(
+        "webhooks/events/",
+        WebhookEndpointViewSet.as_view({"get": "catalogue"}),
+        name="webhook-events",
+    ),
+    path(
+        "webhooks/endpoints/<uuid:public_id>/",
+        WebhookEndpointViewSet.as_view(
+            {"get": "retrieve", "patch": "partial_update", "delete": "destroy"}
+        ),
+        name="webhook-endpoint",
+    ),
+    path(
+        "webhooks/endpoints/<uuid:public_id>/rotate-secret/",
+        WebhookEndpointViewSet.as_view({"post": "rotate_secret"}),
+        name="webhook-rotate-secret",
+    ),
+    path(
+        "webhooks/endpoints/<uuid:public_id>/send-test/",
+        WebhookEndpointViewSet.as_view({"post": "send_test"}),
+        name="webhook-send-test",
+    ),
+    path(
+        "webhooks/endpoints/<uuid:public_id>/deliveries/",
+        WebhookEndpointViewSet.as_view({"get": "deliveries"}),
+        name="webhook-deliveries",
+    ),
+    path(
+        "webhooks/endpoints/<uuid:public_id>/deliveries/<slug:delivery_id>/redeliver/",
+        WebhookEndpointViewSet.as_view({"post": "redeliver"}),
+        name="webhook-redeliver",
+    ),
+    # § 17: public by declaration (core.routes.CORE_PUBLIC_ROUTES).
+    path(
+        "hooks/<slug:provider>/<slug:ingress_token>/",
+        InboundWebhookView.as_view(),
+        name="inbound-webhook",
     ),
 ]

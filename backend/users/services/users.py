@@ -12,6 +12,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from core import webhooks
 from core.audit import log_activity
 
 from .. import emails, tokens
@@ -54,6 +55,7 @@ def create_user(*, actor, email: str, full_name: str = "") -> User:
     )
     transaction.on_commit(lambda: _send_setup(user, raw_token))
     log_activity("users.user.created", actor=actor, target=user)
+    webhooks.emit("users.user.created", user)
     return user
 
 
@@ -90,6 +92,7 @@ def deactivate(*, actor, user: User, reason: str = "") -> User:
     # must say so too — it is what an incident is reconstructed from.
     tokens.revoke_all_for_user(user, UserSession.RevokedReason.ADMIN)
     log_activity("users.user.deactivated", actor=actor, target=user, reason=reason)
+    webhooks.emit("users.user.deactivated", user)
     return user
 
 

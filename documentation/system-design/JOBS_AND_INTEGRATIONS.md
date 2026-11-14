@@ -1406,6 +1406,70 @@ from the product slug by default); `webhooks.breaker_threshold` (10), `webhooks.
 `webhooks.default_timeout_seconds` (10), `webhooks.allow_http` (false),
 `webhooks.rotation_overlap_hours` (24), `webhooks.delivery_retention_days` + row cap.
 
+### As built (7.6)
+
+Code: `core/webhooks/` (`emission.py`, `delivery.py`, `service.py`, `signing.py`, `policy.py`,
+`registration.py`, `serializers.py`), `core/api/webhooks.py`, models in `core/models.py`
+(`WebhookEndpoint`, `WebhookSubscription`, `WebhookDelivery`), migration `core/0008_webhooks`.
+
+- **Platform-owned, not consumer-owned.** No API-consumer model exists yet (BUILD_ORDER 9.2, blocked
+  on DB-21), so an endpoint has no owner FK, only `created_by`/`updated_by` (`SET_NULL`, for audit).
+  Gated by `core.webhooks.view` / `core.webhooks.manage`. 9.2 adds a nullable `consumer` FK (DB-79).
+- **Minimal event registry.** `registry.events` holds `EventDef(name, description, object_type,
+  external)`; 9.1 generalises it. The catalogue is `registry.events.external()`. Real events with
+  real call sites: `users.user.created` and `users.user.deactivated` (`users/services/users.py`).
+  `tests/architecture/test_webhook_catalogue_has_call_sites.py` is the done-when: it fails (never
+  skips) on an empty scan or an empty catalogue.
+- **Emission.** `webhooks.emit(event, obj)` enqueues one `webhooks.event` outbox row inside a
+  savepoint of the caller's transaction. Unknown event: `KeyError` when `DEBUG` or `APP_ENV=test`,
+  ERROR log and nothing queued otherwise. An internal (`external=False`) event queues nothing. Any
+  other failure is logged and swallowed.
+- **Three topics.** `webhooks.event` fans out through the `core_webhook_subscription` join (active
+  and not-tripped endpoints only) into one `WebhookDelivery` + one `webhooks.deliver` outbox row per
+  endpoint; `webhooks.deliver` sends; `webhooks.inbound` processes inbound events. All
+  `at_least_once` (receivers dedupe on the delivery id header).
+- **Retries.** The handler computes the delay (ladder 30 s, 2 min, 10 min, 30 min, 2 h, +/-20 %
+  jitter, or `Retry-After` capped at 2 h), stores it as `WebhookDelivery.next_attempt_at` and hands
+  it to the outbox as `Outcome.RETRY(after=...)`. `webhooks.delivery.max_attempts` ends the delivery.
+- **A dead delivery ends its outbox row as `skipped`, not `failed`.** The dead letter a human works
+  is the `WebhookDelivery` (with Redeliver); an `outbox.failed` finding per dead third-party
+  receiver would be noise nobody here can fix. `WebhookDelivery.pending` is covered by the outbox
+  row that carries it (allow-list entry in `test_every_pending_state_has_a_reconciler.py`).
+- **Breaker.** Counts failed *deliveries* (permanent failure or attempts exhausted), never attempts,
+  never test sends. 410 sets `disabled_at` at once. `PATCH {"is_active": true}` on a tripped
+  endpoint clears `disabled_at` and the counter.
+- **Settings are three-segment keys** (the registry refuses two-segment ones): the five outbound
+  keys are `webhooks.delivery.{breaker_threshold, max_attempts, default_timeout_seconds,
+  allow_http, rotation_overlap_hours}`; retention is `retention.core_webhook_delivery.days` (30 d,
+  cap 500,000, pending rows never pruned).
+- **Header prefix and secret prefix are derived** from `PRODUCT_SLUG` (`X-<Slug>-Signature`,
+  `<slug_>_whsec_<token>`). The `WEBHOOK_HEADER_PREFIX` / `WEBHOOK_SECRET_PREFIX` env overrides are
+  not built (DB-79). Custom headers must be `X-*`; platform-owned families are refused.
+- **Delivery happens through `registry.http_purposes["webhooks.deliver"]`**, so every connection is
+  vetted at connect time; the https-only rule is a runtime setting enforced at write and at send.
+- **Not built:** the endpoint list / delivery-log screens (DB-79), the
+  `core.webhook_endpoint_disabled` notification (needs 7.7; the breaker state is visible in the
+  endpoint serializer meanwhile).
+
+**Receiver recipe** (executed by `test_signature_verifies_with_documented_recipe`; the reference
+implementation is `core.webhooks.signing.verify_signature`):
+
+```python
+import hashlib, hmac, time
+
+def verify(secret: str, raw_body: bytes, headers) -> bool:
+    ts = headers["X-<Slug>-Timestamp"]           # the prefix is derived from the product slug
+    expected = hmac.new(secret.encode(), f"{ts}.".encode() + raw_body, hashlib.sha256)
+    signed = any(
+        hmac.compare_digest(f"v1={expected.hexdigest()}", part.strip())
+        for part in headers["X-<Slug>-Signature"].split(",")   # two values during a rotation
+    )
+    return signed and abs(time.time() - int(ts)) <= 300          # reject a replayed delivery
+```
+
+Sign over the **raw bytes received**, never re-serialised JSON. Deduplicate on the
+`X-<Slug>-Delivery` header (stable per event and endpoint, also across redeliveries).
+
 ---
 
 ## 17. Inbound webhooks   — **Tier 2 · Core**
@@ -1481,6 +1545,36 @@ missing from `PUBLIC_ROUTES`.
 
 **Configurable, not hard-coded.** `webhooks.inbound.timestamp_tolerance_seconds` (300), throttle rate
 `inbound_webhook`, per-provider secrets in the credential store (§ 26).
+
+### As built (7.6)
+
+Code: `core/webhooks/inbound.py`, models `InboundWebhookEvent` (`core_inbound_webhook_event`),
+`registry.inbound_webhooks` (`core/registry.py`), route `core:inbound-webhook`.
+
+- **Registry.** `registry.inbound_webhooks.register(verifier, handler="dotted.path")`; the verifier
+  has `provider`, `durable_dedupe` (must be declared True or False, silence is refused at register),
+  `secret_for(ingress_token)` (None when the token names no connection), `verify(raw_body, headers,
+  secret) -> Verified` and `dedupe_key(verified)`. `Verified.payload` is the minimised allowlist that
+  is stored; the body never is. No real provider ships in core; the tests register a fake one.
+- **Order in `InboundWebhookView`:** 404 for an unknown provider, then `request.body` (raw), then
+  `secret_for` (a missing secret raises `InvalidSignature`: fail closed in every environment), then
+  `verify`, and only then the insert with the unique `dedupe_key`. The insert and the
+  `webhooks.inbound` outbox row share one transaction; an `IntegrityError` (duplicate) answers 200
+  `{"status": "duplicate"}`. Portable: it relies on the unique constraint, not on `ON CONFLICT`.
+- **`InvalidSignature`** (any reason, including a stale timestamp via `check_timestamp`) is the only
+  rejection: 400 `{"error": {"code": "invalid_signature"}}`.
+- **Processing** is the outbox's `webhooks.inbound` topic: `received` is covered by its outbox row
+  (committed with the event), so no separate sweeper exists. A handler exception marks the event
+  `failed` with the exception class name; the provider is not asked to retry.
+- **Throttle** `InboundWebhookThrottle`: 300/min per address, declared on the class because the
+  shipped `REST_FRAMEWORK` rate table is in a protected file (DB-79).
+- **Settings:** `webhooks.inbound.timestamp_tolerance_seconds` (300). Retention
+  `retention.core_inbound_webhook_event.days` (90 d, no row cap: after the age cut these rows are the
+  idempotency record, and `received` rows are never pruned).
+- **Not built here:** the cross-tenant check is the handler's duty (there is no connection model
+  yet), so `test_cross_tenant_reference_is_rejected` and the parametrised
+  `test_invalid_signature_is_400_for_every_registered_verifier` wait for the first real provider
+  (DB-79). `dbx.hooks.E001` is covered by the public-route ledger test, not a separate check.
 
 ---
 

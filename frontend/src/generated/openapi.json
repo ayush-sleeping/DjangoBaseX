@@ -358,6 +358,37 @@
         ],
         "type": "object"
       },
+      "PaginatedWebhookEndpointList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookEndpoint"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
       "Role": {
         "properties": {
           "created_at": {
@@ -548,6 +579,95 @@
           "mfa_enabled",
           "public_id",
           "roles"
+        ],
+        "type": "object"
+      },
+      "WebhookEndpoint": {
+        "properties": {
+          "consecutive_failures": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "custom_headers": {
+            "readOnly": true
+          },
+          "disabled_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "is_active": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "is_disabled_by_breaker": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "last_delivery_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "name": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "previous_secret_expires_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "readOnly": true,
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "url": {
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "consecutive_failures",
+          "created_at",
+          "custom_headers",
+          "disabled_at",
+          "events",
+          "id",
+          "is_active",
+          "is_disabled_by_breaker",
+          "last_delivery_at",
+          "name",
+          "previous_secret_expires_at",
+          "timeout_seconds",
+          "updated_at",
+          "url"
         ],
         "type": "object"
       }
@@ -1117,6 +1237,38 @@
         ],
         "tags": [
           "core"
+        ]
+      }
+    },
+    "/api/hooks/{provider}/{ingress_token}/": {
+      "post": {
+        "description": "POST /api/hooks/<provider>/<ingress_token>/ : public by declaration (public_routes), no\nsession, no CSRF (it is not cookie-authenticated), throttled, JSON body read raw.",
+        "operationId": "hooks_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ingress_token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "tags": [
+          "hooks"
         ]
       }
     },
@@ -1864,6 +2016,349 @@
         ],
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/webhooks/endpoints/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_list",
+        "parameters": [
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedWebhookEndpointList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      },
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_create",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/api/webhooks/endpoints/{public_id}/": {
+      "delete": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      },
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      },
+      "patch": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_partial_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/api/webhooks/endpoints/{public_id}/deliveries/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_deliveries_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/api/webhooks/endpoints/{public_id}/deliveries/{delivery_id}/redeliver/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_deliveries_redeliver_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/api/webhooks/endpoints/{public_id}/rotate-secret/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_rotate_secret_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/api/webhooks/endpoints/{public_id}/send-test/": {
+      "post": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_endpoints_send_test_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "public_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/api/webhooks/events/": {
+      "get": {
+        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "operationId": "webhooks_events_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "webhooks"
         ]
       }
     }

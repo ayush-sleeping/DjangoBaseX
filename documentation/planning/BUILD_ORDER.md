@@ -876,7 +876,8 @@ audit log is untouched unless named explicitly.
 
 *Proved by* (`backend/tests/core/test_retention.py`): `test_dry_run_deletes_nothing_and_reports_what_the_real_run_then_deletes`; `test_a_raw_zero_reaching_the_engine_is_clamped_to_the_floor_with_a_warning` (and `test_zero_and_negative_are_refused_at_save`); `test_the_audit_log_is_untouched_by_the_scheduled_run_and_the_cli_without_the_flag`.
 
-### 7.6 — Webhooks, outbound and inbound ⬜
+### 7.6 — Webhooks, outbound and inbound ✅
+*Done 2026-11-14.* Owner decisions: endpoints are platform-owned until 9.2 (DB-79); a minimal `registry.events` now, generalised by 9.1; two real external events (`users.user.created`, `users.user.deactivated`). Not built: frontend screens, env prefix overrides, the disabled-endpoint notification, and the two § 17 tests that need a first real provider (DB-80 to DB-83).
 Signed `timestamp.body`, SSRF guard at write **and** send, no redirects, 4xx permanent, backoff, breaker, delivery
 log with redeliver and send-test, emitted through the outbox; inbound verification with DB idempotency.
 

@@ -10,6 +10,8 @@ export interface PermissionCodes {
   "core.audit.export": true;
   "core.audit.view": true;
   "core.health.view": true;
+  "core.webhooks.manage": true;
+  "core.webhooks.view": true;
   "rbac.permissions.view": true;
   "rbac.roles.assign": true;
   "rbac.roles.create": true;
@@ -39,6 +41,8 @@ export const CORE_PERMISSIONS = [
   "core.audit.export",
   "core.audit.view",
   "core.health.view",
+  "core.webhooks.manage",
+  "core.webhooks.view",
   "rbac.permissions.view",
   "rbac.roles.assign",
   "rbac.roles.create",

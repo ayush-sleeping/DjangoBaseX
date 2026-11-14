@@ -11,11 +11,19 @@
   "platform.week_start": "locale",
   "retention.core_activity_log.days": 365,
   "retention.core_activity_log.enabled": false,
+  "retention.core_inbound_webhook_event.days": 90,
   "retention.core_job_run_completed.days": 14,
   "retention.core_job_run_failed.days": 90,
+  "retention.core_webhook_delivery.days": 30,
   "retention.users_login_attempts.days": 90,
   "retention.users_password_reset_tokens.days": 7,
   "retention.users_sessions.days": 30,
   "security.reauth.actions": [],
-  "security.reauth.window_minutes": 15
+  "security.reauth.window_minutes": 15,
+  "webhooks.delivery.allow_http": false,
+  "webhooks.delivery.breaker_threshold": 10,
+  "webhooks.delivery.default_timeout_seconds": 10,
+  "webhooks.delivery.max_attempts": 5,
+  "webhooks.delivery.rotation_overlap_hours": 24,
+  "webhooks.inbound.timestamp_tolerance_seconds": 300
 }

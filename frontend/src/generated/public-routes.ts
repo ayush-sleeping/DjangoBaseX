@@ -8,6 +8,7 @@ export const PUBLIC_ROUTES = {
   "core:health": "Liveness alias (/api/health/): the URL existing probes point at. No I/O.",
   "core:health-live": "Liveness for the container restart policy. No I/O, no identity.",
   "core:health-ready": "Readiness for the container healthcheck and the load balancer: database and cache, named from a closed set on failure, never exception text (OBSERVABILITY § 6).",
+  "core:inbound-webhook": "Third-party callbacks carry no session. Authenticated by the provider's signature over the raw body, checked first with the secret the opaque ingress token selects; fails closed, deduplicated only after verification, throttled per address (§ 17).",
   "core:public-config": "The product's display name and tagline, which the sign-in page shows before anyone signs in. Public by nature; no user data, no boot identity (CONFIGURATION.md § 7).",
   "schema": "OpenAPI document: describes the API surface, holds no data. To be served only when DEBUG or SCHEMA_PUBLIC (AUTH_BLUEPRINT.md § 9.2).",
   "swagger-ui": "Docs UI over the schema. Same condition as the schema.",
