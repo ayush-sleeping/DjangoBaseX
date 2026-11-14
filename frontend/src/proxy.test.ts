@@ -60,6 +60,8 @@ describe("proxy: the session marker, not a credential, decides page navigations"
     expect(unstable_doesMiddlewareMatch({ config, nextConfig, url: "/api/me/bootstrap/" })).toBe(false);
     expect(unstable_doesMiddlewareMatch({ config, nextConfig, url: "/_next/static/chunk.js" })).toBe(false);
     expect(unstable_doesMiddlewareMatch({ config, nextConfig, url: "/favicon.ico" })).toBe(false);
+    // /fe/ route handlers authenticate themselves (shared secret): never redirected to sign-in.
+    expect(unstable_doesMiddlewareMatch({ config, nextConfig, url: "/fe/revalidate/" })).toBe(false);
   });
 });
 

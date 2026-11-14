@@ -5,6 +5,7 @@ import { getIdentity } from "@/core/lib/identity";
 import { brandCss } from "@/core/lib/security/brand";
 import { Providers } from "@/core/providers/Providers";
 import { ThemeScript } from "@/core/theme/ThemeScript";
+import { TitleSync } from "@/core/theme/TitleSync";
 
 import "./globals.css";
 
@@ -34,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // The platform's locale (and timezone), from the same cached public config as the product name:
   // <html lang> and signed-out formatting follow it; a signed-in user's own comes from bootstrap.
-  const { locale, timezone, brand } = await getIdentity();
+  const { locale, timezone, brand, product_name } = await getIdentity();
   // The per-request CSP nonce (src/proxy.ts). Reading it makes every page dynamic, which a nonce
   // requires: Next tags its own scripts from the request's CSP header, and we tag ours.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
@@ -52,6 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {brandStyles ? <style>{brandStyles}</style> : null}
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <TitleSync productName={product_name} />
         <Providers platform={{ locale, timezone }}>{children}</Providers>
       </body>
     </html>
