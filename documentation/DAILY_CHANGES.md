@@ -26,6 +26,30 @@ Newest first.
 
 ## 2026-11-14
 
+### Docs plan phase 2: the standards set — one short hub per dimension
+**What:** nine new docs at the top of `documentation/`, each ≤ ~125 lines with a `Status · checked` line,
+every rule written as Rule · Gold-standard file · Anti-pattern · Check, linking the deep `system-design/`
+specs by section instead of copying them:
+- `DOMAIN.md`: 31 platform concepts → the one module that owns each; login, job and outbox flows step → file.
+- `ARCHITECTURE.md`: overview diagram (every edge says why), layers, dependency rule, 9 "add a new X" recipes.
+- `CODE_STANDARDS.md`, `UI_STANDARDS.md`: gold-standard files and pages (the Users module), the component kit,
+  every page state, tokens, breakpoints, accessibility, i18n.
+- `TESTING.md`: the gate, what each change type must test, what each architecture test guarantees, what
+  SQLite does not prove. Replaces `planning/TESTING_STRATEGY.md` (deleted — tests exist now, so this is
+  reality, not intent).
+- `SECURITY.md`, `PRODUCTION.md` (diagnosing a running instance), `RELEASE.md` (releasing the core),
+  `DEFINITION_OF_DONE.md` (14-line scorecard), `system-design/TRAPS.md` (34 incidents from this repo).
+
+**Why:** the deep specs are 800–2,400 lines each; an agent needs the one rule, the one file to copy and the
+one check, then a link. Without a gold-standard file, the second way of doing a thing appears.
+**Files:** the ten docs above; links repointed from `TESTING_STRATEGY.md` in `README.md`,
+`documentation/INDEX.md`, `documentation/planning/BUILD_ORDER.md`,
+`documentation/system-design/ENGINEERING_PRACTICES.md`.
+**Verification:** a script resolved every relative link and every backticked repo path in the new docs — 0
+broken; identifiers spot-checked with `rg`/`find` (one wrong path fixed, one class name fixed).
+**Notes:** found while writing — `eslint.config.mjs`'s `storage` ban points at `src/core/lib/storage/`, which
+does not exist; no test asserts a scoped detail lookup answers 404; `/verify` omits `npm test`.
+
 ### Docs plan phase 1: PURPOSE and INVARIANTS — the two docs every session reads first
 **What:**
 - `VISION.md` renamed `PURPOSE.md`; content kept, template sections added (problem it solves, where it sits,

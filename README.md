@@ -278,7 +278,7 @@ Browser ──► Next.js 16 (App Router)  ──►  Django 5.2 + DRF  ──�
 ```
 
 Every boundary above is enforced by a test rather than by convention — see
-[`documentation/planning/TESTING_STRATEGY.md`](documentation/planning/TESTING_STRATEGY.md).
+[`documentation/TESTING.md`](documentation/TESTING.md).
 
 <p align="right"><a href="#top"><img src="https://img.shields.io/badge/-Back%20to%20Top-092E20?style=for-the-badge" /></a></p>
 

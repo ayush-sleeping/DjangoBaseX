@@ -336,7 +336,7 @@ hits `/api/health/`. `cd frontend && npm run typecheck` passes.
 Both deliberate breaks fail with a readable message. Removing `core:health` from the ledger reports
 `GET /api/health/ [core:health] -> 200`. Two `0002` migrations report
 `users: 0002_probe_branch_a, 0002_probe_branch_b`.
-In `backend/tests/architecture/`, per [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) § "The four tests":
+In `backend/tests/architecture/`, per [`TESTING.md`](../TESTING.md) § "The four tests":
 
 - `test_route_enforcement.py` — walk Django's URL resolver for **every** route, call each
   unauthenticated, fail on anything that is not 401/403. **A 404 counts as a failure** — it means the

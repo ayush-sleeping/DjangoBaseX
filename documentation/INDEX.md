@@ -20,7 +20,7 @@ your task below, read the **Start Here** file, and stop.
 | **Understand the core + plugin architecture** | [`planning/CORE_ARCHITECTURE_PLAN.md`](planning/CORE_ARCHITECTURE_PLAN.md) |
 | **Why the auth model is cookie JWT (decided)** | [`adr/0009-jwt-in-httponly-cookies.md`](adr/0009-jwt-in-httponly-cookies.md) — reasoning in [`planning/AUTH_RND.md`](planning/AUTH_RND.md) |
 | **Understand what auth/RBAC designs get wrong** | [`system-design/AUTH_FAILURE_MODES.md`](system-design/AUTH_FAILURE_MODES.md) — the failure catalogue + design checklist |
-| **Set up tests and CI** | [`planning/TESTING_STRATEGY.md`](planning/TESTING_STRATEGY.md) |
+| **Set up tests and CI** | [`TESTING.md`](TESTING.md) |
 | **Understand what this is FOR — read this first** | [`PURPOSE.md`](PURPOSE.md) |
 | **See every capability a strong base must have — the master map** | [`planning/PLATFORM_BLUEPRINT.md`](planning/PLATFORM_BLUEPRINT.md) |
 | **Make something configurable / avoid hard-coding a value** | [`system-design/CONFIGURATION.md`](system-design/CONFIGURATION.md) |
