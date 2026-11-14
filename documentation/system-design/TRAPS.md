@@ -28,7 +28,7 @@
 | A production-like boot on `memory://` broker | Jobs published, nothing consumes | `dbx.jobs.E015` refuses it | DAILY_CHANGES 2026-11-06 (7.1) |
 | A plugin field shares a name with a core enum field (`status`, `scope`) | Installing the plugin fails `test_every_committed_contract_is_current`: drf-spectacular renamed core's `StatusEnum` in `openapi.json` | Pin core's enum names in `SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`; add any new core choice field there | BUILD_ORDER 10.1 F3 |
 | A gap-tolerant numbering series in a `django_db` test | `database table is locked` on every create, on in-memory SQLite: `reserve()` writes on its own connection while the test's transaction holds the lock | Use a `real_db`-style fixture (no wrapping transaction, delete your counter rows) as `tests/test_numbering.py` does, or a gapless series | BUILD_ORDER 10.1 F2 |
-| A core file changed without regenerating `core.manifest.json` | The `core-guard` workflow fails on push while the § 2 gate and the CI workflow are green (it is not in the local gate) | `git worktree add --detach <scratch> HEAD`, then `python3 scripts/core_doctor.py --write` there (it hashes the working tree), copy the manifest back; `--verify` exits 1 if stale | 2026-11-14 push of 10.1 |
+| A core file changed without regenerating `core.manifest.json` | The `core-guard` workflow fails on push while the § 2 gate and the CI workflow are green (it was not in the local gate until 2026-11-14; now `AGENTS.md` § 2) | `git worktree add --detach <scratch> HEAD`, then `python3 scripts/core_doctor.py --write` there (it hashes the working tree), copy the manifest back; `--verify` exits 1 if stale | 2026-11-14 push of 10.1 |
 
 ## Frontend
 

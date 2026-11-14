@@ -117,6 +117,7 @@ cd frontend && npm run typecheck                         # next typegen && tsc -
 cd frontend && npm test                                  # vitest
 
 python3 .claude/hooks/test_agent_guard.py                # agent tooling — when .claude/hooks/ changed
+python3 scripts/core_doctor.py --verify                  # core manifest — when a core file changed (core-guard CI)
 ```
 
 - **`makemigrations --check --dry-run` is not optional after a model change.**

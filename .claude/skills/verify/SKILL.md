@@ -24,6 +24,8 @@ ever disagree, `AGENTS.md` wins. Fix this file.
      needs it installed and the suite rerun: CI does both (`examples/plugins/notes/README.md`).
    - Anything under `frontend/`: `npm run lint`, `npm run typecheck` and `npm test`, from `frontend/`.
    - Anything under `.claude/hooks/`: `python3 .claude/hooks/test_agent_guard.py`.
+   - Any core file (`python3 scripts/core_doctor.py --list-core` lists them): `python3 scripts/core_doctor.py
+     --verify`. If stale, regenerate from a clean detached worktree of HEAD (`TRAPS.md`), never the shared tree.
    - Documentation only: no code gate. Check that every link you added resolves and every path you cite exists.
 2. **Run each command separately** so that one failure doesn't hide the next.
 3. **Do not fix and re-run silently.** If a check fails, show the failing output, fix it, re-run, and report

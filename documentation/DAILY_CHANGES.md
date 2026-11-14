@@ -26,6 +26,12 @@ Newest first.
 
 ## 2026-11-14
 
+### The core-manifest check joins the local gate
+**What:** `python3 scripts/core_doctor.py --verify` added to the `AGENTS.md` § 2 gate (owner-confirmed protected edit) and to the `/verify` procedure.
+**Why:** the 10.1 push failed the `core-guard` workflow because no local check read `core.manifest.json`; the gate and the CI workflow were green.
+**Files:** `AGENTS.md`, `.claude/skills/verify/SKILL.md`, `documentation/system-design/TRAPS.md`, `documentation/DAILY_CHANGES.md`.
+**Verification:** `core_doctor.py --verify` exit 0; `.claude/hooks/test_agent_guard.py` exit 0 (it parses `AGENTS.md`); doc-link tests passed.
+
 ### BUILD_ORDER 10.1 done: PostgreSQL run, the merge path proven locally, F8 fixed
 **What:** the suite on PostgreSQL 16 (throwaway container), and a product cloned at the pre-10.1 core, put through the NEW_PROJECT.md checklist, then merged with `core/main`. Recorded in `planning/SECOND_PRODUCT.md` § The merge path; new finding F8.
 **Why:** 10.1's last unproven part was whether a product built from the core can take an update with `git merge`.
