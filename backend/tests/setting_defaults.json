@@ -9,6 +9,13 @@
   "platform.time_style": "locale",
   "platform.timezone": "UTC",
   "platform.week_start": "locale",
+  "retention.core_activity_log.days": 365,
+  "retention.core_activity_log.enabled": false,
+  "retention.core_job_run_completed.days": 14,
+  "retention.core_job_run_failed.days": 90,
+  "retention.users_login_attempts.days": 90,
+  "retention.users_password_reset_tokens.days": 7,
+  "retention.users_sessions.days": 30,
   "security.reauth.actions": [],
   "security.reauth.window_minutes": 15
 }

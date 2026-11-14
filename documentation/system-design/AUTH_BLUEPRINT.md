@@ -1915,7 +1915,7 @@ PASSWORD_HASHERS = [
 | `EMAIL_BACKEND` / `DEFAULT_FROM_EMAIL` | console / — | Reset and invitation delivery (Ch. 18) |
 | `FRONTEND_BASE_URL` | `http://localhost:3000` | Where emailed links point. **Never taken from the `Host` header** |
 | `MAX_SESSIONS_PER_USER` | `10` | Oldest is revoked past the cap (Ch. 19.2) |
-| `LOGIN_ATTEMPT_RETENTION_DAYS` | `90` | Used by `auth_cleanup` |
+| ~~`LOGIN_ATTEMPT_RETENTION_DAYS`~~ | — | Removed in 7.5: the window is the runtime setting `retention.users_login_attempts.days` (`core/retention`) |
 
 **Per-product cookie names** — `dbx_access` derives from a slug setting, so two products on sibling
 subdomains do not overwrite each other's cookies. It is exactly the kind of detail a boilerplate

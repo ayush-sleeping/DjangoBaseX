@@ -865,7 +865,7 @@ one test recipient.
 **Done when:** a request to a private address is refused before connecting; in development a non-allow-listed
 POST gets 423 and no mail leaves the machine except to the test recipient.
 
-### 7.5 — The retention engine ⬜
+### 7.5 — The retention engine ✅
 *Includes (from 7.2):* `core_job_run` as a retention policy (completed ~14 days, failed ~90, with a row cap). It has no
 retention until then and grows fastest when something is wrong.
 `registry.retention` policies with age **and** row caps, batched deletes, opt-in for evidence tables, floors,
@@ -873,6 +873,8 @@ retention until then and grows fastest when something is wrong.
 
 **Done when:** `--dry-run` reports counts and deletes nothing; a retention value of `0` is clamped to the floor; the
 audit log is untouched unless named explicitly.
+
+*Proved by* (`backend/tests/core/test_retention.py`): `test_dry_run_deletes_nothing_and_reports_what_the_real_run_then_deletes`; `test_a_raw_zero_reaching_the_engine_is_clamped_to_the_floor_with_a_warning` (and `test_zero_and_negative_are_refused_at_save`); `test_the_audit_log_is_untouched_by_the_scheduled_run_and_the_cli_without_the_flag`.
 
 ### 7.6 — Webhooks, outbound and inbound ⬜
 Signed `timestamp.body`, SSRF guard at write **and** send, no redirects, 4xx permanent, backoff, breaker, delivery

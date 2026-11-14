@@ -137,6 +137,7 @@ def test_the_command_prints_the_diff():
     assert out.getvalue().splitlines() == [
         "created core.outbox_drain",
         "created core.outbox_recover",
+        "created core.retention",
         "created users.auth_cleanup",
         "schedules already match the registry",
     ]

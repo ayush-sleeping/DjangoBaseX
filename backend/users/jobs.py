@@ -23,9 +23,7 @@ AUTH_CLEANUP = JobSpec(
 
 
 def auth_cleanup(ctx: JobContext) -> int:
-    from users.management.commands.auth_cleanup import purge_expired
+    from core.retention import engine
+    from core.retention.jobs import log_results
 
-    deleted = purge_expired(warn=ctx.logger.warning)
-    for table, count in deleted.items():
-        ctx.logger.info("users.auth_cleanup.deleted", extra={"table": table, "count": count})
-    return sum(deleted.values())
+    return log_results(ctx, engine.run(owner="users", scheduled=True))

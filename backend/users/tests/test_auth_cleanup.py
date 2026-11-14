@@ -1,5 +1,8 @@
 """manage.py auth_cleanup: retention for the auth tables (AUTH_BLUEPRINT § 19.2, BUILD_ORDER 1.7).
 
+Since 7.5 the command is a caller of the retention engine; batching, floors and clamping are proved
+in tests/core/test_retention.py. What stays here is WHAT the auth policies purge.
+
 Boundaries use a one-hour margin either side of the cutoff: the test's clock and the command's are
 a few milliseconds apart, and an hour is far from both.
 """
@@ -11,9 +14,11 @@ from io import StringIO
 
 import pytest
 from django.apps import apps
-from django.core.management import CommandError, call_command
+from django.core.management import call_command
 from django.utils import timezone
 
+from core.models import ActivityLog
+from core.settings_service import get_setting
 from tests.factories import UserFactory
 from users.models import LoginAttempt, UserSession
 from users.models.password_reset import PasswordResetToken
@@ -66,11 +71,13 @@ def exists(row) -> bool:
     return type(row).objects.filter(pk=row.pk).exists()
 
 
-def test_the_settings_are_the_ones_these_tests_assume(settings):
+def test_the_windows_are_the_ones_these_tests_assume():
+    # The code defaults of the registered policies (users/retention.py): the values auth_cleanup
+    # always read from the environment.
     assert (
-        settings.LOGIN_ATTEMPT_RETENTION_DAYS,
-        settings.SESSION_RETENTION_DAYS,
-        settings.PASSWORD_RESET_TOKEN_RETENTION_DAYS,
+        get_setting("retention.users_login_attempts.days"),
+        get_setting("retention.users_sessions.days"),
+        get_setting("retention.users_password_reset_tokens.days"),
     ) == (ATTEMPTS, SESSIONS, TOKENS)
 
 
@@ -190,44 +197,6 @@ def test_a_real_run_prints_one_line_per_table():
     ]
 
 
-# --- Batching -----------------------------------------------------------------------------------
-
-
-def test_small_batches_still_delete_everything_and_count_it_once():
-    for _ in range(5):
-        attempt(ATTEMPTS * DAY + DAY)
-    keep = attempt(timedelta(0))
-    out, _ = cleanup("--batch-size", "2")
-    assert "deleted 5 from users_login_attempt" in out
-    assert list(LoginAttempt.objects.values_list("pk", flat=True)) == [keep.pk]
-
-
-def test_a_batch_size_below_one_is_refused():
-    with pytest.raises(CommandError, match="at least 1"):
-        cleanup("--batch-size", "0")
-
-
-# --- Clamping -----------------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("value", [0, -5])
-def test_a_retention_below_one_day_is_clamped_with_a_warning(settings, value):
-    settings.LOGIN_ATTEMPT_RETENTION_DAYS = value
-    today = attempt(timedelta(hours=12))
-    yesterday = attempt(DAY + HOUR)
-    _, err = cleanup()
-    assert f"LOGIN_ATTEMPT_RETENTION_DAYS={value} is below 1; using 1 day" in err
-    assert exists(today)
-    assert not exists(yesterday)
-
-
-@pytest.mark.parametrize("name", ["SESSION_RETENTION_DAYS", "PASSWORD_RESET_TOKEN_RETENTION_DAYS"])
-def test_every_retention_setting_is_clamped(settings, name):
-    setattr(settings, name, 0)
-    _, err = cleanup("--dry-run")
-    assert f"{name}=0 is below 1" in err
-
-
 # --- Nothing else -------------------------------------------------------------------------------
 
 
@@ -235,7 +204,8 @@ def _row_counts() -> dict[str, int]:
     return {
         model._meta.db_table: model.objects.count()
         for model in apps.get_models()
-        if model._meta.db_table not in CLEANED and model._meta.managed
+        # The engine's own summary row is the one write outside the cleaned tables (and is checked).
+        if model._meta.db_table not in CLEANED | {"core_activity_log"} and model._meta.managed
     }
 
 
@@ -253,3 +223,9 @@ def test_no_other_table_is_touched():
 
     assert _row_counts() == before
     assert exists(old_user)
+    purged = ActivityLog.objects.filter(action="core.retention.purged")
+    assert sorted(purged.values_list("meta__policy", flat=True)) == [
+        "users.login_attempts",
+        "users.password_reset_tokens",
+        "users.sessions",
+    ]

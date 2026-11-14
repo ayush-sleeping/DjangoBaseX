@@ -32,6 +32,12 @@ class UsersConfig(AppConfig):
         from .jobs import AUTH_CLEANUP
 
         registry.jobs.register(AUTH_CLEANUP)
+        from core.retention import register as register_retention
+
+        from .retention import POLICIES as RETENTION_POLICIES
+
+        for retention_policy in RETENTION_POLICIES:
+            register_retention(registry, retention_policy)
         # Navigation is also the route gate (FRONTEND_PLATFORM § 10): every page needs an entry.
         from .navigation import register as register_navigation
 

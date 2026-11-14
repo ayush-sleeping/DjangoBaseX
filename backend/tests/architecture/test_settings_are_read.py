@@ -27,6 +27,9 @@ MACHINERY = {
     # Guards read their own `<key>.mode` setting generically (core.guards.guard_mode); those keys
     # are counted as read below, from the guard catalog, instead of by literal.
     "core/guards.py",
+    # The retention engine reads each policy's own `days_setting` / `enabled_setting`; those keys
+    # are counted as read below, from the policy catalog, instead of by literal.
+    "core/retention/engine.py",
 }
 READERS = {"get_setting", "resolve_setting", "set_value", "reset"}
 
@@ -79,6 +82,11 @@ def test_every_key_read_is_registered_and_every_registered_key_is_read():
             read |= set(field_keys.values())
     # Every registered guard's mode is read by check_guard/guard_mode, by construction.
     read |= {f"{guard.key}.mode" for guard in registry.guards.defs()}
+    # Every registered retention policy's window (and opt-in switch) is read by the engine.
+    for retention in registry.retention.policies():
+        read.add(retention.days_setting)
+        if retention.requires_opt_in:
+            read.add(retention.enabled_setting)
     unread = registered - read
     assert not unread, (
         f"registered settings nothing reads (§ 9.11 — withdraw them or wire the reader): "

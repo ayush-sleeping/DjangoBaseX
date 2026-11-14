@@ -45,6 +45,7 @@ ACTIONS = (
     ("core.lookup.created", "Lookup value added", "info", "settings"),
     ("core.lookup.changed", "Lookup value changed", "info", "settings"),
     ("core.command.ran", "Management command ran", "neutral", "data"),
+    ("core.retention.purged", "Retention removed rows", "warning", "data"),
     ("core.audit.exported", "Audit log exported", "security", "security"),
     ("guard.would_block", "A guard would have blocked this (log-only)", "warning", "security"),
     ("guard.blocked", "A guard blocked this", "danger", "security"),

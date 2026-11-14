@@ -60,9 +60,6 @@ env = environ.Env(
     INVITATION_LIFETIME=(int, 604_800),
     JWT_SIGNING_KEY_FALLBACKS=(list, []),
     MAX_SESSIONS_PER_USER=(int, 10),
-    LOGIN_ATTEMPT_RETENTION_DAYS=(int, 90),
-    SESSION_RETENTION_DAYS=(int, 30),
-    PASSWORD_RESET_TOKEN_RETENTION_DAYS=(int, 7),
     FIELD_ENCRYPTION_KEYS=(list, []),
     MFA_ISSUER=(str, ""),
     MFA_TOKEN_LIFETIME=(int, 300),
@@ -351,10 +348,7 @@ LOCKOUT_THRESHOLD = env("LOCKOUT_THRESHOLD")
 LOCKOUT_WINDOW = env("LOCKOUT_WINDOW")
 LOCKOUT_DURATION = env("LOCKOUT_DURATION")
 PASSWORD_RESET_TOKEN_LIFETIME = env("PASSWORD_RESET_TOKEN_LIFETIME")  # seconds; a link works once
-# Retention for manage.py auth_cleanup (§ 19.2). The audit log is never pruned by it.
-LOGIN_ATTEMPT_RETENTION_DAYS = env("LOGIN_ATTEMPT_RETENTION_DAYS")
-SESSION_RETENTION_DAYS = env("SESSION_RETENTION_DAYS")  # after a session is revoked or expired
-PASSWORD_RESET_TOKEN_RETENTION_DAYS = env("PASSWORD_RESET_TOKEN_RETENTION_DAYS")
+# Retention windows are runtime settings now (`retention.*`, core/retention, BUILD_ORDER 7.5).
 # A new account created by an operator gets a set-your-password link (3 days), not a reset (30 min).
 PASSWORD_SETUP_TOKEN_LIFETIME = env("PASSWORD_SETUP_TOKEN_LIFETIME")
 INVITATION_LIFETIME = env("INVITATION_LIFETIME")  # seconds; 7 days (§ 3.5)

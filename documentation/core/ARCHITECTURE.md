@@ -164,7 +164,6 @@ Stated plainly, because assuming otherwise wastes time. Source of truth: `BUILD_
 
 | Not built | `BUILD_ORDER` |
 |-----------|---------------|
-| Retention engine | 7.5 |
 | Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |
 | Ops alerting | 7.8 |

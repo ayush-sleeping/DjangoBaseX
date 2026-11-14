@@ -707,6 +707,22 @@ storage-failure row left untouched, held row kept. `test_no_foreign_cleaner_in_t
 floor: `retention.<policy>.days`; `retention.core.activity_log.enabled` (default off);
 `retention.batch_size` (5,000); `retention.max_batches` (200); `recycle_bin.retention_days` (§ 7).
 
+**As built (7.5).** `core/registry.py` (`RetentionPolicy`, `RetentionRegistry`, `registry.retention`);
+`core/retention/{__init__,engine,policies,jobs}.py` (`register()` declares the policy and its
+settings together; `cutoff_for`, `run`, `status`); `core/management/commands/retention.py`;
+`users/retention.py` (the three auth policies; `auth_cleanup` and the `users.auth_cleanup` job are
+callers of the engine); the daily job `core.retention` (03:43 UTC, queue `bulk`); audit action
+`core.retention.purged`. Differences from the sketch above: setting keys are three segments, because
+the settings registry allows no more: `retention.<owner>_<name>.days` and
+`retention.core_activity_log.enabled`; `batch_size`/`max_batches` are policy fields (5,000 / 200), not
+settings; floors are users 7 / 7 / 1 days, `core_job_run` 1 / 7, the audit log 90 (default 365); the
+audit log's delete goes past its append-only manager through a plain QuerySet and, on PostgreSQL,
+`SET LOCAL core.retention_purge = 'on'` per batch (the trigger path is untested here: SQLite only).
+`--status` omits last run (a CLI run leaves no job row) and shows `truncated` as "would truncate".
+**Deferred** (TECH_DEBT DB-74 to DB-78): `anonymise` and `storage_fields`, legal hold, `--erase-subject`,
+the System → Data retention screen, the § 6.4 beat-schedule "no other deleter" test, and removing
+the `*_RETENTION_DAYS` environment settings (removed in the same change).
+
 ---
 
 ## 7. Soft delete and the recycle bin — **Tier 2 · Core**

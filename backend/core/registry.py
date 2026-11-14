@@ -1128,6 +1128,151 @@ class JobRegistry(_Catalog):
         return tuple(self._specs[k] for k in sorted(self._specs))
 
 
+# --- Retention policies (BUILD_ORDER 7.5; DATA_LIFECYCLE.md § 6) --------------------------------
+
+
+RETENTION_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
+RETENTION_DATA_CLASSES = ("security_log", "operational_log", "personal_data", "evidence", "content")
+# A cap on these is an attacker-controllable delete: enough noise rolls your own tracks off the end.
+RETENTION_UNCAPPABLE = frozenset({"evidence", "security_log"})
+RETENTION_STRATEGIES = ("delete",)  # "anonymise" is deferred (TECH_DEBT)
+
+
+@dataclass(frozen=True)
+class RetentionPolicy:
+    """
+    What may be deleted, how old, and how many (DATA_LIFECYCLE.md § 6.1). Registering it also
+    registers its window as the setting `retention.<key with . as _>.days` (code default
+    `max_age_days`, bounded below by the floor `min_age_days`) and, when `requires_opt_in`, the
+    switch `retention.<key>.enabled`. `filter` narrows the population: a Q, or a callable(now) -> Q.
+    `age_q`, when set, replaces the plain `timestamp_field < cutoff` test: callable(cutoff, now) ->
+    Q (a session is dead by two different clocks). Both are typed loosely: this module stays
+    standard library only.
+    """
+
+    key: str  # "<owner>.<name>": "users.login_attempts"
+    model: str  # "app_label.ModelName"
+    timestamp_field: str
+    description: str
+    data_class: str
+    max_age_days: int  # the code default of the window
+    min_age_days: int  # the floor: a smaller value is refused at save and clamped by the engine
+    strategy: str = "delete"
+    filter: object = None
+    age_q: object = None
+    max_rows: int | None = None  # cap on what survives the age cut; never on evidence/security_log
+    requires_opt_in: bool = False
+    batch_size: int = 5000
+    max_batches: int = 200
+
+    @property
+    def owner_module(self) -> str:
+        return self.key.split(".", 1)[0]
+
+    @property
+    def days_setting(self) -> str:
+        return f"retention.{self.key.replace('.', '_')}.days"
+
+    @property
+    def enabled_setting(self) -> str:
+        return f"retention.{self.key.replace('.', '_')}.enabled"
+
+
+class RetentionRegistry(_Catalog):
+    """Registered retention policies. Each registers its window (and opt-in switch) into `settings`,
+    the same Registry's catalog, in the same all-or-nothing step: no policy without its setting."""
+
+    def __init__(self, settings: SettingRegistry) -> None:
+        super().__init__()
+        self._settings = settings
+        self._policies: dict[str, RetentionPolicy] = {}
+
+    @staticmethod
+    def _problems(policy: RetentionPolicy) -> list[str]:
+        def positive_int(value: object) -> bool:
+            return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+        out = []
+        if not isinstance(policy.key, str) or not RETENTION_KEY_PATTERN.match(policy.key):
+            return [f"key {policy.key!r} is not <owner>.<name> (lowercase, digits, _)"]
+        if not isinstance(policy.model, str) or policy.model.count(".") != 1:
+            out.append("model must be 'app_label.ModelName'")
+        if not isinstance(policy.timestamp_field, str) or not policy.timestamp_field.isidentifier():
+            out.append("timestamp_field must be a field name")
+        if not isinstance(policy.description, str) or not policy.description.strip():
+            out.append("has an empty description")
+        if policy.data_class not in RETENTION_DATA_CLASSES:
+            out.append(f"data_class must be one of {RETENTION_DATA_CLASSES}")
+        if policy.strategy not in RETENTION_STRATEGIES:
+            out.append(f"strategy must be one of {RETENTION_STRATEGIES} (anonymise is not built)")
+        if not positive_int(policy.min_age_days):
+            out.append("min_age_days (the floor) must be a whole number of days, at least 1")
+        elif not positive_int(policy.max_age_days) or policy.max_age_days < policy.min_age_days:
+            out.append("max_age_days (the default) must be a whole number, at least min_age_days")
+        for name in ("filter", "age_q"):
+            value = getattr(policy, name)
+            if name == "age_q" and value is not None and not callable(value):
+                out.append("age_q must be a callable(cutoff, now) -> Q")
+            if (
+                name == "filter"
+                and value is not None
+                and not (callable(value) or hasattr(value, "resolve_expression"))
+            ):
+                out.append("filter must be a Q or a callable(now) -> Q")
+        if policy.max_rows is not None:
+            if not positive_int(policy.max_rows):
+                out.append("max_rows must be a positive whole number or None")
+            if policy.data_class in RETENTION_UNCAPPABLE:
+                out.append(
+                    f"max_rows is refused for data_class {policy.data_class!r}: a row cap on "
+                    "evidence or a security log is a delete an attacker can trigger"
+                )
+        if policy.data_class == "evidence" and not policy.requires_opt_in:
+            out.append("evidence is opt-in: set requires_opt_in=True")
+        for name in ("batch_size", "max_batches"):
+            if not positive_int(getattr(policy, name)):
+                out.append(f"{name} must be a positive whole number")
+        return out
+
+    def register(self, policy: RetentionPolicy, definitions: list) -> None:
+        """`definitions`: the policy's SettingDefs, built by core.retention.register() (this module
+        stays standard library only). They must be exactly its days setting, plus its enabled
+        switch when it is opt-in."""
+        owner = _caller_module()
+        with self._lock:
+            if not isinstance(policy, RetentionPolicy):
+                raise RegistryError(f"expected a RetentionPolicy, got {type(policy).__name__}")
+            name = f"retention policy {policy.key!r}"
+            self._refuse_if_sealed(name)
+            problems = self._problems(policy)
+            if problems:
+                raise RegistryError(f"{name}: {'; '.join(problems)}")
+            if policy.key in self._policies:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[policy.key]}; "
+                    f"registered again by {owner}"
+                )
+            expected = [policy.days_setting] + ([policy.enabled_setting] * policy.requires_opt_in)
+            if [getattr(d, "key", None) for d in definitions] != expected:
+                raise RegistryError(f"{name}: its settings must be exactly {expected}")
+            self._settings._add(definitions, owner)  # noqa: SLF001 — all or nothing, then ours
+            self._policies[policy.key] = policy
+            self._owner_of[policy.key] = owner
+
+    def __contains__(self, key: str) -> bool:
+        self.seal()
+        return key in self._policies
+
+    def get(self, key: str) -> RetentionPolicy:
+        self.seal()
+        return self._policies[key]
+
+    def policies(self) -> tuple[RetentionPolicy, ...]:
+        """In registration order: it is the delete order (a parent table is never emptied first)."""
+        self.seal()
+        return tuple(self._policies.values())
+
+
 # --- Findings, outbox topics, reconcilers (BUILD_ORDER 7.3) -------------------------------------
 
 
@@ -1578,6 +1723,7 @@ class Registry:
         self.lookups = LookupRegistry()
         self.guards = GuardRegistry()
         self.jobs = JobRegistry()
+        self.retention = RetentionRegistry(self.settings)
         self.doctors = DoctorRegistry()
         self.finding_kinds = FindingKindRegistry()
         self.outbox_topics = OutboxTopicRegistry()

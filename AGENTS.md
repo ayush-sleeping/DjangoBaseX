@@ -47,9 +47,9 @@ branch and next task — still verify.)
 **Know what exists.** Built (BUILD_ORDER ✅): auth (ADR-0009), RBAC, Users (the reference module to copy), the
 `project/` split (ADR-0010), plugins (`scripts/plugins.py`, example `examples/plugins/notes`), the typed settings
 registry, flags, lookups, identity, request id + scrubber, health rungs, `doctor`, encryption, audit, money, Celery
-jobs, outbox + reconcilers + locks, safe outbound HTTP + the non-production guard (`core/http/`, `core/mail/`), the
+jobs, outbox + reconcilers + locks, the retention engine (`core/retention/`), safe outbound HTTP + the non-production guard (`core/http/`, `core/mail/`), the
 frontend platform (data layer, shell, design system, i18n, per-request nonce CSP, runtime brand colours), dev Docker
-Compose. **Not built:** BUILD_ORDER 7.5–7.8, 8.5b, Phase 9, 10.1; Sentry wiring (ADR-0013); production Docker. Check
+Compose. **Not built:** BUILD_ORDER 7.6–7.8, 8.5b, Phase 9, 10.1; Sentry wiring (ADR-0013); production Docker. Check
 [`ROADMAP.md`](documentation/planning/ROADMAP.md) / [`BUILD_ORDER.md`](documentation/planning/BUILD_ORDER.md) before assuming.
 
 **With no specific task**, start at the lowest-numbered unfinished item in `BUILD_ORDER.md` — the executable

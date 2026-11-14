@@ -30,6 +30,9 @@ class CoreConfig(AppConfig):
 
         register_brand_settings(registry)
         register_core_actions(registry)
+        from .retention.policies import register_core_retention
+
+        register_core_retention(registry)
         _register_jobs_monitoring(registry)
         from .outbox.jobs import register as register_outbox
 

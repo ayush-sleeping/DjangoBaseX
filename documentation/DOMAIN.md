@@ -26,6 +26,7 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | **Project identity** | One product name derives slug, cookie prefix and tagline | `backend/core/identity.py` | `CONFIGURATION.md` § 7 |
 | **Audit event** | An append-only `ActivityLog` row: actor, target, action key (`module.entity.verb`), scrubbed changes | `backend/core/audit.py`, actions in `backend/core/audit_actions.py` | `DATA_LIFECYCLE.md` § 4 |
 | **Job** | A `JobSpec` (name, queue, schedule, flags) pointing at `def run(ctx: JobContext) -> int` | `backend/core/registry.py` (spec), `backend/core/jobs/` | `JOBS_AND_INTEGRATIONS.md` § 1 |
+| **Retention policy** | A registered `RetentionPolicy` (model, timestamp, optional filter and row cap, data class, floor, opt-in); one engine deletes by it, in batches, for the daily job and `manage.py retention`. Its window is the setting `retention.<key>.days` (empty keeps forever; below the floor is refused); the audit log is opt-in | `backend/core/retention/` (engine), `backend/core/registry.py` (spec), `backend/users/retention.py` | `DATA_LIFECYCLE.md` § 6 |
 | **Job run** | One `JobRun` row per execution, written from Celery signals, never by the job | `backend/core/jobs/recorder.py` | `JOBS_AND_INTEGRATIONS.md` § 7 |
 | **Outbox row** | An `OutboxMessage` written in the caller's transaction, then leased, sent and settled; the only way to send a side effect | `backend/core/outbox/service.py` | `JOBS_AND_INTEGRATIONS.md` § 12 |
 | **Reconciler** | A `Reconciler` that re-examines rows stuck in a pending state (e.g. expired leases) and fixes or raises a finding | `backend/core/jobs/reconciler.py`, `backend/core/outbox/recovery.py` | `JOBS_AND_INTEGRATIONS.md` § 11 |
@@ -81,7 +82,6 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 
 | Concept | BUILD_ORDER item |
 |---------|------------------|
-| Retention engine | 7.5 |
 | Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |
 | Ops alerting | 7.8 |

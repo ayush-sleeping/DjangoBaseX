@@ -33,7 +33,7 @@ Built by accumulation, one module at a time.
 | Observability | Request ids, JSON logs, one scrubber, three-rung health, metrics, error tracking — [`OBSERVABILITY.md`](../system-design/OBSERVABILITY.md) | ✅ request ids, logs, scrubber, health rungs (6.1, 6.2) |
 | Jobs & integrations | Job monitor, outbox, reconcilers, webhooks, safe HTTP, encrypted credentials — [`JOBS_AND_INTEGRATIONS.md`](../system-design/JOBS_AND_INTEGRATIONS.md) | 🔄 job monitor, outbox, reconcilers (7.1–7.3), safe HTTP + non-production guard (7.4), encryption service (6.3); webhooks ⬜ (7.6) |
 | Notifications & alerting | Purposes, channels, in-app store, ops alerting — [`NOTIFICATIONS_AND_ALERTING.md`](../system-design/NOTIFICATIONS_AND_ALERTING.md) | ⬜ |
-| Data lifecycle | Audit engine, retention, soft delete, provenance, scoping — [`DATA_LIFECYCLE.md`](../system-design/DATA_LIFECYCLE.md) | 🔄 audit engine (6.4); retention ⬜ (7.5); rest ⬜ (9.3) |
+| Data lifecycle | Audit engine, retention, soft delete, provenance, scoping — [`DATA_LIFECYCLE.md`](../system-design/DATA_LIFECYCLE.md) | 🔄 audit engine (6.4); retention engine (7.5); rest ⬜ (9.3) |
 | Domain primitives | Money, sequences, state machines, bulk, import/export — [`DOMAIN_PRIMITIVES.md`](../system-design/DOMAIN_PRIMITIVES.md) | 🔄 money (6.5); rest ⬜ (9.4) |
 | API platform | List pipeline, error catalogue, machine callers, contracts, files — [`API_PLATFORM.md`](../system-design/API_PLATFORM.md) | 🔄 typed errors and contract generation (8.1, 8.4); rest ⬜ (9.2) |
 | Frontend platform | Transport, data layer, module contract, nav-as-gate, tokens, i18n — [`FRONTEND_PLATFORM.md`](../system-design/FRONTEND_PLATFORM.md) | ✅ transport, data layer, nav-as-gate, design system, i18n (8.1–8.4); CSP and branding ⬜ (8.5) |
