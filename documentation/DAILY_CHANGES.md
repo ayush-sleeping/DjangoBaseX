@@ -26,6 +26,34 @@ Newest first.
 
 ## 2026-11-14
 
+### Docs plan phase 5: proved with the gate and a fresh agent; friction fixed
+**What:**
+- Ran the full § 2 gate on the branch (results below) and a link check over every Markdown file.
+- **Fresh-agent test:** a new agent with only the docs planned one past bug (the `/api/me/navigation/` 500) and
+  one small feature (invitation lifetime as a runtime setting). It reached the bug's cause in ~5 reads via the
+  Need → read table and `TRAPS.md`. Its friction list drove these fixes:
+  - `CONFIGURATION.md`: § 9.11 test paths corrected (`backend/tests/…`, not `tests/core/…`); § 6
+    (`core/env_schema.py`) and § 9.14's `test_moved_settings_not_read` marked **not built**, with the steps to
+    follow until they are.
+  - `ARCHITECTURE.md` runtime-setting recipe: moving an existing env value, and that `settings.py`/`.env.example`
+    are protected.
+  - `PRODUCTION.md`: a triage row for "menu empty / navigation 5xx". `TRAPS.md`: `dbx.E009` surfaces only in
+    `manage.py check`/`runserver`. `DOMAIN.md`: an Invitation term naming `INVITATION_LIFETIME`.
+- `planning/DOCS_PLAN.md` marked done.
+
+**Why:** a doc set is proven by someone using it cold, not by its author re-reading it.
+**Files:** `documentation/system-design/CONFIGURATION.md`, `system-design/OBSERVABILITY.md` (a line merged by
+phase 4's edit restored), `system-design/TRAPS.md`, `ARCHITECTURE.md`, `PRODUCTION.md`, `DOMAIN.md`,
+`planning/DOCS_PLAN.md`.
+**Verification:** backend `ruff check` ✅, `ruff format --check` ✅, `manage.py check` (test settings — the
+worktree has no `.env`) ✅ no issues, `makemigrations --check --dry-run` ✅ no changes, `pytest` ✅ 1651 passed / 7
+skipped (no plugin installed), `ruff` on `scripts/` and `examples/` ✅; frontend `npm run lint` ✅,
+`npm run typecheck` ✅, `npm test` ✅ 292/292; `test_agent_guard.py` ✅ 18. Not run: `npm run build`, the
+PostgreSQL-only tests (CI runs them).
+**Notes:** left for later, recorded here rather than fixed: `PURPOSE.md` is 202 lines of mandatory reading — its
+first two sections carry the tie-breakers; `INDEX.md` and the AGENTS Need → read table are two routers by design
+(short and full).
+
 ### Docs plan phase 4: the index, and ~85 stale claims in the older docs fixed
 **What:**
 - `INDEX.md` opens with "Start here": the eleven hubs plus `TRAPS.md`, each with what it answers and when to read it.

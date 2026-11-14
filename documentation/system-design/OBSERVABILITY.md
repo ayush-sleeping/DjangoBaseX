@@ -1316,4 +1316,4 @@ growth tables).
 
 ## Doc accuracy
 
-> Written 2026-09-29 from research across several production codebases. Partly implemented since — see the status line at the top (checked 2026-11-14).> against the code before relying on any section.
+> Written 2026-09-29 from research across several production codebases. Partly implemented since — see the status line at the top (checked 2026-11-14).

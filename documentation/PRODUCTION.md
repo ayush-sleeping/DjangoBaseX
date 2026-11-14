@@ -64,6 +64,7 @@ Not built: `permissions`, `migrations`, `settings`, `observability`, `connection
 | Login fails | `system-design/AUTH_FAILURE_MODES.md`; lockout/throttle live in Redis (`/api/health/ready/` cache); `TRUSTED_PROXY_COUNT` wrong behind a proxy locks everyone out (`DEPLOYMENT.md` § 1); log lines for the request id |
 | 403 on a page/API | The permission code in the response; `registry` default-deny (`SECURITY.md`, `RBAC_DESIGN.md`); `doctor --only dataplane` for a missing administrator role |
 | Blank page | Browser console and `request_id`; backend 5xx for `/api/me/bootstrap/`; `TRAPS.md` Frontend rows; `NEXT_PUBLIC_API_URL` is baked at build time |
+| Menu empty / `/api/me/navigation/` 5xx | `manage.py check` for `dbx.E009` (a nav item gated on a permission no app declares — the navigation registry fails closed for everyone); the most recently installed plugin's `wiring.py`; [`TRAPS.md`](system-design/TRAPS.md) Backend |
 | Job did not run | `doctor --only queue,schedule`; `/api/health/components/` `jobs`; is a worker consuming that queue and exactly one beat running (`DEPLOYMENT.md` § 2) |
 | Email not sent | Outbox first: `doctor --only outbox`; then the worker on queue `outbox`; in development mail goes to the console backend |
 | Wrong number | Reproduce with the same role and data; check the figure's formatter and empty/zero handling (`OBSERVABILITY.md` § 11); locale from bootstrap `localization`; then [`TRAPS.md`](system-design/TRAPS.md) |

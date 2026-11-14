@@ -10,6 +10,7 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 |------|------------|---------------|-----------|
 | **User** | The one account model; email is the identity | `backend/users/models/user.py` | [ADR-0008](adr/0008-custom-user-model-email-identity.md) |
 | **Account state** | active · deactivated · superuser · two-factor on (users); pending · accepted · revoked · expired (invitations). Tone is decided once, the frontend renders it | `backend/users/statuses.py` | `FRONTEND_PLATFORM.md` § 13 |
+| **Invitation** | A pending sign-up for an email, with a role; accepted, revoked or expired. Lifetime is env `INVITATION_LIFETIME` (seconds) today | `backend/users/models/invitation.py`, `backend/users/services/invitations.py` | `AUTH_BLUEPRINT.md` |
 | **Session** | One `UserSession` row per issued refresh token — what makes the JWT revocable; the access token carries its id as `sid` | `backend/users/models/session.py`, `backend/users/tokens.py` | [ADR-0009](adr/0009-jwt-in-httponly-cookies.md), `AUTH_BLUEPRINT.md` § 6 |
 | **Session marker** | Non-credential cookie the page guard reads; the access/refresh cookies are never sent on a navigation | `frontend/src/proxy.ts`, `frontend/src/core/lib/session/cookies.ts` | `FRONTEND_PLATFORM.md` § 8 |
 | **Role** | A named bag of permissions, assigned to users (`UserRole`) | `backend/rbac/models.py`, `backend/rbac/services.py` | `RBAC_DESIGN.md` |

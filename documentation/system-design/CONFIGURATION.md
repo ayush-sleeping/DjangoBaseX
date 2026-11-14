@@ -474,6 +474,8 @@ would let the environment being audited weaken its own audit.
 
 ## 6. `validate_env` — the release-image environment validator — **Tier 1 · Core**
 
+> 🔜 **Not built (checked 2026-11-14):** `core/env_schema.py` and `tests/core/test_env_schema.py` do not exist yet; this section is the design.
+
 **What.** A command that compares the environment a release will run with against the declared
 schema, **inside the new image, before it takes traffic**: unknown keys, missing required keys, keys
 missing from `.env.example`, and retired keys still set.
@@ -919,6 +921,8 @@ encoding and treat an unparseable value as "no state".
 
 ### 9.14 Moving a value from env to the registry
 
+> **Built vs planned (checked 2026-11-14):** `core/env_schema.py` (§ 6) and `test_moved_settings_not_read` (§ 18) are **not built**, so steps 2 and 5 cannot be done yet. Until they are: remove the env read from `backend/config/settings.py` and the key from `backend/.env.example` (both protected — ask), drop it from `backend/config/settings_test.py`, replace every `settings.<KEY>` reader with the registry read, and `rg` the old name to prove nothing reads it.
+
 1. Declare the setting with the env value's current default.
 2. Mark the env key `retired=True, moved_to=…` in `core/env_schema.py` (§ 6).
 3. Prefill once from env where it was set (§ 16), never overwriting.
@@ -934,19 +938,19 @@ encoding and treat an unparseable value as "no state".
 bootstrap.
 
 **Enforced by.**
-- `tests/core/test_settings_registry.py` — wrapper round trip for `false`, `0`, `""`, `null`;
+- `backend/tests/test_settings_registry.py` — wrapper round trip for `false`, `0`, `""`, `null`;
   `sync_settings` twice writes nothing; strict coercion table (`"false"` refused for `bool`, `True`
   refused for `int`, floats refused for `decimal`); a row below `min` is clamped on read; resolution
   with the database unavailable returns the code default and increments the fallback metric; an
   unregistered key raises; the cascade honours declared scopes and `is_locked`; every write produces
   one `ActivityLog` row with old and new.
-- `tests/core/test_settings_namespace_guard.py` — the Security endpoint answers `404` for a
+- 🔜 *not built yet:* `tests/core/test_settings_namespace_guard.py` — the Security endpoint answers `404` for a
   `billing.*` key, even for a superuser.
 - `tests/architecture/test_settings_are_read.py` — AST-walks `backend/` (and `frontend/src/` for
   `useSetting("…")`): every registered key is read somewhere other than the settings app, **and** every
   literal key read is registered; dynamic keys fail. Shrink-only baseline
   ([`ENGINEERING_PRACTICES.md`](ENGINEERING_PRACTICES.md)).
-- `tests/core/test_setting_defaults_snapshot.py` — the code defaults match a committed snapshot; a
+- `backend/tests/test_setting_defaults_snapshot.py` — the code defaults match a committed snapshot; a
   change is a reviewed diff.
 - `tests/architecture/test_plugin_conventions.py` — a plugin's keys start with its label.
 

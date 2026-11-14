@@ -79,6 +79,9 @@ Always finish with the gate in `AGENTS.md` § 2 and a `documentation/DAILY_CHANG
 2. `registry.settings.register_group(Cls, prefix=…, module=…, group=…)` in `ready()`.
 3. Read it through `core.settings_service.get_setting`; unread settings fail CI.
 4. Update `backend/tests/setting_defaults.json` and add an `UPGRADING.md` note.
+   **Moving an existing env value** (e.g. `INVITATION_LIFETIME`) instead of adding one: also follow `CONFIGURATION.md` § 9.14 —
+   remove the env read from `backend/config/settings.py` and `backend/.env.example` (**both protected: ask**), drop it from
+   `config/settings_test.py`, switch every `settings.<KEY>` reader to the registry, then `rg` the old name → 0 hits.
 5. Check: `tests/architecture/test_settings_are_read.py`, `tests/test_setting_defaults_snapshot.py`.
 
 **Feature flag** — declaration `FlagDef` in `backend/core/registry.py`; evaluate with `flag_enabled` / `requires_flag` in `backend/core/flags.py`.
