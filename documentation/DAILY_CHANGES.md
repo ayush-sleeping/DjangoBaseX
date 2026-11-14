@@ -26,6 +26,19 @@ Newest first.
 
 ## 2026-11-14
 
+### BUILD_ORDER 7.4 lands on main; the new docs updated to match
+**What:** the 7.4 work (entry under 2026-11-06 below) was finished and reviewed but never committed. Committed on
+`feature/7.4-outbound`, merged with main (8.4c, 8.4d and the docs plan), the two log conflicts kept both sides, and
+the four TECH_DEBT rows it wrote (DB-62–65) moved from main's working tree into its branch. Docs that called 7.4
+planned now describe it: `AGENTS.md` § 0, `INVARIANTS.md` (38, 39), `DOMAIN.md` (outbound purpose, guard, provider
+error), `SECURITY.md` rule 9, `PRODUCTION.md` mail triage, `PURPOSE.md`, `README.md`, `ROADMAP.md`,
+`core/ARCHITECTURE.md`. `core.manifest.json` regenerated.
+**Why:** a built feature described as planned sends the next agent to build it again.
+**Files:** the docs above, `core.manifest.json`.
+**Verification:** each 7.4 done-when clause maps to a test (`test_a_private_address_is_refused_before_connecting`,
+`test_a_non_allow_listed_post_gets_423_and_never_leaves`, `test_every_message_goes_to_the_test_recipient_only`);
+`core_doctor.py --verify` exit 0; full gate on the merged tree in the merge report.
+
 ### Docs plan phase 5: proved with the gate and a fresh agent; friction fixed
 **What:**
 - Ran the full § 2 gate on the branch (results below) and a link check over every Markdown file.
@@ -200,7 +213,6 @@ control that shows the leak. The frontend was not touched, so its gate was not r
   exactly.
 - Deferred: per-purpose and breaker settings, SMTP pinning for a user-configurable host, the chat/SMS test
   destination, and the first production purpose (7.6).
-||||||| 92e3314
 ### BUILD_ORDER 8.4d: per-plugin catalogues, and translations that are present but wrong
 **What** (Dev 2 `djangobasex-bc`; manager review and gate):
 - **Plugin catalogues:**

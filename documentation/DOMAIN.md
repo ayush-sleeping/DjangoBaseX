@@ -38,6 +38,9 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | **Request id / scrubber** | Every request gets an id carried into logs; one scrubber redacts secrets everywhere | `backend/core/observability/request_id.py`, `backend/core/observability/scrub.py` | `OBSERVABILITY.md` §§ 1, 3 |
 | **Encryption** | Fernet keyed per purpose, multi-key rotation; encrypted columns are registered | `backend/core/crypto.py`, `registry.encrypted_fields` | `JOBS_AND_INTEGRATIONS.md` § 25 |
 | **Navigation manifest** | Server-built menu that is also the frontend route gate | `backend/core/navigation.py`, `frontend/src/core/shell/nav/` | `FRONTEND_PLATFORM.md` § 10 |
+| **Outbound HTTP purpose** | A registered `HttpPurpose` (timeouts, hosts, size cap, retry); `core.http.client(purpose)` is the only way to call another system, and every address is vetted inside the connect (no private ranges, no DNS rebinding) | `backend/core/http/` | `JOBS_AND_INTEGRATIONS.md` § 20 |
+| **Non-production guard** | On unless `APP_ENV` is exactly `production`: HTTP outside `OUTBOUND_ALLOWLIST` gets a synthetic 423; mail goes only to `NONPROD_TEST_RECIPIENT` | `backend/core/http/guard.py`, `backend/core/mail/backends.py`, `core.env.outbound_guard_active` | `JOBS_AND_INTEGRATIONS.md` § 27 |
+| **Provider error** | One hierarchy for upstream failures; `raise_for_upstream()` is the only status mapping; an upstream 401/403 is our 502 | `backend/core/providers/errors.py` | `JOBS_AND_INTEGRATIONS.md` § 20 |
 | **Invariant** | A DB constraint mapped to a typed error so the API answers cleanly | `backend/core/invariants.py` | `DATA_LIFECYCLE.md` § 10 |
 
 ## Core flows
@@ -78,7 +81,6 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 
 | Concept | BUILD_ORDER item |
 |---------|------------------|
-| Safe outbound HTTP client, non-production outbound guard | 7.4 |
 | Retention engine | 7.5 |
 | Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |

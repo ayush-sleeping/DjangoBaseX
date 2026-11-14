@@ -1,6 +1,6 @@
 # DjangoBaseX — security
 
-> **Status:** Hub — checked 2026-11-14 · built: cookie-JWT auth with DB sessions, RBAC, route enforcement, scrubber, encryption service, secret-env guard; planned: non-production guard (BUILD_ORDER 7.4).
+> **Status:** Hub — checked 2026-11-14 · built: cookie-JWT auth with DB sessions, RBAC, route enforcement, scrubber, encryption service, secret-env guard, safe outbound HTTP and the non-production guard (BUILD_ORDER 7.4).
 
 A hub, not a spec. **The deep spec** is [`system-design/SECURITY.md`](system-design/SECURITY.md) (threat model, rules by area, production checklist). Detail: [`AUTH_BLUEPRINT.md`](system-design/AUTH_BLUEPRINT.md), [`AUTH_FAILURE_MODES.md`](system-design/AUTH_FAILURE_MODES.md), [`RBAC_DESIGN.md`](system-design/RBAC_DESIGN.md). Testing side: [`TESTING.md`](TESTING.md). Siblings: [`INVARIANTS.md`](INVARIANTS.md), [`system-design/TRAPS.md`](system-design/TRAPS.md).
 
@@ -27,7 +27,7 @@ A hub, not a spec. **The deep spec** is [`system-design/SECURITY.md`](system-des
 | 6 | **Encrypt at rest only via `core.crypto`** (`encrypt`/`decrypt`/`mask`, per-purpose keys, `FIELD_ENCRYPTION_KEYS` newest first); decrypt is an explicit service call, never on attribute access | `backend/core/crypto.py`; `backend/tests/test_crypto.py` | Own Fernet in a model; a property that calls `decrypt()` | `test_encrypted_columns_are_registered.py`, `test_no_decrypt_on_access.py` |
 | 7 | **Secrets only via env, read only in settings.** Key names only in docs and output; every new key goes into `backend/.env.example` (or `frontend/.env.example`) with a placeholder in the same change. `NEXT_PUBLIC_*` is never a secret | `backend/config/settings.py`; `backend/.env.example` | `os.environ["STRIPE_SECRET_KEY"]` in a module; a real value in an example file | `test_secret_env_reads.py`, `test_env_example.py` (placeholders must be refused by `weak_reason()`), `test_secret_policy.py`, `test_production_boot.py` |
 | 8 | **The repo is public** (`AGENTS.md` § 1 rule 5): no real credentials, customer data, internal URLs or other codebase names; demo credentials obviously fake | `backend/.env.example` | Pasting a working token "just for the example" | Before any push: `git status`, then `git diff --cached \| grep -iE "secret\|password\|token\|api[_-]?key"` and read every hit |
-| 9 | **Non-production guard** (outbound HTTP allow-list answering 423, mail redirected to one test recipient, private-range refusal) | 🔜 planned — BUILD_ORDER 7.4 (`planning/BUILD_ORDER.md` "7.4") | Assuming dev/staging cannot reach real clients or send real mail | Not built: do not rely on it; keep dev data synthetic |
+| 9 | **Every outbound call goes through `core.http.client(purpose)`; outside production the guard is on** — private ranges refused inside the connect, HTTP outside `OUTBOUND_ALLOWLIST` gets a synthetic 423, mail goes only to `NONPROD_TEST_RECIPIENT`; no setting disables it | `backend/core/http/vetting.py`, `backend/core/http/guard.py`, `backend/core/mail/backends.py` | `httpx`/`requests` called directly; trusting a hostname validated once, then resolved again by the library (DNS rebinding) | `backend/tests/core/http/test_ssrf.py`, `test_guard_http.py`, `backend/tests/core/test_outbound_guard.py`, `backend/tests/architecture/test_outbound_http_goes_through_core_http.py` |
 
 ## Before merging anything security-sensitive
 

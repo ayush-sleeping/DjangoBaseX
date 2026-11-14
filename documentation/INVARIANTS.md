@@ -83,6 +83,12 @@ where one exists, the **test that goes red** when it is broken. The source holds
 29. **Never build an error tracker in the core** (no errors table, grouping or screen); error tracking is
     Sentry ([ADR-0013](adr/0013-sentry-only-error-tracking.md)). The Sentry wiring itself is not built yet
     — no code reads `SENTRY_DSN` today.
+38. **Call other systems only through `core.http.client(purpose)`;** never `httpx`/`requests` directly, and map
+    upstream statuses only with `raise_for_upstream()` (JOBS_AND_INTEGRATIONS § 20, BUILD_ORDER 7.4) —
+    `architecture/test_outbound_http_goes_through_core_http.py`, `architecture/test_no_hand_rolled_status_mapping.py`.
+39. **Outside production, nothing reaches a real person or system:** the outbound guard is on unless `APP_ENV` is
+    exactly `production`, and no setting disables it (JOBS_AND_INTEGRATIONS § 27) — `core/test_outbound_guard.py`,
+    `core/http/test_guard_http.py`.
 
 ## Frontend
 

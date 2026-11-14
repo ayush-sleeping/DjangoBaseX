@@ -66,7 +66,7 @@ Not built: `permissions`, `migrations`, `settings`, `observability`, `connection
 | Blank page | Browser console and `request_id`; backend 5xx for `/api/me/bootstrap/`; `TRAPS.md` Frontend rows; `NEXT_PUBLIC_API_URL` is baked at build time |
 | Menu empty / `/api/me/navigation/` 5xx | `manage.py check` for `dbx.E009` (a nav item gated on a permission no app declares — the navigation registry fails closed for everyone); the most recently installed plugin's `wiring.py`; [`TRAPS.md`](system-design/TRAPS.md) Backend |
 | Job did not run | `doctor --only queue,schedule`; `/api/health/components/` `jobs`; is a worker consuming that queue and exactly one beat running (`DEPLOYMENT.md` § 2) |
-| Email not sent | Outbox first: `doctor --only outbox`; then the worker on queue `outbox`; in development mail goes to the console backend |
+| Email not sent | Outbox first: `doctor --only outbox`; then the worker on queue `outbox`; outside production every message goes only to `NONPROD_TEST_RECIPIENT`, and with none set only console/file backends send (`backend/core/mail/backends.py`, `GuardedEmailBackend`) |
 | Wrong number | Reproduce with the same role and data; check the figure's formatter and empty/zero handling (`OBSERVABILITY.md` § 11); locale from bootstrap `localization`; then [`TRAPS.md`](system-design/TRAPS.md) |
 
 See also [`system-design/OBSERVABILITY.md`](system-design/OBSERVABILITY.md), [`system-design/OPERATIONS.md`](system-design/OPERATIONS.md) (§ 6 deploy driver, § 9 backups: designed, tooling is BUILD_ORDER 9.5 🔜), [`system-design/DEPLOYMENT.md`](system-design/DEPLOYMENT.md) § 3 health checks, [`TESTING.md`](TESTING.md), [`SECURITY.md`](SECURITY.md).

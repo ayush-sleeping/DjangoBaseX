@@ -164,7 +164,6 @@ Stated plainly, because assuming otherwise wastes time. Source of truth: `BUILD_
 
 | Not built | `BUILD_ORDER` |
 |-----------|---------------|
-| Safe outbound HTTP and the non-production guard | 7.4 |
 | Retention engine | 7.5 |
 | Webhooks, outbound and inbound | 7.6 |
 | Notifications | 7.7 |
