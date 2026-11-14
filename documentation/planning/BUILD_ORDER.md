@@ -1056,12 +1056,14 @@ cannot see a row gets 404 on `PATCH` to it.
 
 *Proved by:* `backend/tests/architecture/test_scoping.py::test_every_model_with_an_owner_or_tenant_field_is_registered_for_scoping`; `backend/users/tests/test_users_api.py::test_a_row_the_caller_cannot_see_is_a_404_on_patch_not_a_403`, `examples/plugins/notes/djx_notes/tests/test_notes.py::test_a_view_holder_gets_404_not_403_when_patching_a_note_they_cannot_see`. Built: the scoping registry and write-path narrowing, state-transition history, soft delete with the recycle bin and its retention policy, provenance. Closes **DB-67**; the rest is deferred to DB-123 to DB-128.
 
-### 9.4 — Domain primitives ⬜
+### 9.4 — Domain primitives ✅
 Document sequences (peek vs reserve), the state-machine helper, the business calendar, bulk actions, the
 import/export registry.
 
 **Done when:** two concurrent reservations on a fresh database mint different numbers; a bulk action over "all
 matching" touches exactly the rows the list shows.
+
+*Proved by:* `backend/tests/test_numbering.py::test_two_concurrent_reservations_on_a_fresh_database_mint_different_numbers` (real threads, each its own connection, a counter row that does not exist yet; runs on PostgreSQL in CI and on file-backed SQLite, skips on in-memory SQLite; `test_the_race_ran_on_postgres_in_ci` fails the PostgreSQL job if it ever skips there); `backend/tests/test_bulk.py::test_all_matching_touches_exactly_the_rows_the_list_shows`. Built: document sequences, the state-machine helper, the business calendar, bulk actions, the import/export registry. Deferred to TECH_DEBT DB-129 to DB-135 (XLSX, job-mode bulk, the import wizard, calendar hours, and more).
 
 ### 9.5 — Operations ✅
 Release images, the deploy driver, verified backups, restore with `config_snapshot`, infrastructure policy tests,

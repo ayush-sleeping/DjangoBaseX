@@ -42,6 +42,11 @@ urlpatterns = [
     # /api/users/ — the Users module (§ 10.2)
     path("users/", UserViewSet.as_view({"get": "list", "post": "create"}), name="users"),
     path(
+        "users/bulk/<slug:bulk_name>/",
+        UserViewSet.as_view({"post": "bulk"}),
+        name="users-bulk",
+    ),
+    path(
         "users/invitations/",
         InvitationViewSet.as_view({"get": "list", "post": "create"}),
         name="invitations",

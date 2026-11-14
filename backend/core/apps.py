@@ -51,6 +51,9 @@ class CoreConfig(AppConfig):
         from .retention.policies import register_core_retention
 
         register_core_retention(registry)
+        from .dataio import register_core_specs
+
+        register_core_specs(registry)
         from .scoping import register as register_scoping
 
         register_scoping(registry)

@@ -84,6 +84,20 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # either a second, unmigrated database or (mirrored) a second connection that the first one's open
 # test transaction locks out. So on SQLite the recorder writes through default, and the
 # rollback-survival test is PostgreSQL-only. On PostgreSQL it is a real second connection.
+# A file-backed SQLite (TEST_DATABASE_URL=sqlite:////abs/app.sqlite3) tests in a `test_` file beside
+# it, never in the file itself: real threads can then race on it (tests/test_numbering.py).
+_default = DATABASES["default"]  # noqa: F405
+_sqlite_file = str(_default["NAME"])
+if (
+    _default["ENGINE"].endswith("sqlite3")
+    and _sqlite_file not in ("", ":memory:")
+    and "mode=memory" not in _sqlite_file
+):
+    from pathlib import Path as _Path
+
+    _default["TEST"] = {
+        "NAME": str(_Path(_sqlite_file).with_name("test_" + _Path(_sqlite_file).name))
+    }
 if DATABASES["default"]["ENGINE"].endswith("sqlite3"):  # noqa: F405
     DATABASES["monitor"] = {**DATABASES["default"], "TEST": {"MIRROR": "default"}}  # noqa: F405
     JOB_RUN_DB_ALIAS = "default"

@@ -1216,16 +1216,36 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description required_permissions maps each action to its codes; an action missing from it denies.
-         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
          */
         get: operations["users_list"];
         put?: never;
         /**
-         * @description required_permissions maps each action to its codes; an action missing from it denies.
-         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
          */
         post: operations["users_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/bulk/{bulk_name}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
+         */
+        post: operations["users_bulk_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1284,8 +1304,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description required_permissions maps each action to its codes; an action missing from it denies.
-         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
          */
         get: operations["users_retrieve"];
         put?: never;
@@ -1294,8 +1314,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * @description required_permissions maps each action to its codes; an action missing from it denies.
-         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
          */
         patch: operations["users_partial_update"];
         trace?: never;
@@ -1310,8 +1330,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description required_permissions maps each action to its codes; an action missing from it denies.
-         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
          */
         post: operations["users_activate_create"];
         delete?: never;
@@ -1330,8 +1350,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description required_permissions maps each action to its codes; an action missing from it denies.
-         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
          */
         post: operations["users_deactivate_create"];
         delete?: never;
@@ -1350,8 +1370,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description required_permissions maps each action to its codes; an action missing from it denies.
-         *     Filtering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).
+         * @description Put before BaseViewSet. Set `bulk_resource` ("users.user") and allow the `bulk` action in
+         *     required_permissions with [] (the registered action's own permission is enforced below).
          */
         post: operations["users_sessions_revoke_create"];
         delete?: never;
@@ -3551,6 +3571,27 @@ export interface operations {
         requestBody?: never;
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    users_bulk_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bulk_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

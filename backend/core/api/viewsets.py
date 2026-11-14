@@ -47,9 +47,16 @@ class BaseViewSet(viewsets.GenericViewSet):
         writable_by(). Pass the model's manager or queryset; an invisible row is then a 404.
         """
         user = self.request.user
-        if self.request.method in SAFE_METHODS:
+        if self.request.method in SAFE_METHODS or getattr(self, "_scope_as_read", False):
             return queryset.visible_to(user)
         return queryset.writable_by(user)
 
+    @property
+    def list_params(self):
+        """The list's query parameters: the request's own, unless a bulk action re-runs the list
+        pipeline with the filters its body carries (core.api.bulk) — the one seam for that."""
+        override = getattr(self, "_list_params", None)
+        return self.request.query_params if override is None else override
+
     def filter_queryset(self, queryset):
-        return run_list(queryset, self, self.request.query_params)
+        return run_list(queryset, self, self.list_params)

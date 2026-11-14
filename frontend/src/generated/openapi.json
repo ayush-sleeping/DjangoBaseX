@@ -4139,7 +4139,7 @@
     },
     "/api/users/": {
       "get": {
-        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
         "operationId": "users_list",
         "parameters": [
           {
@@ -4177,10 +4177,49 @@
         ]
       },
       "post": {
-        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
         "operationId": "users_create",
         "responses": {
           "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apiToken": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/users/bulk/{bulk_name}/": {
+      "post": {
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
+        "operationId": "users_bulk_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bulk_name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
@@ -4333,7 +4372,7 @@
     },
     "/api/users/{public_id}/": {
       "get": {
-        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
         "operationId": "users_retrieve",
         "parameters": [
           {
@@ -4371,7 +4410,7 @@
         ]
       },
       "patch": {
-        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
         "operationId": "users_partial_update",
         "parameters": [
           {
@@ -4411,7 +4450,7 @@
     },
     "/api/users/{public_id}/activate/": {
       "post": {
-        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
         "operationId": "users_activate_create",
         "parameters": [
           {
@@ -4451,7 +4490,7 @@
     },
     "/api/users/{public_id}/deactivate/": {
       "post": {
-        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
         "operationId": "users_deactivate_create",
         "parameters": [
           {
@@ -4491,7 +4530,7 @@
     },
     "/api/users/{public_id}/sessions/revoke/": {
       "post": {
-        "description": "required_permissions maps each action to its codes; an action missing from it denies.\nFiltering and ordering are opt-in per field: forgetting closes the door (API_DESIGN.md).",
+        "description": "Put before BaseViewSet. Set `bulk_resource` (\"users.user\") and allow the `bulk` action in\nrequired_permissions with [] (the registered action's own permission is enforced below).",
         "operationId": "users_sessions_revoke_create",
         "parameters": [
           {

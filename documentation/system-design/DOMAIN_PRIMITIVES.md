@@ -306,6 +306,8 @@ writes nothing (`assertNumQueries` shows no write).
 **Configurable, not hard-coded.** `numbering.<series>.pattern` · `.prefix` · `.reset` per scope;
 `gapless` is code (a compliance property, not a knob).
 
+> ✅ **As built (BUILD_ORDER 9.4):** `core/numbering.py` + `core_sequence` (migration `core/0013`) + `registry.numbering` (`NumberingSeries`; `gapless` has no default; pattern/reset validated at registration). `reserve()` is `INSERT … ON CONFLICT DO NOTHING` (write first, so SQLite waits instead of failing on a lock upgrade) then one `UPDATE … SET last_value = last_value + 1` (`F()`); the unique `core_sequence_uq` decides the first-use race. No separate `select_for_update()`: the UPDATE holds the row lock. Gapless refuses outside `atomic`; gap-tolerant uses its own autocommit connection (`UPDATE … RETURNING`). The period is the issue date in the platform timezone. `tests/test_numbering.py` races real threads on a fresh counter (PostgreSQL and file SQLite; in-memory SQLite skips). Not built: the peek endpoint, per-scope settings overrides of pattern/prefix/reset, the width-90% finding, the document-table backstop (no consumer yet) — TECH_DEBT DB-133.
+
 ---
 
 ## 3. The state-machine helper — **Tier 2 · Core**
@@ -378,6 +380,8 @@ reachable, correction pairs have reasons. Per model: `test_concurrent_transition
 **Configurable, not hard-coded.** The table is code. Which states count for SLAs or eligibility are
 named constants (`DATA_LIFECYCLE.md` § 5), not settings.
 
+> ✅ **As built (BUILD_ORDER 9.4):** `core/statemachine.py` + `registry.state_machines` (`StateMachine`: `initial`, `transitions`, `reason_required`; validated for undeclared targets, unreachable states and bad reason pairs). `transition()` refuses an undeclared move with `IllegalTransition`, a missing reason with `ReasonRequired`, re-reads the stored state under `select_for_update()` (so a stale object cannot win) and records through `change_state()`. A move to the current state is a no-op (`False`). Wired to `users.user.is_active` (`activate`/`deactivate` now call it). Not built: `POST …/transition/`, `allowed_transitions` on detail responses, `PUBLIC_STATUS`, write-once timestamps, the `.status =` source scan — TECH_DEBT DB-134.
+
 ---
 
 ## 4. The business calendar — **Tier 2 · Core**
@@ -425,6 +429,8 @@ long weekend, `24x7` identity.
 **Configurable, not hard-coded.** Calendars, intervals and holidays are data; the default calendar per
 scope is a setting (`calendar.default`).
 
+> ✅ **As built (BUILD_ORDER 9.4):** `core/business_calendar.py` (named so it cannot shadow the standard library's `calendar`) + `core_holiday`. Day level: Monday–Friday minus holiday rows, always in the platform timezone (`local_date()`); `is_business_day`, `add_business_days` (negative allowed; from a non-working day the count starts at the next working day), `next_business_day`, `business_days_between`. Holidays: Django admin plus `manage.py import_holidays file.ics` (stdlib parser: all-day VEVENTs, ranges, folded lines; idempotent). Not built: intra-day hours, per-tenant calendars, overrides, `24x7`, a holiday API, caching — TECH_DEBT DB-132.
+
 ---
 
 ## 5. Bulk actions — **Tier 2 · Core**
@@ -470,6 +476,8 @@ reason while the rest succeed; changed selection → 409.
 
 **Configurable, not hard-coded.** `bulk.max_sync_rows` (default 500); actions via decorator
 registration.
+
+> ✅ **As built (BUILD_ORDER 9.4):** `core/bulk.py`-style contract in `core/api/bulk.py` (`BulkActionsMixin`, `registry.bulk_actions`/`BulkAction`, `Skip`). `POST /api/users/bulk/deactivate/` takes `{"ids": […]}` or `{"all_matching": true, "filters": {…}, "exclude_ids": […], "expected_count": n}`. Both forms resolve through the list's own `get_queryset()` under the READ scope and `run_list()` with the supplied filters (`BaseViewSet.list_params` is the one seam), so "all matching" touches exactly the listed rows and an unknown filter is the same 400. Rows the caller reads but may not write are skipped (`not_writable`); unseen ids are `not_found`; service refusals become `Skip` reasons; a changed count is `409 bulk_selection_changed`. One `batch_id` ties the row audits and the `core.bulk.completed` summary. Limit `MAX_SYNC_ROWS = 500` (a constant, not yet `bulk.max_sync_rows`). Not built: job mode above the limit, the frontend selection model — TECH_DEBT DB-130.
 
 ---
 
@@ -567,6 +575,8 @@ and round-trips; a never-import field in the file is refused; a stale preview 40
 
 **Configurable, not hard-coded.** `import.max_atomic_rows` · `import.max_rows` · normalisation profiles
 per entity (registered) · specs via registry.
+
+> ✅ **As built (BUILD_ORDER 9.4):** `core/dataio.py` + `registry.dataio` (`DataSpec`). CSV (UTF-8 BOM, formula cells prefixed `'`, round-trips) for people and a `djx-bundle` JSON envelope (`_meta.format`/`format_version`, per-spec counts) for environment moves. `import_rows()` sends every row through the spec's service (`core.lookups` is the worked example, via `set_lookup_value`), dry-run by default (the real services inside a rolled-back transaction), per-row error report, natural-key idempotence, both permissions checked. XLSX is deferred (needs a dependency). Not built: HTTP endpoints/wizard, preview token and `409 import_preview_stale`, foreign-key remap, an engine-level never-export floor, job mode — TECH_DEBT DB-129, DB-131.
 
 ---
 

@@ -2265,6 +2265,200 @@ class ScopingRegistry(_Catalog):
 # --- The whole seam -----------------------------------------------------------------------------
 
 
+# --- Domain primitives (BUILD_ORDER 9.4; DOMAIN_PRIMITIVES.md § 2-6) ----------------------------
+
+NUMBER_RESETS = ("never", "yearly", "monthly", "daily")
+_PATTERN_TOKEN = re.compile(r"\{(PREFIX|YYYY|YY|MM|DD|SCOPE|seq(?::0?([1-9][0-9]?))?)\}")
+_PERIOD_TOKENS = {
+    "never": (),
+    "yearly": (("YYYY", "YY"),),
+    "monthly": (("YYYY", "YY"), ("MM",)),
+    "daily": (("YYYY", "YY"), ("MM",), ("DD",)),
+}
+
+
+@dataclass(frozen=True)
+class NumberingSeries:
+    """
+    One document-number series (§ 2). `gapless` has NO default: the author must choose, because the
+    wrong answer is either a compliance problem (gaps in a legal sequence) or a throughput problem
+    (every document serialised behind one row lock).
+    """
+
+    key: str  # "billing.invoice"
+    label: str
+    pattern: str  # "{PREFIX}-{YYYY}{MM}-{seq:04}"
+    reset: str  # one of NUMBER_RESETS
+    gapless: bool
+    prefix: str = ""
+
+
+class NumberingRegistry(ContributionRegistry):
+    kind = "numbering series"
+    spec_type = NumberingSeries
+
+    def register(self, item, *, when=None) -> None:
+        if isinstance(item, NumberingSeries):
+            problems = self.problems(item)
+            if problems:
+                raise RegistryError(f"numbering series {item.key!r}: " + "; ".join(problems))
+        super().register(item, when=when)
+
+    @staticmethod
+    def problems(series: NumberingSeries) -> list[str]:
+        out = []
+        if not isinstance(series.gapless, bool):
+            out.append("gapless must be True or False (there is no default)")
+        _require_label(f"numbering series {series.key!r}", series.label)
+        if series.reset not in NUMBER_RESETS:
+            out.append(f"reset must be one of {NUMBER_RESETS}")
+            return out
+        tokens = [m.group(1).split(":")[0] for m in _PATTERN_TOKEN.finditer(series.pattern)]
+        leftover = _PATTERN_TOKEN.sub("", series.pattern)
+        if "{" in leftover or "}" in leftover:
+            out.append("pattern has an unknown {token}")
+        if tokens.count("seq") != 1:
+            out.append("pattern must contain exactly one {seq} token")
+        for needed in _PERIOD_TOKENS[series.reset]:
+            if not any(token in tokens for token in needed):
+                out.append(
+                    f"a {series.reset} reset needs {' or '.join('{' + t + '}' for t in needed)} "
+                    "in the pattern, or two periods render the same number"
+                )
+        if "PREFIX" in tokens and not series.prefix:
+            out.append("pattern uses {PREFIX} but the series declares no prefix")
+        return out
+
+    def get(self, key: str):
+        return next((item for item in self.all() if item.key == key), None)
+
+
+@dataclass(frozen=True)
+class StateMachine:
+    """
+    The declared moves of one registered state field (§ 3). `transitions` maps a state to the set
+    of states it may move to; `initial` is where new rows start; `reason_required` lists the
+    (from, to) pairs that must carry a reason (correcting a mis-click is allowed, silently is not).
+    """
+
+    key: str  # "users.user.is_active" — the same key as its StateField
+    model: str  # "users.User"
+    field: str  # "is_active"
+    initial: object
+    transitions: dict
+    reason_required: frozenset = frozenset()
+
+
+class StateMachineRegistry(ContributionRegistry):
+    kind = "state machine"
+    spec_type = StateMachine
+
+    def register(self, item, *, when=None) -> None:
+        if isinstance(item, StateMachine):
+            problems = self.problems(item)
+            if problems:
+                raise RegistryError(f"state machine {item.key!r}: " + "; ".join(problems))
+        super().register(item, when=when)
+
+    @staticmethod
+    def problems(machine: StateMachine) -> list[str]:
+        out = []
+        states = set(machine.transitions)
+        if machine.initial not in states:
+            out.append("initial is not a declared state")
+        for source, targets in machine.transitions.items():
+            for target in targets:
+                if target not in states:
+                    out.append(f"{source!r} -> {target!r}: the target is not a declared state")
+        reachable, frontier = {machine.initial}, [machine.initial]
+        while frontier:
+            for target in machine.transitions.get(frontier.pop(), ()):
+                if target in states and target not in reachable:
+                    reachable.add(target)
+                    frontier.append(target)
+        for state in sorted(states - reachable, key=repr):
+            out.append(f"{state!r} is unreachable from the initial state")
+        for pair in machine.reason_required:
+            if pair[1] not in machine.transitions.get(pair[0], ()):
+                out.append(f"reason_required names an undeclared move {pair!r}")
+        return out
+
+    def get(self, model_label: str, field: str):
+        return next((i for i in self.all() if i.model == model_label and i.field == field), None)
+
+
+@dataclass(frozen=True)
+class BulkAction:
+    """
+    One "do X to these rows" (§ 5). `handler(actor=, obj=)` runs per row and goes through the
+    resource's service; it raises core.bulk.Skip(code, message) for a protected row.
+    """
+
+    resource: str  # "users.user" — the viewset's resource key
+    name: str  # "deactivate"
+    label: str
+    permission: str  # the code the caller must hold (also required of every row via scope)
+    handler: Callable
+    batch_size: int = 100
+    audit_action: str = ""  # the summary row's verb, registered in registry.audit_actions
+
+    @property
+    def key(self) -> str:
+        return f"{self.resource}.{self.name}"
+
+
+class BulkActionRegistry(ContributionRegistry):
+    kind = "bulk action"
+    spec_type = BulkAction
+
+    def register(self, item, *, when=None) -> None:
+        if isinstance(item, BulkAction):
+            if not callable(item.handler):
+                raise RegistryError(f"bulk action {item.key!r}: handler is not callable")
+            if not isinstance(item.batch_size, int) or not 1 <= item.batch_size <= 1000:
+                raise RegistryError(f"bulk action {item.key!r}: batch_size must be 1..1000")
+            if not item.permission:
+                raise RegistryError(f"bulk action {item.key!r}: declare its permission")
+        super().register(item, when=when)
+
+    def get(self, resource: str, name: str):
+        return next((i for i in self.enabled() if i.resource == resource and i.name == name), None)
+
+
+@dataclass(frozen=True)
+class DataSpec:
+    """
+    One importable/exportable resource (§ 6). `rows(user)` yields the dict rows the user may see
+    (scope respected); `upsert(row, actor=)` applies ONE row through the resource's service and
+    returns "created" | "updated" | "unchanged", raising ValueError(message) for a bad row.
+    """
+
+    key: str  # "core.lookups"
+    label: str
+    fields: tuple  # exported / importable columns, in order
+    natural_key: tuple  # the columns that identify a row (idempotent re-import)
+    rows: Callable
+    upsert: Callable
+    export_permission: str
+    import_permission: str
+
+
+class DataSpecRegistry(ContributionRegistry):
+    kind = "data spec"
+    spec_type = DataSpec
+
+    def register(self, item, *, when=None) -> None:
+        if isinstance(item, DataSpec):
+            if not item.natural_key or not set(item.natural_key) <= set(item.fields):
+                raise RegistryError(f"data spec {item.key!r}: natural_key must be listed fields")
+            if not (callable(item.rows) and callable(item.upsert)):
+                raise RegistryError(f"data spec {item.key!r}: rows and upsert must be callable")
+        super().register(item, when=when)
+
+    def get(self, key: str):
+        return next((i for i in self.enabled() if i.key == key), None)
+
+
 class Registry:
     """Everything apps contribute at boot. Each instance owns its own catalogs."""
 
@@ -2300,6 +2494,10 @@ class Registry:
         self.scoping = ScopingRegistry()
         self.recyclable = RecyclableRegistry()
         self.state_fields = StateFieldRegistry()
+        self.numbering = NumberingRegistry()
+        self.state_machines = StateMachineRegistry()
+        self.bulk_actions = BulkActionRegistry()
+        self.dataio = DataSpecRegistry()
         # A reconciler registers its job and its give-up kind into THIS registry's catalogs.
         self.reconcilers = ReconcilerRegistry(self.jobs, self.finding_kinds)
 

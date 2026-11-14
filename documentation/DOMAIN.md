@@ -57,6 +57,11 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | **Doctor** | A registered check run by `manage.py doctor`; findings are failure or advisory, known backlog is never "healthy" | `backend/core/doctors.py`, `backend/core/management/commands/doctor.py` | `OBSERVABILITY.md` § 12 |
 | **Data-plane check** | A boot-time/doctor check that required rows exist (an active superuser, the administrator role) | `backend/core/dataplane.py` | `OBSERVABILITY.md` § 7 |
 | **Money type** | `Money`/`Rate` on `Decimal` with ISO-4217 minor units; floats refused | `backend/core/money.py` | `DOMAIN_PRIMITIVES.md` § 1 |
+| **Document series** | A registered numbering series (pattern, reset, gapless or gap-tolerant); `peek()` shows the next number, `reserve()` mints it atomically | `backend/core/numbering.py` | `DOMAIN_PRIMITIVES.md` § 2 |
+| **State machine** | The declared legal moves of a registered state field; every move is recorded through `change_state()` | `backend/core/statemachine.py` | `DOMAIN_PRIMITIVES.md` § 3 |
+| **Business calendar** | Working days and holidays in the platform timezone; holidays are data (admin or ICS import) | `backend/core/business_calendar.py` | `DOMAIN_PRIMITIVES.md` § 4 |
+| **Bulk action** | One registered "do X to these rows"; `ids` or `all_matching` through the list's own pipeline and scope | `backend/core/api/bulk.py` | `DOMAIN_PRIMITIVES.md` § 5 |
+| **Import/export** | A registered resource that exports to CSV or a JSON bundle and imports through its service, dry-run first | `backend/core/dataio.py` | `DOMAIN_PRIMITIVES.md` § 6 |
 | **Request id / scrubber** | Every request gets an id carried into logs; one scrubber redacts secrets everywhere | `backend/core/observability/request_id.py`, `backend/core/observability/scrub.py` | `OBSERVABILITY.md` §§ 1, 3 |
 | **Encryption** | Fernet keyed per purpose, multi-key rotation; encrypted columns are registered | `backend/core/crypto.py`, `registry.encrypted_fields` | `JOBS_AND_INTEGRATIONS.md` § 25 |
 | **Navigation manifest** | Server-built menu that is also the frontend route gate | `backend/core/navigation.py`, `frontend/src/core/shell/nav/` | `FRONTEND_PLATFORM.md` § 10 |
@@ -108,7 +113,6 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | Concept | BUILD_ORDER item |
 |---------|------------------|
 | Static security headers, revalidation, logos, host-matched identity | 8.5b |
-| Domain primitives beyond money (number sequences, state machines) | 9.4 |
 | Error tracking via Sentry ([ADR-0013](adr/0013-sentry-only-error-tracking.md); no code reads `SENTRY_DSN` yet) | not in a numbered item |
 
 Items are in [`planning/BUILD_ORDER.md`](planning/BUILD_ORDER.md).

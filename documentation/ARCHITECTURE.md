@@ -56,6 +56,17 @@ Always finish with the gate in `AGENTS.md` § 2 and a `documentation/DAILY_CHANG
 3. Logic in `services.py`; route in the app's `urls.py`; run `manage.py export_frontend_contracts` so `frontend/src/generated/` follows.
 4. Check: `tests/architecture/test_route_enforcement.py` and `test_public_routes.py` pass.
 
+**Bulk action** — copy `backend/users/bulk.py`.
+1. Write a handler `(*, actor, obj, reason="")` that calls the resource's service and raises `core.api.bulk.Skip(code, message)` for a protected row.
+2. Register a `BulkAction(resource, name, label, permission, handler)` from the app's `ready()`.
+3. Add `BulkActionsMixin` before `BaseViewSet`, set `bulk_resource`, put `"bulk": []` in `required_permissions`, and route `<resource>/bulk/<slug:bulk_name>/` to `{"post": "bulk"}` before any `<public_id>` route; declare the list's `filterset_fields` (the bulk filters are the list's).
+4. Check: a test that GETs the list with filters and POSTs `all_matching` with the same filters and compares ids (`tests/test_bulk.py`).
+
+**Document series** — copy `backend/tests/test_numbering.py` for the test shape.
+1. Register `NumberingSeries(key, label, pattern, reset, gapless, prefix)` from `ready()`; choose `gapless` deliberately (no default).
+2. Forms call `numbering.peek()`; the save calls `numbering.reserve()` as late as possible inside its `transaction.atomic()` and stores the result; the client never submits a number.
+3. The document table gets `UniqueConstraint(fields=[scope, number], condition=~Q(number=""))` as the backstop.
+
 **Permission** — copy `backend/users/permissions.py`.
 1. Add a `PermissionSpec("<module>.<feature>.<action>", label)` to the app's `PermissionGroupSpec`.
 2. Register the group in `AppConfig.ready()` (`registry.permissions.register(GROUP)`, as `backend/users/apps.py`).

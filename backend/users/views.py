@@ -16,6 +16,7 @@ from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from core.api.bulk import BulkActionsMixin
 from core.api.errors import error_response, from_exception, invalid_response
 from core.api.schemas import (
     DynamicBodySerializer,
@@ -310,11 +311,14 @@ def role_model():
     return apps.get_model("rbac", "Role")  # by string: users never imports rbac (Ch. 2)
 
 
-class UserViewSet(BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
+class UserViewSet(BulkActionsMixin, BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin):
     serializer_class = UserSerializer
     ordering_fields = ("email", "full_name", "created_at")
+    filterset_fields = ("is_active",)
     accepted_params = ("search",)  # read in get_queryset
+    bulk_resource = "users.user"
     required_permissions = {
+        "bulk": [],  # any signed-in caller reaches it; core.api.bulk then demands the action's code
         "list": ["users.users.view"],
         "retrieve": ["users.users.view"],
         "create": ["users.users.create"],
@@ -332,7 +336,7 @@ class UserViewSet(BaseViewSet, mixins.ListModelMixin, mixins.RetrieveModelMixin)
             )
             .order_by("email", "pk")
         )
-        search = self.request.query_params.get("search", "").strip()
+        search = self.list_params.get("search", "").strip()
         if search:
             queryset = queryset.filter(Q(email__icontains=search) | Q(full_name__icontains=search))
         return queryset

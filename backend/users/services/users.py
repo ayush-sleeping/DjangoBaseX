@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from core import webhooks
 from core.audit import log_activity
-from core.lifecycle.transitions import change_state
+from core.statemachine import transition
 
 from .. import emails, tokens
 from ..models import PasswordResetToken, User, UserSession
@@ -87,7 +87,7 @@ def deactivate(*, actor, user: User, reason: str = "") -> User:
         raise LastSuperuser
     user.deactivated_at = timezone.now()
     user.deactivated_reason = reason[:255]
-    change_state(
+    transition(
         user,
         "is_active",
         False,
@@ -107,7 +107,7 @@ def deactivate(*, actor, user: User, reason: str = "") -> User:
 def activate(*, actor, user: User) -> User:
     user.deactivated_at = None
     user.deactivated_reason = ""
-    change_state(
+    transition(
         user,
         "is_active",
         True,

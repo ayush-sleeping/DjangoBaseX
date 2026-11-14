@@ -30,6 +30,21 @@ class UsersConfig(AppConfig):
         registry.state_fields.register(
             StateField(key="users.user.is_active", model="users.User", field="is_active")
         )
+        from core.registry import StateMachine
+
+        registry.state_machines.register(
+            StateMachine(
+                key="users.user.is_active",
+                model="users.User",
+                field="is_active",
+                initial=True,
+                transitions={True: {False}, False: {True}},
+            )
+        )
+        from .bulk import ACTIONS as BULK_ACTIONS
+
+        for bulk_action in BULK_ACTIONS:
+            registry.bulk_actions.register(bulk_action)
         from .scoping import SPECS as SCOPING
 
         for scope_spec in SCOPING:

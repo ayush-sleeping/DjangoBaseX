@@ -971,5 +971,54 @@ class PrivateFile(models.Model):
         return f"{self.purpose}:{self.public_id}"
 
 
+class Sequence(models.Model):
+    """
+    The counter of one document-number series in one scope and period (DOMAIN_PRIMITIVES.md § 2.1).
+    One row per (series, scope, period), so invoice minting never waits on order numbering. Written
+    only by core.numbering.reserve(); nothing edits `last_value` by hand.
+    """
+
+    series = models.CharField(max_length=64)
+    scope_key = models.CharField(max_length=64, blank=True, default="")
+    period_key = models.CharField(max_length=16, blank=True, default="")
+    last_value = models.BigIntegerField(default=0)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "core_sequence"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["series", "scope_key", "period_key"], name="core_sequence_uq"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.series}[{self.scope_key}|{self.period_key}]={self.last_value}"
+
+
+class Holiday(models.Model):
+    """
+    A non-working day of the platform business calendar (DOMAIN_PRIMITIVES.md § 4). Holidays are
+    data: typed in by an admin or imported from an ICS file; no list ships in code. The date is a
+    calendar date in the platform timezone, never an instant.
+    """
+
+    class Source(models.TextChoices):
+        MANUAL = "manual"
+        ICS = "ics"
+
+    date = models.DateField(unique=True)
+    name = models.CharField(max_length=128)
+    source = models.CharField(max_length=8, choices=Source.choices, default=Source.MANUAL)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = "core_holiday"
+        ordering = ["date"]
+
+    def __str__(self):
+        return f"{self.date} {self.name}"
+
+
 # Registered under the core app, defined in core.lifecycle (one concern per package).
 from core.lifecycle.models import StateTransition  # noqa: E402, F401

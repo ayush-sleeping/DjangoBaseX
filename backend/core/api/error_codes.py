@@ -37,6 +37,10 @@ for _entry in (
     ErrorCode("credential_not_accepted", 403, "This endpoint does not accept this kind of caller."),
     ErrorCode("not_found", 404, "Not found."),
     ErrorCode(
+        "bulk_selection_changed", 409, "The selection changed since it was shown; review it again."
+    ),
+    ErrorCode("bulk_too_large", 400, "Too many rows for one bulk action; narrow the selection."),
+    ErrorCode(
         "restore_conflict",
         409,
         "A live record already holds a value this one needs to be restored.",
