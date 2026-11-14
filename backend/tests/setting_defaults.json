@@ -1,4 +1,5 @@
 {
+  "core.plugins.disabled": [],
   "notifications.delivery.enabled": true,
   "notifications.delivery.test_recipient": "",
   "operations.queue.stall_threshold_minutes": 15,

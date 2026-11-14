@@ -5,7 +5,7 @@ transaction and audits what it changed.
 
 from django.db import transaction
 
-from core.audit import log_activity
+from core.sdk import log_activity
 
 from .models import Note
 

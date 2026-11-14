@@ -8,8 +8,7 @@ exact permission it enforces, and every read goes through Note.objects.visible_t
 from rest_framework import mixins, status
 from rest_framework.response import Response
 
-from core.api.errors import invalid_response
-from core.api.viewsets import BaseViewSet
+from core.sdk import BaseViewSet, invalid_response
 
 from . import services
 from .models import Note

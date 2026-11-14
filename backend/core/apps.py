@@ -10,11 +10,16 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         from . import checks  # noqa: F401 — registers the dbx.* system checks
+        from .bootstrap import register_core_contributors
         from .dataplane import register_core_checks
         from .observability.health import HEALTH_GROUP
         from .permissions import AUDIT_GROUP, NOTIFICATIONS_GROUP, SETTINGS_GROUP, WEBHOOKS_GROUP
+        from .plugin_state import register as register_plugin_state
         from .registry import registry
         from .routes import CORE_PUBLIC_ROUTES
+
+        register_plugin_state(registry)
+        register_core_contributors()
 
         for url_name, reason in CORE_PUBLIC_ROUTES.items():
             registry.public_routes.register(url_name, reason)

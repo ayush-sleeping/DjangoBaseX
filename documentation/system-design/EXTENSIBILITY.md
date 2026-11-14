@@ -319,6 +319,20 @@ one item and the other items still serialise.
 
 **Configurable, not hard-coded.** Order, gates and component are data on each contribution.
 
+> **As built (2026-11-14, BUILD_ORDER 9.1): the primitive is `ContributionRegistry` in `core/registry.py`.**
+> One shape: a frozen spec with a `key`, an **owner** filled from the registering module (never typed),
+> and an optional `when` predicate. `all()` is everything registered; `enabled()` is what a reader acts
+> on (owner not soft-disabled, `when` true). Four registries use it: `bootstrap`
+> (`BootstrapContributor(key, build, essential)`, moved out of `core/bootstrap.py`), `search_sources`,
+> `help_pages` and `services`. **Left as they were, deliberately:** permissions, navigation, health,
+> data plane, encrypted fields, audit actions, statuses, routes, settings, flags, lookups, guards, jobs,
+> retention, doctors, finding kinds, outbox topics, HTTP purposes, reconcilers, events, webhooks and
+> notifications. Each has validation of its own that a generic base would only forward; the soft-disable
+> gate reaches them through `_Catalog.owner_enabled()` instead (DB-100). Not built: `permission`/`flag`/
+> `order`/`component`/`props` on the base, `for_request(RequestContext)`, the registrar that refuses a
+> foreign key prefix, and `unknown_key_policy`. Search sources and help pages have no core contributors
+> and no reader yet: the slot exists so the contract already covers them (DB-104).
+
 ---
 
 ## 4. Registration rules — **Tier 1 · Core**
@@ -1024,6 +1038,29 @@ def warm_billing_cache(sender, user, **kw): ...
 **Configurable, not hard-coded.** The switch is runtime data; `PLUGIN_STATE_CACHE_SECONDS` is a
 setting.
 
+> **As built (2026-11-14, BUILD_ORDER 9.1): one helper, no table, no middleware.**
+> - **State** is the typed runtime setting `core.plugins.disabled` (a list of plugin labels), not a
+>   `core_plugin_state` table: 9.1 may not migrate. Missing label = enabled. `core/plugin_state.py`
+>   supplies it and `set_enabled(label, enabled, actor=, reason=)` writes it through the settings
+>   service (audited there). One snapshot read per request comes from the settings request snapshot.
+> - **One helper:** `registry.plugin_state.owner_enabled(module)` (`PluginState` in `core/registry.py`),
+>   asked by `_Catalog.owner_enabled(key)` for every registry; the route gate and the job runner ask the
+>   same object. The owner of a contribution is its registering module; `djx_<label>.*` maps to plugin
+>   `<label>`, everything else (core, users, rbac, project) is never switchable.
+> - **Surfaces covered:** navigation (`visible_to` drops the section, so the bootstrap `nav` and
+>   `/api/me/navigation/` omit it), bootstrap contributors, search sources, help pages, service contracts
+>   (`has_service` False, `call_service` raises `ServiceUnavailable`), routes and jobs. **Routes answer
+>   403 `plugin_disabled`** (the spec's choice, kept): `core/plugin_gate.py::gated_include` wraps every
+>   view of a registered urlconf at mount time in `config/urls.py`, so no `MIDDLEWARE` entry was needed.
+>   **Jobs** skip at run time inside the task wrapper and are recorded `skipped` with message
+>   `plugin_disabled`. Permissions stay in the catalogue, grants intact; data is never touched.
+> - **Executable form:** `tests/test_plugin_lifecycle.py` (a fixture plugin contributing to every
+>   registry) and the notes plugin's `test_disabling_the_plugin_hides_its_nav_and_routes_without_touching_its_data`.
+> - **Not built (DB-101):** the Extensions page and `/api/extensions/`, `core.extensions.manage`,
+>   `plugin_task`/`plugin_receiver`, event-subscriber gating, shared-base-table filtering, auto-disable
+>   on import failure, the frontend `notFound()` catch-all and shell list of disabled plugins, and the
+>   one-query-per-request test. A view mounted outside `registry.api_routes` is not gated.
+
 ---
 
 ## 16. The versioned SDK facade — **Tier 1 · Core**
@@ -1089,6 +1126,17 @@ instead of folklore.
 
 **Configurable, not hard-coded.** The version is a constant — correctly, because it describes the
 contract, not the environment.
+
+> **As built (2026-11-14, BUILD_ORDER 9.1): `core/sdk/__init__.py`, SDK 1.0.**
+> `SDK_VERSION = (1, 0)`, `SDK_CHANGELOG`, `is_compatible`, `require_version`, `SDKVersionError`, an
+> explicit sorted `__all__`. It re-exports the registry and its contribution specs, `plugin_enabled`,
+> `provide`/`has_service`/`call_service` and the service errors, and lazily (PEP 562, so a plugin's
+> `models.py` can import it while apps load) `BaseViewSet`, `BaseAPIView`, `error_response`,
+> `invalid_response`, `VisibleToQuerySet`, `log_activity`, `get_setting`, `flag_enabled`.
+> `tests/architecture/test_plugins_import_only_sdk.py` fails a plugin (tests excluded) that imports any
+> other `core.*`, `users` or `rbac`; the example plugin and the scaffold template now import only
+> `core.sdk`. Not built (DB-102): `registrar`, `capabilities()` and `/api/meta/`, `core.sdk.testing`, the
+> `api_snapshot.txt` test and its hash-bump rule, the frontend `@/core/sdk`, the `project/` ratchet.
 
 ---
 
@@ -1210,6 +1258,17 @@ def account_summary(customer_id: int) -> dict:
 - `test_no_cross_plugin_imports` allows exactly `TYPE_CHECKING`-guarded imports of `djx_<other>.contracts`.
 
 **Configurable, not hard-coded.** The provider is chosen by what is installed.
+
+> **As built (2026-11-14, BUILD_ORDER 9.1): the mechanism and the import rule, no contract yet.**
+> `registry.services` (`ServiceRegistry`): `provide(name, impl)` (names are `<owner>.<thing>.v<N>`; a
+> second provider raises `RegistryError` at boot), `has_service`, `call_service`, with `NoProvider` and
+> `ServiceUnavailable` under `ServiceContractError`; all re-exported by `core.sdk`. Platform-wide
+> contracts go in `core/contracts/` (a package since 9.1; `core/contracts.py`, the frontend export,
+> became its `__init__`); a plugin-to-plugin contract is the provider's `djx_<name>/contracts.py`, which
+> `plugin_rules.boundary_problems` allows another plugin to import under `if TYPE_CHECKING:` only
+> (proved allowed and proved refused at run time). No contract was invented: none has a caller. The
+> three AST tests (one provider per called name, callers guard, provider matches its Protocol) are
+> built with the first real contract (DB-103).
 
 ---
 

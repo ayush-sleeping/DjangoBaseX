@@ -64,9 +64,9 @@ Always finish with the gate in `AGENTS.md` § 2 and a `documentation/DAILY_CHANG
 
 **Plugin** — copy `examples/plugins/notes/`; tooling `scripts/plugins.py`.
 1. `cd backend && uv run python ../scripts/plugins.py new <label>` (scaffold from `scripts/plugin_template/`).
-2. Fill `plugin.toml` (prefixes derive from the label), models/services/views, and `wiring.py` registrations; never edit core.
+2. Fill `plugin.toml` (prefixes derive from the label), models/services/views, and `wiring.py` registrations; never edit core. **Import the platform only through `core.sdk`** (`from core.sdk import registry, NavItem, BaseViewSet, log_activity, …`; versioned, `require_version("1.0")`); `tests/architecture/test_plugins_import_only_sdk.py` fails any other `core.*`, `users` or `rbac` import. A plugin-to-plugin contract is the provider's `contracts.py`, imported by the consumer under `TYPE_CHECKING` only.
 3. `uv run python ../scripts/plugins.py link <label>` mounts its `frontend/`; `list` shows state; `registry` regenerates `frontend/src/plugins/registry.generated.ts`.
-4. Check: `tests/architecture/test_plugin_conventions.py`, `tests/test_plugins_script.py`, and the plugin's own tests.
+4. Check: `tests/architecture/test_plugin_conventions.py`, `test_plugins_import_only_sdk.py`, `tests/test_plugins_script.py`, and the plugin's own tests. A plugin is switched off without touching its data by adding its label to the setting `core.plugins.disabled` (`core.plugin_state.set_enabled`).
 
 **Background job** — copy `backend/users/jobs.py`.
 1. Declare a `JobSpec` (name `<module>.<verb>`, `func`, queue, `Cron`/`Interval`, `idempotent`, time limits) and `def run(ctx: JobContext) -> int`.

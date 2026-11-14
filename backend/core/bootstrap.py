@@ -12,16 +12,17 @@ or not:
 
 core holds the engine and core's own contributors. The identity sections (`user`, `session`) belong
 to the users app, which composes them with CORE_CONTRIBUTORS (users never the other way round).
-The contributor list is a plain tuple for now; it moves into core.registry with the full registry
-catalogue (BUILD_ORDER 9.1), keeping this shape.
+The contributors live in registry.bootstrap (BUILD_ORDER 9.1), keeping the (key, build, essential)
+shape: core and users register theirs from AppConfig.ready(), a plugin may add its own, and a
+soft-disabled plugin's contributor is left out (EXTENSIBILITY § 15).
 
 `permissions` is the EFFECTIVE set, computed by effective_permissions(): the one function both this
 endpoint and /api/auth/me/ use, so the UI and the API never compute it two ways.
 """
 
 import logging
-from collections.abc import Callable, Iterable
-from dataclasses import asdict, dataclass
+from collections.abc import Iterable
+from dataclasses import asdict
 from typing import Any
 
 from django.utils import timezone
@@ -31,16 +32,12 @@ from .flags import flags_for
 from .formatting import locale_policy
 from .navigation import navigation_for
 from .observability.health import read_release
-from .registry import registry
+from .registry import BootstrapContributor, registry
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass(frozen=True)
-class Contributor:
-    key: str  # the top-level key it fills; unique across the response
-    build: Callable[[Any], Any]  # request -> JSON-serialisable value
-    essential: bool = False
+# The (key, build, essential) shape; defined beside the registry that holds it.
+Contributor = BootstrapContributor
 
 
 def effective_permissions(user) -> list[str]:
@@ -69,6 +66,12 @@ CORE_CONTRIBUTORS: tuple[Contributor, ...] = (
     # core's only, so a plugin's chips take their tone from here (FRONTEND_PLATFORM § 13).
     Contributor("statuses", lambda request: status_table(PluginScope.none())),
 )
+
+
+def register_core_contributors() -> None:
+    """Called from CoreConfig.ready(): core's contributors into registry.bootstrap."""
+    for contributor in CORE_CONTRIBUTORS:
+        registry.bootstrap.register(contributor)
 
 
 def assemble(request, contributors: Iterable[Contributor]) -> dict:

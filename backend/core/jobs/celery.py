@@ -58,6 +58,11 @@ def register_task(app, spec: JobSpec):
             idempotency_key=idempotency_key,
             params=params,
         )
+        if not registry.jobs.runnable(spec.name):
+            # Soft-disabled plugin (§ 15): checked here, at run time, so a run queued before the
+            # switch still no-ops. Recorded as skipped, nothing is touched.
+            note_skip(ctx.run_id, "plugin_disabled")
+            return 0
         if not spec.single_flight:
             return execute(spec, ctx)
         # § 9: one run at a time, fleet-wide. The lock lives for the hard limit plus a margin, so a

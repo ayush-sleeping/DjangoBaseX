@@ -13,9 +13,16 @@ import sys
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[2]
-IGNORE = shutil.ignore_patterns(
-    "project", ".venv", "__pycache__", ".ruff_cache", ".pytest_cache", "db.sqlite3", ".env*"
+IGNORE_NAMES = (
+    "project",
+    ".venv",
+    "__pycache__",
+    ".ruff_cache",
+    ".pytest_cache",
+    "db.sqlite3",
+    ".env*",
 )
+IGNORE = shutil.ignore_patterns(*IGNORE_NAMES)
 PROBE = """
 import django
 django.setup()
@@ -61,3 +68,29 @@ def test_the_probe_can_fail(tmp_path):
     result = run_probe(copy)
     assert result.returncode != 0
     assert "No module named 'project'" in result.stderr
+
+
+NO_PLUGINS_PROBE = PROBE.replace(
+    'assert "project" not in settings.INSTALLED_APPS, settings.INSTALLED_APPS',
+    'assert not [a for a in settings.INSTALLED_APPS if a.startswith("djx_")], '
+    "settings.INSTALLED_APPS",
+)
+
+
+def test_check_passes_with_every_plugin_removed_from_installed_apps(tmp_path):
+    """BUILD_ORDER 9.1 done-when. Whatever plugins are linked into this checkout, the copy has no
+    plugins/ directory, so none is in INSTALLED_APPS; the platform must still check and route."""
+    copy = tmp_path / "backend"
+    shutil.copytree(BACKEND, copy, ignore=shutil.ignore_patterns(*IGNORE_NAMES, "plugins"))
+    assert not (copy / "plugins").exists()
+
+    env = {**os.environ, "DJANGO_SETTINGS_MODULE": "config.settings_test", "PYTHONPATH": str(copy)}
+    result = subprocess.run(
+        [sys.executable, "-c", NO_PLUGINS_PROBE],
+        cwd=copy,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0 and "PLATFORM-OK" in result.stdout, result.stderr[-2000:]

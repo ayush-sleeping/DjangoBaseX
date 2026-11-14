@@ -19,8 +19,9 @@ from core.api.errors import error_response, from_exception, invalid_response
 from core.api.views import BaseAPIView
 from core.api.viewsets import BaseViewSet
 from core.bootstrap import assemble
+from core.registry import registry
 
-from . import bootstrap, mfa, tokens
+from . import mfa, tokens
 from .cookies import clear_auth_cookies, cookie_names, set_auth_cookies
 from .models import Invitation, User
 from .reauth import requires_recent_auth
@@ -160,7 +161,7 @@ class BootstrapView(BaseAPIView):
     required_permissions = []  # any signed-in user; the body is the user's own
 
     def get(self, request):
-        return Response(assemble(request, bootstrap.CONTRIBUTORS))
+        return Response(assemble(request, registry.bootstrap.enabled()))
 
 
 class ForgotPasswordView(BaseAPIView):

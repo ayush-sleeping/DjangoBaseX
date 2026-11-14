@@ -2,10 +2,11 @@
 Everything this plugin contributes to the platform, registered at boot from AppConfig.ready()
 (CORE_ARCHITECTURE_PLAN § 2). Core never names this plugin: it only reads the registries.
 
-Imports core.registry and nothing else. A plugin never imports another plugin, or project.
+Imports core.sdk and nothing else (EXTENSIBILITY § 16). A plugin never imports another plugin,
+or project.
 """
 
-from core.registry import NavItem, NavSection, PermissionGroupSpec, PermissionSpec, registry
+from core.sdk import NavItem, NavSection, PermissionGroupSpec, PermissionSpec, registry
 
 HOME_VIEW = PermissionSpec(
     code="{{label}}.home.view",

@@ -94,3 +94,29 @@ def test_the_nav_entry_appears_only_with_the_view_code():
         }
     ]
     assert "notes" not in sections(session())
+
+
+def test_disabling_the_plugin_hides_its_nav_and_routes_without_touching_its_data():
+    """BUILD_ORDER 9.1 done-when, on a real plugin: one switch, every surface, the rows stay."""
+    from core.plugin_state import set_enabled
+    from djx_notes.models import Note
+
+    client = session(*ALL)
+    send(client, "post", NOTES, {"title": "Keep me", "body": "Still here"})
+    assert client.get(NOTES).status_code == 200
+    assert "notes" in [s["key"] for s in client.get(NAV).json()["sections"]]
+    before = list(Note.objects.values_list("public_id", "title", "body"))
+    assert len(before) == 1
+
+    set_enabled("notes", False, reason="the switch is off for this test")
+    listed = client.get(NOTES)
+    assert listed.status_code == 403
+    assert listed.json()["error"]["code"] == "plugin_disabled"
+    assert send(client, "post", NOTES, {"title": "No", "body": "No"}).status_code == 403
+    assert "notes" not in [s["key"] for s in client.get(NAV).json()["sections"]]
+    assert list(Note.objects.values_list("public_id", "title", "body")) == before  # data intact
+
+    set_enabled("notes", True)
+    assert client.get(NOTES).status_code == 200
+    assert "notes" in [s["key"] for s in client.get(NAV).json()["sections"]]
+    assert list(Note.objects.values_list("public_id", "title", "body")) == before

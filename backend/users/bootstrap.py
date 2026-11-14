@@ -3,15 +3,16 @@ The users app's sections of GET /api/me/bootstrap/ (FRONTEND_PLATFORM.md § 7): 
 and when the session ends. Both are essential: without them the shell cannot render, so a failure
 here fails the response and the frontend fails closed.
 
-core.bootstrap owns the engine and core's sections; this module composes them, because users
-depends on core and never the other way round.
+core.bootstrap owns the engine and core's sections; this module registers users' own into
+registry.bootstrap, because users depends on core and never the other way round.
 """
 
 from datetime import timedelta
 
 from django.conf import settings
 
-from core.bootstrap import CORE_CONTRIBUTORS, Contributor
+from core.bootstrap import Contributor
+from core.registry import registry
 
 from .models import UserSession
 from .serializers import BootstrapUserSerializer
@@ -37,5 +38,10 @@ def _session(request) -> dict:
 CONTRIBUTORS: tuple[Contributor, ...] = (
     Contributor("user", _user, essential=True),
     Contributor("session", _session, essential=True),
-    *CORE_CONTRIBUTORS,
 )
+
+
+def register() -> None:
+    """Called from UsersConfig.ready(): the identity sections into registry.bootstrap."""
+    for contributor in CONTRIBUTORS:
+        registry.bootstrap.register(contributor)

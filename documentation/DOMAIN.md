@@ -20,6 +20,9 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 | **core vs `project/`** | `core`, `users`, `rbac` are the platform; `backend/project/` (and `frontend/src/project/`) is where one product plugs in. Dependencies point inward | `backend/tests/architecture/test_core_boundary.py` | [ADR-0010](adr/0010-platform-layer-is-logical.md) |
 | **Setting** | A typed, admin-editable runtime value declared in code (`Bool`, `Int`, `Choice`, …) and stored in `Setting`; no row means the declared default | `backend/core/settings_registry.py`, `backend/core/settings_service.py` | `CONFIGURATION.md` § 9 |
 | **Feature flag** | A registered on/off switch, evaluated per user/role, with an expiry | `backend/core/flags.py` | `CONFIGURATION.md` § 11 |
+| **SDK facade** | The only core module a plugin imports: `SDK_VERSION`, `SDK_CHANGELOG`, `require_version`, the registry and specs, lazily the view and queryset bases | `backend/core/sdk/__init__.py`, `backend/tests/architecture/test_plugins_import_only_sdk.py` | `EXTENSIBILITY.md` § 16 |
+| **Soft-disable** | A plugin label listed in the setting `core.plugins.disabled`: its nav, bootstrap, search and help contributions hide, its routes answer 403 `plugin_disabled`, its jobs skip; its data is never touched. One helper, `registry.plugin_state` | `backend/core/registry.py`, `backend/core/plugin_state.py`, `backend/core/plugin_gate.py` | `EXTENSIBILITY.md` § 15 |
+| **Service contract** | A named, versioned, single-provider call (`billing.invoice_totals.v1`): `provide` / `has_service` / `call_service`. Platform Protocols in `core/contracts/`, plugin-to-plugin ones in the provider's `contracts.py`, imported under `TYPE_CHECKING` only | `backend/core/registry.py` (`ServiceRegistry`), `backend/core/contracts/` | `EXTENSIBILITY.md` § 18 |
 | **Guard mode** | A flag-like `off` · `log_only` · `enforce` switch, always paired with its `<key>.mode` setting | `backend/core/guards.py` | `CONFIGURATION.md` § 13 |
 | **Lookup / vocabulary** | An admin-editable value set (`LookupValue`) seeded after migrate; models point at it with `LookupField` | `backend/core/lookups.py` | `CONFIGURATION.md` § 14 |
 | **Environment identity** | `APP_ENV`, fail-closed: only an allow-list is non-production; `is_production_like()` is the only environment test | `backend/core/env.py` | `CONFIGURATION.md` § 4 |
@@ -93,7 +96,6 @@ Look a term up, go to its **owner** (the one module that decides it — change b
 |---------|------------------|
 | Ops alerting | 7.8 |
 | Static security headers, revalidation, logos, host-matched identity | 8.5b |
-| Full registry catalogue, plugin lifecycle | 9.1 |
 | API platform | 9.2 |
 | Data lifecycle (soft delete, recycle bin) | 9.3 |
 | Domain primitives beyond money (number sequences, state machines) | 9.4 |

@@ -14,6 +14,7 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from core.plugin_gate import gated_include
 from core.registry import registry
 
 API = settings.API_PREFIX  # every API path derives from it (DB-24)
@@ -28,7 +29,11 @@ urlpatterns = [
 
 # Whatever project/ and plugins registered (CORE_ARCHITECTURE_PLAN.md § 2): core names none of them.
 urlpatterns += [
-    path(f"{API}/{route.prefix}/", include(route.urlconf)) for route in registry.api_routes.routes()
+    path(
+        f"{API}/{route.prefix}/",
+        include(gated_include(route.urlconf, registry.api_routes.owner_of(route.prefix))),
+    )
+    for route in registry.api_routes.routes()
 ]
 
 # A second authentication and authorization system beside the API's; off unless asked for.

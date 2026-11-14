@@ -17,25 +17,70 @@ SKIP_DIRS = {"__pycache__", ".venv", "node_modules", "frontend"}
 # --- § 4: a plugin imports no other plugin, and not the product -----------------------------------
 
 
-def boundary_problems(plugin: Plugin, forbidden: set[str]) -> list[str]:
-    """Absolute imports from `plugin`'s Python files whose top-level package is in `forbidden`."""
-    found = []
+def _imported_names(node: ast.AST) -> list[str]:
+    if isinstance(node, ast.Import):
+        return [alias.name for alias in node.names]
+    if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+        return [node.module]
+    if _is_dynamic_import(node):
+        return [node.args[0].value]
+    return []
+
+
+def _type_checking_nodes(tree: ast.AST) -> set[int]:
+    """ids of every node inside an `if TYPE_CHECKING:` body: the one place a plugin may name
+    another plugin, and only its contracts module (EXTENSIBILITY § 18)."""
+    inside: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.If):
+            test = node.test
+            name = test.attr if isinstance(test, ast.Attribute) else getattr(test, "id", None)
+            if name == "TYPE_CHECKING":
+                for child in node.body:
+                    inside.update(id(n) for n in ast.walk(child))
+    return inside
+
+
+def _plugin_sources(plugin: Plugin):
     for path in sorted(plugin.path.rglob("*.py")):
         if SKIP_DIRS & set(path.relative_to(plugin.path).parts):
             continue
-        tree = ast.parse(path.read_text(), filename=str(path))
+        yield path, ast.parse(path.read_text(), filename=str(path))
+
+
+def boundary_problems(plugin: Plugin, forbidden: set[str]) -> list[str]:
+    """Absolute imports from `plugin`'s Python files whose top-level package is in `forbidden`.
+    Exempt: `djx_<other>.contracts` under `if TYPE_CHECKING:` (typing only, no runtime coupling)."""
+    found = []
+    for path, tree in _plugin_sources(plugin):
+        typing_only = _type_checking_nodes(tree)
         for node in ast.walk(tree):
-            names = []
-            if isinstance(node, ast.Import):
-                names = [alias.name for alias in node.names]
-            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                names = [node.module]
-            elif _is_dynamic_import(node):
-                names = [node.args[0].value]
-            for name in names:
-                if name.split(".")[0] in forbidden:
+            for name in _imported_names(node):
+                if name.split(".")[0] not in forbidden:
+                    continue
+                if id(node) in typing_only and name.split(".")[1:2] == ["contracts"]:
+                    continue
+                where = f"{plugin.name}/{path.relative_to(plugin.path)}:{node.lineno}"
+                found.append(f"{where} imports {name}")
+    return found
+
+
+SDK_ONLY = {"core", "users", "rbac"}
+
+
+def sdk_problems(plugin: Plugin) -> list[str]:
+    """§ 16: a plugin reaches the platform only through `core.sdk`. Any other `core.*`, and the
+    users and rbac apps, are internals that a refactor moves without telling the plugin."""
+    found = []
+    for path, tree in _plugin_sources(plugin):
+        if "tests" in path.relative_to(plugin.path).parts:
+            continue  # a plugin's tests may use the platform's factories and clients
+        for node in ast.walk(tree):
+            for name in _imported_names(node):
+                parts = name.split(".")
+                if parts[0] in SDK_ONLY and parts[:2] != ["core", "sdk"]:
                     where = f"{plugin.name}/{path.relative_to(plugin.path)}:{node.lineno}"
-                    found.append(f"{where} imports {name}")
+                    found.append(f"{where} imports {name}; import it through core.sdk")
     return found
 
 

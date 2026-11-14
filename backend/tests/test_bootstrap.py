@@ -14,7 +14,6 @@ from core import bootstrap
 from core.registry import registry
 from rbac import services as rbac
 from tests.factories import DEFAULT_PASSWORD, UserFactory
-from users import bootstrap as users_bootstrap
 
 pytestmark = pytest.mark.django_db
 
@@ -87,16 +86,20 @@ def test_me_and_bootstrap_compute_permissions_the_same_way():
     )
 
 
+def add_contributor(monkeypatch, contributor):
+    """The bootstrap view reads registry.bootstrap.enabled(): add one to what it returns."""
+    from core.registry import registry
+
+    real = registry.bootstrap.enabled
+    monkeypatch.setattr(registry.bootstrap, "enabled", lambda: (*real(), contributor))
+
+
 def boom(request):
     raise RuntimeError("contributor broke")
 
 
 def test_a_raising_decorative_contributor_is_degraded_not_fatal(monkeypatch):
-    monkeypatch.setattr(
-        users_bootstrap,
-        "CONTRIBUTORS",
-        (*users_bootstrap.CONTRIBUTORS, bootstrap.Contributor("badges", boom)),
-    )
+    add_contributor(monkeypatch, bootstrap.Contributor("badges", boom))
     response = signed_in(UserFactory()).get(URL)
 
     assert response.status_code == 200
@@ -105,11 +108,7 @@ def test_a_raising_decorative_contributor_is_degraded_not_fatal(monkeypatch):
 
 
 def test_a_raising_essential_contributor_fails_the_response(monkeypatch):
-    monkeypatch.setattr(
-        users_bootstrap,
-        "CONTRIBUTORS",
-        (*users_bootstrap.CONTRIBUTORS, bootstrap.Contributor("scope", boom, essential=True)),
-    )
+    add_contributor(monkeypatch, bootstrap.Contributor("scope", boom, essential=True))
     client = signed_in(UserFactory())
     client.raise_request_exception = False
 

@@ -47,6 +47,9 @@ class UsersConfig(AppConfig):
         for retention_policy in RETENTION_POLICIES:
             register_retention(registry, retention_policy)
         # Navigation is also the route gate (FRONTEND_PLATFORM § 10): every page needs an entry.
+        from .bootstrap import register as register_bootstrap
+
+        register_bootstrap()
         from .navigation import register as register_navigation
 
         register_navigation()

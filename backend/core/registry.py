@@ -160,6 +160,11 @@ class _Catalog:
         The plugin conventions test attributes registrations by it (BUILD_ORDER 3.2)."""
         return self._owner_of.get(key, "")
 
+    def owner_enabled(self, key: str) -> bool:
+        """False when the plugin that registered `key` is soft-disabled. The ONE question every
+        registry asks about an owner's state, answered by plugin_state (BUILD_ORDER 9.1)."""
+        return plugin_state.owner_enabled(self.owner(key))
+
     def seal(self) -> None:
         with self._lock:
             self._sealed = True
@@ -292,6 +297,10 @@ class NavigationRegistry(_Catalog):
         This only shapes a menu: every endpoint still decides for itself."""
         visible = []
         for section in self.sections():
+            if not self.owner_enabled(
+                section.key
+            ):  # soft-disable (§ 15): the owner is switched off
+                continue
             items = tuple(
                 item
                 for item in section.items
@@ -626,6 +635,10 @@ class ApiRouteRegistry(_Catalog):
         """Sorted by prefix, so the URL table does not depend on INSTALLED_APPS order."""
         self.seal()
         return tuple(sorted(self._routes.values(), key=lambda r: r.prefix))
+
+    def owner_of(self, prefix: str) -> str:
+        """The module that mounted /api/<prefix>/: what config/urls.py gates the mount on."""
+        return self.owner(prefix)
 
 
 # --- Public routes ------------------------------------------------------------------------------
@@ -1126,6 +1139,12 @@ class JobRegistry(_Catalog):
     def specs(self) -> tuple[JobSpec, ...]:
         self.seal()
         return tuple(self._specs[k] for k in sorted(self._specs))
+
+    def runnable(self, name: str) -> bool:
+        """False when the owning plugin is soft-disabled: the runner skips the run (§ 15). Checked
+        at run time, not at enqueue, so a run queued before the switch still no-ops."""
+        self.seal()
+        return self.owner_enabled(name)
 
 
 # --- Retention policies (BUILD_ORDER 7.5; DATA_LIFECYCLE.md § 6) --------------------------------
@@ -1952,6 +1971,193 @@ class NotificationChannelRegistry(_Catalog):
         return tuple(self._channels[k] for k in sorted(self._channels))
 
 
+# --- Plugin lifecycle and the uniform contribution shape (BUILD_ORDER 9.1; EXTENSIBILITY § 3, § 15)
+
+
+def owner_label(module: str) -> str | None:
+    """The plugin label behind a registering module, or None for the platform. A plugin's package
+    is `djx_<label>` (core.plugins enforces it), so `djx_notes.wiring` is plugin "notes"; core,
+    users, rbac and project/ are never switchable."""
+    top = module.split(".", 1)[0]
+    if top.startswith("djx_") and len(top) > 4:
+        return top[4:]
+    return None
+
+
+class PluginState:
+    """
+    Which plugins are soft-disabled (§ 15). One answer for every surface: registries call
+    owner_enabled(), the route mount and the job runner call it too, and nothing keeps a second
+    copy. The disabled set comes from a provider core installs (a typed runtime setting); until
+    then, and for every owner that is not a plugin, everything is enabled.
+    """
+
+    def __init__(self) -> None:
+        self._provider: Callable[[], frozenset[str]] = frozenset
+
+    def use(self, provider: Callable[[], frozenset[str]]) -> None:
+        self._provider = provider
+
+    def disabled(self) -> frozenset[str]:
+        return frozenset(self._provider())
+
+    def is_enabled(self, label: str) -> bool:
+        return label not in self.disabled()
+
+    def owner_enabled(self, module: str) -> bool:
+        label = owner_label(module)
+        return label is None or label not in self.disabled()
+
+
+plugin_state = PluginState()
+
+
+@dataclass(frozen=True)
+class BootstrapContributor:
+    """One top-level key of GET /api/me/bootstrap/ (core.bootstrap)."""
+
+    key: str  # the key it fills; unique across the response
+    build: Callable[[object], object]  # request -> JSON-serialisable value
+    essential: bool = False
+
+
+@dataclass(frozen=True)
+class SearchSource:
+    """A source the global search will ask. No core contributors yet: the slot exists so the
+    soft-disable contract already covers it."""
+
+    key: str  # "<owner>.<source>"
+    label: str
+    search: Callable[..., object]
+    permission: str | None = None
+
+
+@dataclass(frozen=True)
+class HelpPage:
+    """A help page. No core contributors yet; see SearchSource."""
+
+    key: str  # "<owner>.<page>"
+    title: str
+    body: str
+    permission: str | None = None
+
+
+@dataclass(frozen=True)
+class ServiceProvider:
+    key: str  # "<owner>.<thing>.v<N>"
+    impl: Callable[..., object]
+
+
+class ServiceContractError(Exception):
+    """A service contract that cannot answer. Callers check has_service() or handle this."""
+
+
+class NoProvider(ServiceContractError):
+    """No installed app provides the contract."""
+
+
+class ServiceUnavailable(ServiceContractError):
+    """The provider's plugin is soft-disabled."""
+
+
+_SERVICE_NAME = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.v[0-9]+$")
+_CONTRIBUTION_KEY = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_-]*)*$")
+
+
+class ContributionRegistry(_Catalog):
+    """
+    The uniform shape (§ 3): a keyed spec, its owner (filled from the registering module, never
+    typed), and an optional `when` predicate. enabled() applies every gate in one place: the owner
+    is not soft-disabled, and `when` (if any) says yes. Subclasses name what they hold and may
+    tighten the key.
+    """
+
+    kind = "contribution"
+    spec_type: type = object
+    key_pattern: re.Pattern = _CONTRIBUTION_KEY
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._items: dict[str, tuple[object, Callable[[], bool] | None]] = {}
+
+    def register(self, item, *, when: Callable[[], bool] | None = None) -> None:
+        owner = _caller_module()
+        with self._lock:
+            key = getattr(item, "key", None)
+            name = f"{self.kind} {key!r}"
+            self._refuse_if_sealed(name)
+            if not isinstance(item, self.spec_type):
+                raise RegistryError(
+                    f"expected a {self.spec_type.__name__}, got {type(item).__name__}"
+                )
+            if not isinstance(key, str) or not self.key_pattern.match(key):
+                raise RegistryError(f"{name}: key is not lowercase <owner>.<name>")
+            if key in self._items:
+                raise RegistryError(
+                    f"{name} is already registered by {self._owner_of[key]}; registered again by "
+                    f"{owner}"
+                )
+            self._items[key] = (item, when)
+            self._owner_of[key] = owner
+
+    def all(self) -> tuple:
+        """Everything registered, sorted by key, whatever its owner's state."""
+        self.seal()
+        return tuple(self._items[k][0] for k in sorted(self._items))
+
+    def enabled(self) -> tuple:
+        """What a reader should act on: owner enabled and `when` true."""
+        self.seal()
+        return tuple(
+            item
+            for key, (item, when) in sorted(self._items.items())
+            if self.owner_enabled(key) and (when is None or when())
+        )
+
+
+class BootstrapRegistry(ContributionRegistry):
+    kind = "bootstrap contributor"
+    spec_type = BootstrapContributor
+    key_pattern = re.compile(r"^[a-z][a-z0-9_]*$")  # a top-level JSON key: no dots
+
+
+class SearchSourceRegistry(ContributionRegistry):
+    kind = "search source"
+    spec_type = SearchSource
+
+
+class HelpPageRegistry(ContributionRegistry):
+    kind = "help page"
+    spec_type = HelpPage
+
+
+class ServiceRegistry(ContributionRegistry):
+    """Service contracts (§ 18): a named contract with exactly one provider. A second provider is
+    refused at boot; a disabled provider's contract is unavailable, not removed."""
+
+    kind = "service contract"
+    spec_type = ServiceProvider
+    key_pattern = _SERVICE_NAME
+
+    def provide(self, name: str, impl: Callable[..., object]) -> None:
+        # Frame depth differs from register(): re-attribute to the caller of provide().
+        owner = _caller_module()
+        self.register(ServiceProvider(key=name, impl=impl))
+        self._owner_of[name] = owner
+
+    def has_service(self, name: str) -> bool:
+        self.seal()
+        return name in self._items and self.owner_enabled(name)
+
+    def call_service(self, name: str, **kwargs):
+        self.seal()
+        if name not in self._items:
+            raise NoProvider(f"no installed app provides {name!r}")
+        if not self.owner_enabled(name):
+            raise ServiceUnavailable(f"{name!r} is provided by a plugin that is disabled")
+        return self._items[name][0].impl(**kwargs)
+
+
 # --- The whole seam -----------------------------------------------------------------------------
 
 
@@ -1983,6 +2189,10 @@ class Registry:
         self.inbound_webhooks = InboundWebhookRegistry()
         self.notification_purposes = NotificationPurposeRegistry()
         self.notification_channels = NotificationChannelRegistry()
+        self.bootstrap = BootstrapRegistry()
+        self.search_sources = SearchSourceRegistry()
+        self.help_pages = HelpPageRegistry()
+        self.services = ServiceRegistry()
         # A reconciler registers its job and its give-up kind into THIS registry's catalogs.
         self.reconcilers = ReconcilerRegistry(self.jobs, self.finding_kinds)
 

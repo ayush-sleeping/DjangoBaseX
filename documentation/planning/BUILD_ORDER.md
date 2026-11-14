@@ -944,7 +944,7 @@ renders an error, never an empty state.
 contributors; one `effective_permissions()` behind `/me` and bootstrap; the fail-closed `PermissionProvider`;
 `NavItem.href` + `hidden`/`public`/`exact`, core's own screens registered, and `resolveRoute()` as the default-deny
 route gate; `src/proxy.ts` on the `Path=/` marker. As built: [`FRONTEND_PLATFORM.md`](../system-design/FRONTEND_PLATFORM.md)
-§ 7/§ 9/§ 10. Deferred: `X-Permissions-Version` (**DB-50**); the bootstrap contributor tuple moves into the registry in **9.1**.
+§ 7/§ 9/§ 10. Deferred: `X-Permissions-Version` (**DB-50**); the bootstrap contributor tuple moved into the registry in **9.1** (done).
 `/api/me/bootstrap`; a fail-closed permission provider on *effective* permissions; server-built navigation that is
 also the route gate (default-deny); the `Path=/` session marker cookie. Closes **DB-20**.
 
@@ -1016,13 +1016,17 @@ measured ratio and a passing suggestion.
 [`DOMAIN_PRIMITIVES.md`](../system-design/DOMAIN_PRIMITIVES.md), [`OPERATIONS.md`](../system-design/OPERATIONS.md),
 [`ENGINEERING_PRACTICES.md`](../system-design/ENGINEERING_PRACTICES.md).*
 
-### 9.1 — The full registry catalogue and plugin lifecycle ⬜
+### 9.1 — The full registry catalogue and plugin lifecycle ✅
 Every registry in `EXTENSIBILITY.md` with the uniform contribution shape; the soft-disable contract; the versioned
 SDK facade; service contracts. Needs Phase 3. Closes **DB-18**, **DB-22**. Includes moving the bootstrap contributor
 tuple (`core/bootstrap.py`, 8.2) into the registry, keeping its `(key, build, essential)` shape.
 
 **Done when:** disabling a plugin hides its nav, routes, jobs, search sources and help pages without touching its
 data; `manage.py check` passes with every plugin removed from `INSTALLED_APPS`.
+
+*Done 2026-11-14.* `ContributionRegistry` (four registries on it; the rest keep their own validation, DB-100), the bootstrap tuple moved into `registry.bootstrap`, soft-disable through one helper (`registry.plugin_state`, state in the setting `core.plugins.disabled`, no migration), `core.sdk` 1.0 with the import rule, service contracts (`registry.services`, `core/contracts/`). **DB-18 and DB-22 were already closed (2026-10-11); nothing further was needed.** Not built: the Extensions page/API, `plugin_task`/`plugin_receiver`, the SDK snapshot test, the contract AST tests (DB-100 to DB-104).
+
+*Proved by:* `backend/tests/test_plugin_lifecycle.py::test_disabling_a_plugin_hides_every_registry_surface_and_enabling_restores_it` (with `test_a_plugin_route_answers_403_plugin_disabled_and_enabled_answers_through` and `test_a_disabled_plugins_job_skips_at_run_time_and_is_recorded`); on a real plugin `plugins/notes` → `djx_notes/tests/test_notes.py::test_disabling_the_plugin_hides_its_nav_and_routes_without_touching_its_data` (rows asserted unchanged); `backend/tests/architecture/test_platform_without_project.py::test_check_passes_with_every_plugin_removed_from_installed_apps`.
 
 ### 9.2 — API platform ⬜
 *Input from 8.4a:* 26 views are absent from the OpenAPI contract ("unable to guess serializer"): AcceptInvitation,

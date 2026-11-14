@@ -45,6 +45,10 @@ def check_registry_seals(app_configs, **kwargs):
         ("outbox_topics", registry.outbox_topics.topics),
         ("http_purposes", registry.http_purposes.purposes),
         ("reconcilers", registry.reconcilers.specs),
+        ("bootstrap", registry.bootstrap.all),
+        ("search_sources", registry.search_sources.all),
+        ("help_pages", registry.help_pages.all),
+        ("services", registry.services.all),
     ):
         try:
             read()

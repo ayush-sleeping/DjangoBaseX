@@ -17,6 +17,13 @@ The committed files are the BOILERPLATE's own contract: a linked plugin's contri
 out, so they are identical with or without a plugin installed (CI runs the suite both ways). A
 plugin reaches the frontend at runtime through bootstrap, and types its own codes by augmentation.
 
+This package also owns the platform-wide SERVICE contracts (EXTENSIBILITY § 18): a `typing.Protocol`
+module per capability, named for the capability and never for a plugin ("render a PDF", "resolve
+an actor's display name"), registered under a versioned name such as `pdf.render.v1` with
+registry.services.provide(). None exists yet because no code needs one: add the Protocol here in
+the same change as its first provider and caller. A contract between two plugins is the provider's
+`djx_<name>/contracts.py`, imported by the consumer under TYPE_CHECKING only.
+
 Rendering is deterministic: sorted keys, no timestamps, and the schema's deployment-specific title
 and description replaced, so two machines produce byte-identical files.
 """
@@ -28,9 +35,9 @@ from pathlib import Path
 from django.conf import settings
 from django.urls import URLPattern, URLResolver, get_resolver
 
-from . import navigation
-from .plugins import discover
-from .registry import registry
+from .. import navigation
+from ..plugins import discover
+from ..registry import registry
 
 GENERATED_DIR = Path(settings.BASE_DIR).parent / "frontend" / "src" / "generated"
 COMMAND = "uv run python manage.py export_frontend_contracts"
@@ -265,7 +272,7 @@ def render_localization() -> str:
     code (FRONTEND_PLATFORM § 14)."""
     from dataclasses import asdict
 
-    from .formatting import LocalePolicy
+    from ..formatting import LocalePolicy
 
     rows = "\n".join(
         f"  {key}: {'null' if value is None else _ts_string(value)},"
@@ -286,7 +293,7 @@ def render_localization() -> str:
 def render_brand() -> str:
     """The brand slots and the chroma bound (core.theme), so the frontend's re-validation of the
     numbers it composes into `oklch()` uses the backend's own ranges, never a second copy."""
-    from .theme import BRAND_SLOTS, MAX_CHROMA
+    from ..theme import BRAND_SLOTS, MAX_CHROMA
 
     slots = ", ".join(_ts_string(slot) for slot in BRAND_SLOTS)
     return (
